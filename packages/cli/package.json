@@ -1,0 +1,28 @@
+{
+  "name": "crap-typescript",
+  "version": "0.1.0",
+  "description": "CLI for CRAP metric analysis in TypeScript projects.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fabian-barney/crap-typescript.git"
+  },
+  "homepage": "https://github.com/fabian-barney/crap-typescript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "crap-typescript": "dist/bin.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "crap-typescript-core": "^0.1.0"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "crap-typescript-core",
+  "version": "0.1.0",
+  "description": "Core CRAP metric analyzer for TypeScript projects.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fabian-barney/crap-typescript.git"
+  },
+  "homepage": "https://github.com/fabian-barney/crap-typescript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "typescript": "^6.0.2"
+  }
+}

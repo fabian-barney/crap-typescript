@@ -1,0 +1,28 @@
+{
+  "name": "crap-typescript-vitest",
+  "version": "0.1.0",
+  "description": "Vitest integration for crap-typescript.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fabian-barney/crap-typescript.git"
+  },
+  "homepage": "https://github.com/fabian-barney/crap-typescript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "crap-typescript-core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "vitest": "^4.0.0"
+  }
+}

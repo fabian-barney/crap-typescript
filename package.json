@@ -1,0 +1,32 @@
+{
+  "name": "crap-typescript-parent",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Shared CRAP metric tooling for TypeScript projects.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fabian-barney/crap-typescript.git"
+  },
+  "homepage": "https://github.com/fabian-barney/crap-typescript",
+  "bugs": {
+    "url": "https://github.com/fabian-barney/crap-typescript/issues"
+  },
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
+    "test": "npm run build && vitest run",
+    "pack": "npm pack --workspaces",
+    "verify-release-version": "node ./scripts/verify-release-version.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.1",
+    "@vitest/coverage-v8": "^4.1.2",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}

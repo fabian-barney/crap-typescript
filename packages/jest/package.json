@@ -1,0 +1,29 @@
+{
+  "name": "crap-typescript-jest",
+  "version": "0.1.0",
+  "description": "Jest integration for crap-typescript.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fabian-barney/crap-typescript.git"
+  },
+  "homepage": "https://github.com/fabian-barney/crap-typescript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./reporter": "./dist/reporter.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "crap-typescript-core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "jest": "^30.0.0"
+  }
+}

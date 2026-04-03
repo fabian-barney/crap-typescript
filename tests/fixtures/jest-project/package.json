@@ -1,0 +1,10 @@
+{
+  "name": "fixture-jest-project",
+  "private": true,
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^6.0.2"
+  }
+}
+
