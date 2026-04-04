@@ -15,7 +15,8 @@ describe("coverage helpers", () => {
         "run",
         "--coverage.enabled=true",
         "--coverage.reporter=lcov",
-        "--coverage.reporter=text"
+        "--coverage.reporter=text",
+        "--coverage.reportsDirectory=coverage"
       ],
       cwd: "C:/tmp",
       packageManager: "npm",
@@ -31,12 +32,22 @@ describe("coverage helpers", () => {
         "--coverage",
         "--runInBand",
         "--coverageReporters=lcov",
-        "--coverageReporters=text"
+        "--coverageReporters=text",
+        "--coverageDirectory=coverage"
       ],
       cwd: "C:/tmp",
       packageManager: "yarn",
       testRunner: "jest"
     });
+  });
+
+  it("builds custom coverage directory arguments from the expected lcov path", () => {
+    expect(buildCoverageCommand("pnpm", "vitest", "C:/tmp", "custom-coverage/lcov.info").args).toContain(
+      "--coverage.reportsDirectory=custom-coverage"
+    );
+    expect(buildCoverageCommand("pnpm", "jest", "C:/tmp", "custom-coverage/lcov.info").args).toContain(
+      "--coverageDirectory=custom-coverage"
+    );
   });
 
   it("computes line-range coverage percentages", () => {

@@ -10,9 +10,10 @@ export async function ensureCoverageReport(
   packageManagerSelection: PackageManager | "auto",
   testRunnerSelection: TestRunner | "auto",
   coverageMode: CoverageMode,
+  coverageReportPath: string | undefined,
   executor: CommandExecutor
 ): Promise<{ coverageSourcePath: string | null; coverageSourceRoot: string | null; command: CoverageCommand | null }> {
-  const existing = await locateCoverageReport(projectRoot, moduleRoot);
+  const existing = await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath);
   if (existing) {
     return {
       coverageSourcePath: existing.lcovPath,
@@ -31,13 +32,13 @@ export async function ensureCoverageReport(
 
   const packageManager = await resolvePackageManager(packageManagerSelection, projectRoot, moduleRoot);
   const testRunner = await resolveTestRunner(testRunnerSelection, projectRoot, moduleRoot);
-  const command = buildCoverageCommand(packageManager, testRunner, moduleRoot);
+  const command = buildCoverageCommand(packageManager, testRunner, moduleRoot, coverageReportPath);
   const exitCode = await executor.execute(command);
   if (exitCode !== 0) {
     throw new Error(`Coverage command failed with exit ${exitCode}`);
   }
 
-  const generated = await locateCoverageReport(projectRoot, moduleRoot);
+  const generated = await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath);
   return {
     coverageSourcePath: generated?.lcovPath ?? null,
     coverageSourceRoot: generated?.sourceRoot ?? null,
@@ -45,25 +46,31 @@ export async function ensureCoverageReport(
   };
 }
 
-export function expectedCoveragePath(moduleRoot: string): string {
-  return path.join(moduleRoot, COVERAGE_REPORT_RELATIVE_PATH);
+export function expectedCoveragePath(moduleRoot: string, coverageReportPath = COVERAGE_REPORT_RELATIVE_PATH): string {
+  return path.isAbsolute(coverageReportPath)
+    ? coverageReportPath
+    : path.join(moduleRoot, coverageReportPath);
 }
 
 export function buildCoverageCommand(
   packageManager: PackageManager,
   testRunner: TestRunner,
-  cwd: string
+  cwd: string,
+  coverageReportPath = COVERAGE_REPORT_RELATIVE_PATH
 ): CoverageCommand {
   return {
     command: packageManager,
-    args: testRunner === "vitest" ? vitestArguments(packageManager) : jestArguments(packageManager),
+    args: testRunner === "vitest"
+      ? vitestArguments(packageManager, coverageReportPath)
+      : jestArguments(packageManager, coverageReportPath),
     cwd,
     packageManager,
     testRunner
   };
 }
 
-function vitestArguments(packageManager: PackageManager): string[] {
+function vitestArguments(packageManager: PackageManager, coverageReportPath: string): string[] {
+  const reportsDirectory = path.dirname(coverageReportPath);
   switch (packageManager) {
     case "npm":
       return [
@@ -74,7 +81,8 @@ function vitestArguments(packageManager: PackageManager): string[] {
         "run",
         "--coverage.enabled=true",
         "--coverage.reporter=lcov",
-        "--coverage.reporter=text"
+        "--coverage.reporter=text",
+        `--coverage.reportsDirectory=${reportsDirectory}`
       ];
     case "pnpm":
       return [
@@ -83,7 +91,8 @@ function vitestArguments(packageManager: PackageManager): string[] {
         "run",
         "--coverage.enabled=true",
         "--coverage.reporter=lcov",
-        "--coverage.reporter=text"
+        "--coverage.reporter=text",
+        `--coverage.reportsDirectory=${reportsDirectory}`
       ];
     case "yarn":
       return [
@@ -91,12 +100,14 @@ function vitestArguments(packageManager: PackageManager): string[] {
         "run",
         "--coverage.enabled=true",
         "--coverage.reporter=lcov",
-        "--coverage.reporter=text"
+        "--coverage.reporter=text",
+        `--coverage.reportsDirectory=${reportsDirectory}`
       ];
   }
 }
 
-function jestArguments(packageManager: PackageManager): string[] {
+function jestArguments(packageManager: PackageManager, coverageReportPath: string): string[] {
+  const coverageDirectory = path.dirname(coverageReportPath);
   switch (packageManager) {
     case "npm":
       return [
@@ -107,7 +118,8 @@ function jestArguments(packageManager: PackageManager): string[] {
         "--coverage",
         "--runInBand",
         "--coverageReporters=lcov",
-        "--coverageReporters=text"
+        "--coverageReporters=text",
+        `--coverageDirectory=${coverageDirectory}`
       ];
     case "pnpm":
       return [
@@ -116,7 +128,8 @@ function jestArguments(packageManager: PackageManager): string[] {
         "--coverage",
         "--runInBand",
         "--coverageReporters=lcov",
-        "--coverageReporters=text"
+        "--coverageReporters=text",
+        `--coverageDirectory=${coverageDirectory}`
       ];
     case "yarn":
       return [
@@ -124,8 +137,8 @@ function jestArguments(packageManager: PackageManager): string[] {
         "--coverage",
         "--runInBand",
         "--coverageReporters=lcov",
-        "--coverageReporters=text"
+        "--coverageReporters=text",
+        `--coverageDirectory=${coverageDirectory}`
       ];
   }
 }
-

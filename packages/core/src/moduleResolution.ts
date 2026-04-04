@@ -30,9 +30,10 @@ export async function resolveModuleRoot(projectRoot: string, filePath: string): 
 
 export async function locateCoverageReport(
   projectRoot: string,
-  moduleRoot: string
+  moduleRoot: string,
+  coverageReportPath = COVERAGE_REPORT_RELATIVE_PATH
 ): Promise<CoverageSource | null> {
-  const moduleReportPath = path.join(moduleRoot, COVERAGE_REPORT_RELATIVE_PATH);
+  const moduleReportPath = resolveCoveragePath(moduleRoot, coverageReportPath);
   if (await exists(moduleReportPath)) {
     return {
       lcovPath: moduleReportPath,
@@ -40,7 +41,7 @@ export async function locateCoverageReport(
     };
   }
 
-  const projectReportPath = path.join(projectRoot, COVERAGE_REPORT_RELATIVE_PATH);
+  const projectReportPath = resolveCoveragePath(projectRoot, coverageReportPath);
   if (await exists(projectReportPath)) {
     return {
       lcovPath: projectReportPath,
@@ -86,20 +87,14 @@ export async function resolveTestRunner(
     if (!packageJson) {
       continue;
     }
-    const dependencyFields = [packageJson.dependencies, packageJson.devDependencies, packageJson.peerDependencies];
-    if (dependencyFields.some((field) => field && "vitest" in field)) {
-      return "vitest";
+    const scriptRunner = detectRunnerFromScripts(packageJson.scripts ?? {});
+    if (scriptRunner) {
+      return scriptRunner;
     }
-    if (dependencyFields.some((field) => field && ("jest" in field || "ts-jest" in field))) {
-      return "jest";
-    }
-    const scripts = packageJson.scripts ?? {};
-    const scriptText = Object.values(scripts).join("\n");
-    if (/\bvitest\b/.test(scriptText)) {
-      return "vitest";
-    }
-    if (/\bjest\b/.test(scriptText)) {
-      return "jest";
+
+    const dependencyRunner = detectRunnerFromDependencies(packageJson);
+    if (dependencyRunner) {
+      return dependencyRunner;
     }
   }
 
@@ -111,6 +106,27 @@ interface PackageJsonShape {
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
+}
+
+function detectRunnerFromScripts(scripts: Record<string, string>): TestRunner | null {
+  return detectSingleRunner(Object.values(scripts).join("\n"));
+}
+
+function detectRunnerFromDependencies(packageJson: PackageJsonShape): TestRunner | null {
+  const dependencyFields = [packageJson.dependencies, packageJson.devDependencies, packageJson.peerDependencies];
+  const dependencyNames = dependencyFields
+    .flatMap((field) => field ? Object.keys(field) : [])
+    .join("\n");
+  return detectSingleRunner(dependencyNames);
+}
+
+function detectSingleRunner(text: string): TestRunner | null {
+  const hasVitest = /\bvitest\b/.test(text);
+  const hasJest = /\bjest\b/.test(text) || /\bts-jest\b/.test(text);
+  if (hasVitest === hasJest) {
+    return null;
+  }
+  return hasVitest ? "vitest" : "jest";
 }
 
 async function readPackageJson(root: string): Promise<PackageJsonShape | null> {
@@ -136,3 +152,8 @@ function isWithinOrEqual(candidate: string, root: string): boolean {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
+function resolveCoveragePath(root: string, coverageReportPath: string): string {
+  return path.isAbsolute(coverageReportPath)
+    ? coverageReportPath
+    : path.join(root, coverageReportPath);
+}

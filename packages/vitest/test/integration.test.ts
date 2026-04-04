@@ -42,4 +42,39 @@ module.exports = withCrapTypescriptVitest(
     await expect(access(path.join(projectRoot, "coverage", "lcov.info"))).resolves.toBeUndefined();
     expect(`${result.stdout}\n${result.stderr}`).toContain("CRAP threshold exceeded");
   });
+
+  it("honors custom coverage output directories when enforcing the CRAP threshold", async () => {
+    const projectRoot = await copyFixture("vitest-project");
+    tempDirs.push(projectRoot);
+    const adapterPath = repoPath("packages", "vitest", "dist", "index.js").replace(/\\/g, "/");
+    await writeProjectFiles(projectRoot, {
+      "vitest.config.cjs": `const { withCrapTypescriptVitest } = require(${JSON.stringify(adapterPath)});
+
+module.exports = withCrapTypescriptVitest(
+  {
+    test: {
+      include: ["test/**/*.test.ts"],
+      coverage: {
+        reportsDirectory: "custom-coverage"
+      }
+    }
+  },
+  {
+    projectRoot: process.cwd()
+  }
+);
+`
+    });
+
+    const result = await runProcess(
+      process.execPath,
+      [repoPath("node_modules", "vitest", "vitest.mjs"), "run", "--config", "vitest.config.cjs"],
+      projectRoot
+    );
+
+    expect(result.exitCode).not.toBe(0);
+    await expect(access(path.join(projectRoot, "custom-coverage", "lcov.info"))).resolves.toBeUndefined();
+    expect(`${result.stdout}\n${result.stderr}`).toContain("CRAP threshold exceeded");
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain("Coverage will be N/A");
+  });
 });

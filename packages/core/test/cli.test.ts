@@ -86,4 +86,23 @@ end_of_record
     expect(stdout.toString()).toContain("No TypeScript files to analyze.");
     expect(stderr.toString()).toBe("");
   });
+
+  it("prints a clear message when selected files contain no analyzable functions", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/types.ts": "export interface Foo { value: number; }\n",
+      "coverage/lcov.info": ""
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli([], projectRoot, stdout, stderr);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toContain("No analyzable functions found.");
+    expect(stdout.toString()).not.toContain("Function  CC  Coverage  CRAP  Location");
+    expect(stderr.toString()).toBe("");
+  });
 });

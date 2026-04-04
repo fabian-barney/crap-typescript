@@ -53,6 +53,7 @@ export interface AnalyzeProjectOptions {
   packageManager?: PackageManagerSelection;
   testRunner?: TestRunnerSelection;
   coverageMode?: CoverageMode;
+  coverageReportPath?: string;
   stdout?: Writer;
   stderr?: Writer;
   executor?: CommandExecutor;
@@ -66,4 +67,3 @@ export interface AnalysisResult {
   coverageCommands: CoverageCommand[];
   warnings: string[];
 }
-

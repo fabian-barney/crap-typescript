@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { CRAP_THRESHOLD, NO_FILES_MESSAGE } from "./constants";
+import { CRAP_THRESHOLD, NO_ANALYZABLE_FUNCTIONS_MESSAGE, NO_FILES_MESSAGE } from "./constants";
 import { analyzeProject } from "./analyzeProject";
 import { formatReport } from "./report";
 import { formatNumber, writeLine } from "./utils";
@@ -156,6 +156,10 @@ export async function runCli(
 
   if (result.selectedFiles.length === 0) {
     writeLine(stdout, NO_FILES_MESSAGE);
+    return 0;
+  }
+  if (result.metrics.length === 0) {
+    writeLine(stdout, NO_ANALYZABLE_FUNCTIONS_MESSAGE);
     return 0;
   }
 

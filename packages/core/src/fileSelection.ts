@@ -23,11 +23,7 @@ export async function expandExplicitPaths(
     const resolvedPath = path.resolve(projectRoot, value);
     const fileStats = await stat(resolvedPath);
     if (fileStats.isDirectory()) {
-      await walkForSourceRoots(resolvedPath, async (sourceRoot) => {
-        await walkSourceTree(sourceRoot, async (filePath) => {
-          files.add(path.resolve(filePath));
-        });
-      });
+      await expandDirectoryPath(resolvedPath, files);
       continue;
     }
     if (isAnalyzableFile(resolvedPath)) {
@@ -38,24 +34,32 @@ export async function expandExplicitPaths(
 }
 
 export async function changedTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
-  const result = await runCommand("git", ["status", "--porcelain"], projectRoot);
+  const result = await runCommand("git", ["status", "--porcelain", "-z"], projectRoot);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr.trim() || "git status --porcelain failed");
   }
 
   const files = new Set<string>();
-  for (const line of result.stdout.split(/\r?\n/)) {
-    if (!line) {
+  const entries = result.stdout.split("\0");
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    if (!entry) {
       continue;
     }
-    const status = line.slice(0, 2);
-    const pathValue = extractStatusPath(line.slice(3));
+    const status = entry.slice(0, 2);
+    const pathValue = entry.slice(3);
     if (!isIncludedGitStatus(status)) {
+      if (isRenameOrCopyStatus(status)) {
+        index += 1;
+      }
       continue;
     }
     const resolvedPath = path.resolve(projectRoot, pathValue);
     if (isAnalyzableFile(resolvedPath) && isUnderSourceTree(projectRoot, resolvedPath)) {
       files.add(resolvedPath);
+    }
+    if (isRenameOrCopyStatus(status)) {
+      index += 1;
     }
   }
   return Array.from(files).sort();
@@ -94,12 +98,8 @@ function isIncludedGitStatus(status: string): boolean {
   return !status.includes("D") && /[AMRCU]/.test(status);
 }
 
-function extractStatusPath(value: string): string {
-  const renameSeparator = " -> ";
-  if (value.includes(renameSeparator)) {
-    return value.split(renameSeparator).at(-1) ?? value;
-  }
-  return value;
+function isRenameOrCopyStatus(status: string): boolean {
+  return status.includes("R") || status.includes("C");
 }
 
 async function walkForSourceRoots(
@@ -141,4 +141,19 @@ async function walkSourceTree(
       await onFile(absolutePath);
     }
   }
+}
+
+async function expandDirectoryPath(directoryPath: string, files: Set<string>): Promise<void> {
+  if (path.basename(directoryPath).toLowerCase() === "src") {
+    await walkSourceTree(directoryPath, async (filePath) => {
+      files.add(path.resolve(filePath));
+    });
+    return;
+  }
+
+  await walkForSourceRoots(directoryPath, async (sourceRoot) => {
+    await walkSourceTree(sourceRoot, async (filePath) => {
+      files.add(path.resolve(filePath));
+    });
+  });
 }

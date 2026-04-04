@@ -52,6 +52,21 @@ describe("file selection", () => {
     ]);
   });
 
+  it("expands a directory argument that is itself a src root", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/app.ts": "export const app = 1;",
+      "src/types.d.ts": "export interface Types {}"
+    });
+
+    const files = await expandExplicitPaths(tempDir, ["src"]);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/app.ts"
+    ]);
+  });
+
   it("finds changed TypeScript files under src trees from git status", async () => {
     const tempDir = await createTempDir("crap-files-");
     tempDirs.push(tempDir);
@@ -74,5 +89,23 @@ describe("file selection", () => {
       "src/new-file.ts"
     ]);
   });
-});
 
+  it("parses quoted git porcelain paths when changed files contain spaces", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await initGitRepository(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/hello world.ts": "export const app = 1;\n"
+    });
+    await runProcess("git", ["add", "."], tempDir);
+    await runProcess("git", ["commit", "-m", "initial"], tempDir);
+
+    await writeFile(path.join(tempDir, "src", "hello world.ts"), "export const app = 2;\n", "utf8");
+
+    const files = await changedTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/hello world.ts"
+    ]);
+  });
+});

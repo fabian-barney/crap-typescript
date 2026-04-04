@@ -7,6 +7,7 @@ export interface CrapTypescriptJestOptions {
   changedOnly?: boolean;
   paths?: string[];
   packageManager?: PackageManagerSelection;
+  coverageReportPath?: string;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -25,7 +26,13 @@ export function withCrapTypescriptJest(
   const reporters = ensureDefaultReporter(
     asArray<JestReporterEntry>(config.reporters as JestReporterEntry[] | undefined)
   );
-  reporters.push([require.resolve("./reporter"), options]);
+  reporters.push([
+    require.resolve("./reporter"),
+    {
+      ...options,
+      coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(config.coverageDirectory as string | undefined)
+    }
+  ]);
 
   return {
     ...config,
@@ -65,3 +72,7 @@ function ensureDefaultReporter(existing: JestReporterEntry[]): JestReporterEntry
 
 export { CrapTypescriptJestReporter };
 export default CrapTypescriptJestReporter;
+
+function buildCoverageReportPath(coverageDirectory: string | undefined): string {
+  return `${coverageDirectory ?? "coverage"}/lcov.info`;
+}
