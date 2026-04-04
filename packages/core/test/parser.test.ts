@@ -114,4 +114,32 @@ const arrow = (items: number[]) => {
 
     expect(await parseFileMethods(filePath)).toEqual([]);
   });
+
+  it("includes anonymous default-exported function declarations", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "defaultExport.ts");
+    await writeFile(
+      filePath,
+      `export default function () {
+  if (true) {
+    return 1;
+  }
+  return 0;
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toEqual([
+      {
+        functionName: "default",
+        containerName: null,
+        displayName: "default",
+        startLine: 1,
+        endLine: 6,
+        complexity: 2
+      }
+    ]);
+  });
 });

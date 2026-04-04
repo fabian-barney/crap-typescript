@@ -15,6 +15,7 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
   const coverageMode = options.coverageMode ?? "auto";
   const packageManager = options.packageManager ?? "auto";
   const testRunner = options.testRunner ?? "auto";
+  const coverageReportPath = options.coverageReportPath;
   const executor = options.executor ?? new DefaultCommandExecutor();
 
   const selectedFiles = await selectFiles(projectRoot, options.explicitPaths ?? [], options.changedOnly ?? false);
@@ -48,6 +49,7 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
       packageManager,
       testRunner,
       coverageMode,
+      coverageReportPath,
       executor
     );
     if (coverageResult.command) {
@@ -58,7 +60,7 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
     if (coverageResult.coverageSourcePath && coverageResult.coverageSourceRoot) {
       lineCoverage = await parseLcov(coverageResult.coverageSourcePath, coverageResult.coverageSourceRoot);
     } else {
-      const warning = `Warning: LCOV report not found at ${expectedCoveragePath(moduleRoot)}. Coverage will be N/A.`;
+      const warning = `Warning: LCOV report not found at ${expectedCoveragePath(moduleRoot, coverageReportPath)}. Coverage will be N/A.`;
       warnings.push(warning);
       writeLine(options.stderr, warning);
     }

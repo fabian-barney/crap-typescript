@@ -24,10 +24,14 @@ export async function parseFileMethods(filePath: string): Promise<MethodDescript
 
 function toMethodDescriptor(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
   if (ts.isFunctionDeclaration(node)) {
-    if (!node.body || !node.name) {
+    if (!node.body) {
       return null;
     }
-    return buildMethodDescriptor(node.name.text, findContainerName(node), node, sourceFile);
+    const functionName = node.name?.text ?? inferFunctionDeclarationName(node);
+    if (!functionName) {
+      return null;
+    }
+    return buildMethodDescriptor(functionName, findContainerName(node), node, sourceFile);
   }
 
   if (ts.isMethodDeclaration(node)) {
@@ -45,6 +49,13 @@ function toMethodDescriptor(node: ts.Node, sourceFile: ts.SourceFile): MethodDes
     return buildMethodDescriptor(assignedName.name, assignedName.containerName, node, sourceFile);
   }
 
+  return null;
+}
+
+function inferFunctionDeclarationName(node: ts.FunctionDeclaration): string | null {
+  if (node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)) {
+    return "default";
+  }
   return null;
 }
 
@@ -198,4 +209,3 @@ function isNestedBoundary(node: ts.Node): boolean {
     ts.isClassDeclaration(node) ||
     ts.isClassExpression(node);
 }
-

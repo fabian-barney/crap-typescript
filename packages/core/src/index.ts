@@ -6,7 +6,7 @@ export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTyp
 export { coverageForLineRange, parseLcov } from "./lcov";
 export { parseFileMethods } from "./parser";
 export { formatReport, sortMetrics } from "./report";
-export { CRAP_THRESHOLD, COVERAGE_REPORT_RELATIVE_PATH, NO_FILES_MESSAGE } from "./constants";
+export { CRAP_THRESHOLD, COVERAGE_REPORT_RELATIVE_PATH, NO_FILES_MESSAGE, NO_ANALYZABLE_FUNCTIONS_MESSAGE } from "./constants";
 export type {
   AnalysisResult,
   AnalyzeProjectOptions,

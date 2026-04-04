@@ -22,6 +22,7 @@ export interface CrapTypescriptVitestOptions {
   changedOnly?: boolean;
   paths?: string[];
   packageManager?: PackageManagerSelection;
+  coverageReportPath?: string;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -39,6 +40,7 @@ export class CrapTypescriptVitestReporter {
       packageManager: this.options.packageManager ?? "auto",
       testRunner: "vitest",
       coverageMode: "existing-only",
+      coverageReportPath: this.options.coverageReportPath,
       stdout,
       stderr
     });
@@ -64,7 +66,11 @@ export function withCrapTypescriptVitest(
   const testConfig = config.test ?? {};
   const coverage = testConfig.coverage ?? {};
   const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "lcov", "text");
-  const reporters = [...asArray(testConfig.reporters), new CrapTypescriptVitestReporter(options)];
+  const reporters = ensureDefaultReporter(asArray(testConfig.reporters));
+  reporters.push(new CrapTypescriptVitestReporter({
+    ...options,
+    coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory)
+  }));
 
   return {
     ...config,
@@ -100,4 +106,18 @@ function ensureReporterEntries(
     }
   }
   return result;
+}
+
+function ensureDefaultReporter(existing: VitestReporterEntry[]): VitestReporterEntry[] {
+  if (existing.length === 0) {
+    return ["default"];
+  }
+  if (!existing.some((entry) => (Array.isArray(entry) ? entry[0] : entry) === "default")) {
+    return ["default", ...existing];
+  }
+  return existing;
+}
+
+function buildCoverageReportPath(reportsDirectory: string | undefined): string {
+  return `${reportsDirectory ?? "coverage"}/lcov.info`;
 }

@@ -15,6 +15,7 @@ export interface CrapTypescriptJestOptions {
   changedOnly?: boolean;
   paths?: string[];
   packageManager?: PackageManagerSelection;
+  coverageReportPath?: string;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -42,8 +43,9 @@ export default class CrapTypescriptJestReporter {
     const projectRoot = this.options.projectRoot ?? process.cwd();
     const stdout = this.options.stdout ?? process.stdout;
     const stderr = this.options.stderr ?? process.stderr;
+    const coverageReportPath = this.options.coverageReportPath ?? COVERAGE_REPORT_RELATIVE_PATH;
     try {
-      await waitForCoverageReport(projectRoot);
+      await waitForCoverageReport(projectRoot, coverageReportPath);
       const result = await analyzeProject({
         projectRoot,
         explicitPaths: this.options.paths ?? [],
@@ -51,6 +53,7 @@ export default class CrapTypescriptJestReporter {
         packageManager: this.options.packageManager ?? "auto",
         testRunner: "jest",
         coverageMode: "existing-only",
+        coverageReportPath,
         stdout,
         stderr
       });
@@ -80,8 +83,8 @@ export default class CrapTypescriptJestReporter {
   }
 }
 
-async function waitForCoverageReport(projectRoot: string): Promise<void> {
-  const coveragePath = path.join(projectRoot, COVERAGE_REPORT_RELATIVE_PATH);
+async function waitForCoverageReport(projectRoot: string, coverageReportPath: string): Promise<void> {
+  const coveragePath = resolveCoveragePath(projectRoot, coverageReportPath);
   for (let attempt = 0; attempt < 40; attempt += 1) {
     try {
       await access(coveragePath);
@@ -92,4 +95,10 @@ async function waitForCoverageReport(projectRoot: string): Promise<void> {
       });
     }
   }
+}
+
+function resolveCoveragePath(projectRoot: string, coverageReportPath: string): string {
+  return path.isAbsolute(coverageReportPath)
+    ? coverageReportPath
+    : path.join(projectRoot, coverageReportPath);
 }
