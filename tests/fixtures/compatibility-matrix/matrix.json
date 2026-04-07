@@ -54,6 +54,77 @@
       ]
     },
     {
+      "name": "accessors",
+      "fixture": "compatibility-matrix/accessors",
+      "expectedMetrics": [
+        {
+          "name": "Example.get value",
+          "coverage": 50
+        },
+        {
+          "name": "Example.set value",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "computed property names",
+      "fixture": "compatibility-matrix/computed-property-names",
+      "expectedMetrics": [
+        {
+          "name": "Example[renderKey]",
+          "coverage": 50
+        },
+        {
+          "name": "helper[formatKey]",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "decorated methods",
+      "fixture": "compatibility-matrix/decorated-methods",
+      "expectedMetrics": [
+        {
+          "name": "Example.value",
+          "coverage": 50
+        }
+      ]
+    },
+    {
+      "name": "additional property-assigned functions",
+      "fixture": "compatibility-matrix/property-assigned-functions",
+      "expectedMetrics": [
+        {
+          "name": "Example.handler",
+          "coverage": 50
+        },
+        {
+          "name": "registry.trim",
+          "coverage": 100
+        },
+        {
+          "name": "registry[\"upper\"]",
+          "coverage": 50
+        }
+      ]
+    },
+    {
+      "name": "TSX-adjacent generic arrows",
+      "fixture": "compatibility-matrix/tsx-generic-arrows",
+      "expectedMetrics": [
+        {
+          "name": "RenderValue",
+          "coverage": 50
+        }
+      ]
+    },
+    {
+      "name": "ambient and namespace-only declaration containers",
+      "fixture": "compatibility-matrix/ambient-and-namespace-only",
+      "expectedMetrics": []
+    },
+    {
       "name": "nested functions",
       "fixture": "compatibility-matrix/nested-functions",
       "expectedMetrics": [

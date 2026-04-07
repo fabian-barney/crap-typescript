@@ -35,10 +35,17 @@ function toMethodDescriptor(node: ts.Node, sourceFile: ts.SourceFile): MethodDes
   }
 
   if (ts.isMethodDeclaration(node)) {
-    if (!node.body || ts.isConstructorDeclaration(node)) {
+    if (!node.body) {
       return null;
     }
     return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, sourceFile);
+  }
+
+  if (ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) {
+    if (!node.body) {
+      return null;
+    }
+    return buildMethodDescriptor(accessorName(node), findContainerName(node), node, sourceFile);
   }
 
   if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
@@ -62,7 +69,7 @@ function inferFunctionDeclarationName(node: ts.FunctionDeclaration): string | nu
 function buildMethodDescriptor(
   functionName: string,
   containerName: string | null,
-  node: ts.FunctionLikeDeclarationBase,
+  node: ts.FunctionLikeDeclaration,
   sourceFile: ts.SourceFile
 ): MethodDescriptor {
   const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
@@ -71,7 +78,7 @@ function buildMethodDescriptor(
   return {
     functionName,
     containerName,
-    displayName: containerName ? `${containerName}.${functionName}` : functionName,
+    displayName: toDisplayName(containerName, functionName),
     startLine,
     endLine,
     complexity: countCyclomaticComplexity(node),
@@ -104,10 +111,7 @@ function findAssignedFunctionName(
     };
   }
   if (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === node) {
-    return {
-      name: assignmentName(parent.left),
-      containerName: null
-    };
+    return assignmentTarget(parent.left);
   }
   return null;
 }
@@ -141,19 +145,48 @@ function inferObjectContainerName(node: ts.ObjectLiteralExpression): string | nu
     return propertyName(parent.name);
   }
   if (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-    return assignmentName(parent.left);
+    const target = assignmentTarget(parent.left);
+    return toDisplayName(target.containerName, target.name);
   }
   return null;
 }
 
-function assignmentName(node: ts.Node): string {
+function assignmentTarget(node: ts.Expression): { name: string; containerName: string | null } {
   if (ts.isIdentifier(node)) {
-    return node.text;
+    return {
+      name: node.text,
+      containerName: null
+    };
   }
-  if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
-    return node.getText();
+  if (ts.isPropertyAccessExpression(node)) {
+    return {
+      name: node.name.text,
+      containerName: node.expression.getText()
+    };
   }
-  return "<assigned>";
+  if (ts.isElementAccessExpression(node)) {
+    return {
+      name: `[${node.argumentExpression?.getText() ?? ""}]`,
+      containerName: node.expression.getText()
+    };
+  }
+  return {
+    name: "<assigned>",
+    containerName: null
+  };
+}
+
+function accessorName(node: ts.GetAccessorDeclaration | ts.SetAccessorDeclaration): string {
+  return `${ts.isGetAccessorDeclaration(node) ? "get" : "set"} ${propertyName(node.name)}`;
+}
+
+function toDisplayName(containerName: string | null, functionName: string): string {
+  if (!containerName) {
+    return functionName;
+  }
+  return functionName.startsWith("[")
+    ? `${containerName}${functionName}`
+    : `${containerName}.${functionName}`;
 }
 
 function propertyName(name: ts.PropertyName): string {
@@ -163,7 +196,7 @@ function propertyName(name: ts.PropertyName): string {
   return name.getText();
 }
 
-function countCyclomaticComplexity(node: ts.FunctionLikeDeclarationBase): number {
+function countCyclomaticComplexity(node: ts.FunctionLikeDeclaration): number {
   let complexity = 1;
 
   const visit = (current: ts.Node): void => {
@@ -263,6 +296,8 @@ function isNestedBoundary(node: ts.Node): boolean {
     ts.isFunctionExpression(node) ||
     ts.isArrowFunction(node) ||
     ts.isMethodDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node) ||
     ts.isClassDeclaration(node) ||
     ts.isClassExpression(node);
 }
