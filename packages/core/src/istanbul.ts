@@ -144,10 +144,11 @@ function matchFunctionCoverage(
   }
 
   const lineAlignedMatches = functions.filter((entry) => spansShareBoundaryLines(entry.span, methodSpan));
-  if (lineAlignedMatches.length === 1) {
-    return lineAlignedMatches[0];
+  const overlappingLineAlignedMatches = lineAlignedMatches.filter((entry) => spansOverlap(entry.span, methodSpan));
+  if (overlappingLineAlignedMatches.length === 1) {
+    return overlappingLineAlignedMatches[0];
   }
-  if (lineAlignedMatches.length > 1) {
+  if (overlappingLineAlignedMatches.length > 1) {
     return null;
   }
 
@@ -293,6 +294,9 @@ function findOwningMethodIndex(methods: AttributableMethod[], span: SourceSpan):
 
   for (let index = 0; index < methods.length; index += 1) {
     const method = methods[index];
+    if (method.fnMapConflict) {
+      continue;
+    }
     if (!spanContains(method.span, span) && !spanContainsPosition(method.span, span.startLine, span.startColumn)) {
       continue;
     }
@@ -340,6 +344,11 @@ function spansEqual(left: SourceSpan, right: SourceSpan): boolean {
 function spansShareBoundaryLines(left: SourceSpan, right: SourceSpan): boolean {
   return left.startLine === right.startLine &&
     left.endLine === right.endLine;
+}
+
+function spansOverlap(left: SourceSpan, right: SourceSpan): boolean {
+  return comparePosition(left.startLine, left.startColumn, right.endLine, right.endColumn) < 0 &&
+    comparePosition(right.startLine, right.startColumn, left.endLine, left.endColumn) < 0;
 }
 
 function parseStatements(statementMapValue: unknown, hitsValue: unknown): StatementCoverageUnit[] {

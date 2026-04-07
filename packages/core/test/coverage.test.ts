@@ -438,6 +438,35 @@ export function enumDeclOnly(): void {
       }
     ]);
   });
+
+  it("rejects line-aligned fnMap matches when the columns do not overlap", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export const trim = (value: string) => value.trim();
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 1, startColumn: 39, endLine: 1, endColumn: 51 }, hits: 1 }
+        ],
+        branches: [],
+        functions: [
+          { span: { startLine: 1, startColumn: 0, endLine: 1, endColumn: 10 } }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "fnmap_conflict" },
+        statement: { percent: null, status: "unknown", reason: "fnmap_conflict" },
+        branch: { percent: null, status: "structural_na", reason: null }
+      }
+    ]);
+  });
 });
 
 function summarizeMethodCoverage(coverage: {
