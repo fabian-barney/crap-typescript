@@ -203,6 +203,47 @@ export const trim = (value: string) => value.trim();
     ]);
   });
 
+  it("preserves structural component statuses when file coverage is unavailable", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function empty(): void {}
+
+export function typeOnly(): void {
+  type Local = { value: string };
+  interface Shape { value: string }
+}
+
+export function branchy(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(coverageForMethods(methods, undefined, "missing_report").map(summarizeMethodCoverage)).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "missing_report" },
+        statement: { percent: null, status: "structural_na", reason: null },
+        branch: { percent: null, status: "structural_na", reason: null }
+      },
+      {
+        coverage: { percent: null, status: "unknown", reason: "missing_report" },
+        statement: { percent: null, status: "structural_na", reason: null },
+        branch: { percent: null, status: "structural_na", reason: null }
+      },
+      {
+        coverage: { percent: null, status: "unknown", reason: "missing_report" },
+        statement: { percent: null, status: "unknown", reason: "missing_report" },
+        branch: { percent: null, status: "unknown", reason: "missing_report" }
+      }
+    ]);
+  });
+
   it("keeps coverage unknown when a body is not provably structural N/A even if no statements were attributed", async () => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);

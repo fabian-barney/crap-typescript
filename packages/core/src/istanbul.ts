@@ -69,7 +69,7 @@ export function coverageForMethods(
   fileUnknownReason: CoverageUnknownReason = "file_unmatched"
 ): MethodCoverage[] {
   if (!fileCoverage) {
-    return methods.map(() => unknownMethodCoverage(fileUnknownReason));
+    return methods.map((method) => unavailableMethodCoverage(method, fileUnknownReason));
   }
 
   const attributed = methods.map(() => ({
@@ -108,6 +108,18 @@ function computeMethodCoverage(
     coverage: combineCoverageMetrics(statementCoverage, branchCoverage),
     statementCoverage,
     branchCoverage
+  };
+}
+
+function unavailableMethodCoverage(method: MethodDescriptor, reason: CoverageUnknownReason): MethodCoverage {
+  return {
+    coverage: unknownCoverageMetric(reason),
+    statementCoverage: method.expectsStatementCoverage
+      ? unknownCoverageMetric(reason)
+      : structuralNaCoverageMetric(),
+    branchCoverage: method.expectsBranchCoverage
+      ? unknownCoverageMetric(reason)
+      : structuralNaCoverageMetric()
   };
 }
 
