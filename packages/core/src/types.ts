@@ -4,12 +4,25 @@ export type PackageManagerSelection = PackageManager | "auto";
 export type TestRunner = "vitest" | "jest";
 export type TestRunnerSelection = TestRunner | "auto";
 export type CoverageMode = "auto" | "existing-only";
+export type CoverageStatus = "measured" | "structural_na" | "unknown";
+export type CoverageUnknownReason =
+  | "missing_report"
+  | "unparseable_report"
+  | "file_unmatched"
+  | "statement_unattributed"
+  | "branch_unattributed";
 
 export interface SourceSpan {
   startLine: number;
   startColumn: number;
   endLine: number;
   endColumn: number;
+}
+
+export interface CoverageMetric {
+  percent: number | null;
+  status: CoverageStatus;
+  unknownReason: CoverageUnknownReason | null;
 }
 
 export interface Writer {
@@ -40,6 +53,9 @@ export interface MethodMetrics extends MethodDescriptor {
   relativePath: string;
   location: string;
   moduleRoot: string;
+  coverage: CoverageMetric;
+  statementCoverage: CoverageMetric;
+  branchCoverage: CoverageMetric;
   coveragePercent: number | null;
   crapScore: number | null;
 }
