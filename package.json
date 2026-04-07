@@ -2,7 +2,9 @@
   "name": "crap-typescript-parent",
   "private": true,
   "version": "0.1.0",
-  "description": "Shared CRAP metric tooling for TypeScript projects.",
+  "description": "CRAP metrics for TypeScript",
+  "license": "Apache-2.0",
+  "author": "Fabian Barney (https://github.com/fabian-barney)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fabian-barney/crap-typescript.git"
@@ -10,6 +12,9 @@
   "homepage": "https://github.com/fabian-barney/crap-typescript",
   "bugs": {
     "url": "https://github.com/fabian-barney/crap-typescript/issues"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "packageManager": "npm@11.6.2",
   "workspaces": [

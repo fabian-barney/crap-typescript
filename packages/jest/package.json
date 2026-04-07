@@ -2,16 +2,36 @@
   "name": "crap-typescript-jest",
   "version": "0.1.0",
   "description": "Jest integration for crap-typescript.",
+  "license": "Apache-2.0",
+  "author": "Fabian Barney (https://github.com/fabian-barney)",
+  "keywords": [
+    "crap",
+    "crap-score",
+    "cyclomatic-complexity",
+    "code-coverage",
+    "code-quality",
+    "typescript",
+    "jest"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fabian-barney/crap-typescript.git"
   },
   "homepage": "https://github.com/fabian-barney/crap-typescript",
+  "bugs": {
+    "url": "https://github.com/fabian-barney/crap-typescript/issues"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./reporter": "./dist/reporter.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./reporter": {
+      "types": "./dist/reporter.d.ts",
+      "default": "./dist/reporter.js"
+    }
   },
   "files": [
     "dist"
@@ -20,6 +40,9 @@
     "access": "public"
   },
   "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "crap-typescript-core": "^0.1.0"
   },
