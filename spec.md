@@ -168,8 +168,8 @@ Where:
 
 Structural non-applicability means the metric has no meaningful denominator for the function, for example:
 
-- no attributable statements inside the function for statement coverage
-- no measurable branches inside the function for branch coverage
+- statement coverage is structurally not applicable only for empty bodies or bodies proven to contain only non-executable type-only declarations local to that function
+- branch coverage is structurally not applicable only when no attributable branch syntax exists in the function's own body after excluding nested function and class bodies
 
 Unknown coverage is distinct from structural non-applicability.
 
@@ -178,6 +178,7 @@ Unknown coverage includes cases such as:
 - missing coverage report
 - analyzed file not present in the report
 - missing or unusable statement or branch attribution for a function that should have such coverage data
+- any zero-unit attribution where the analyzer cannot prove structural non-applicability
 
 If coverage is unknown for non-structural reasons:
 
