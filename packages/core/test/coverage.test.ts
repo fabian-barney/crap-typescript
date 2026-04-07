@@ -139,14 +139,22 @@ export const trim = (value: string) => value.trim();
     );
     const methodCoverage = coverageForMethods(methods, [...coverageReport.values()][0]);
 
-    expect(methodCoverage.map((coverage) => coverage && ({
-      coverage: Number(coverage.coveragePercent.toFixed(1)),
-      statement: coverage.statementCoveragePercent === null ? null : Number(coverage.statementCoveragePercent.toFixed(1)),
-      branch: coverage.branchCoveragePercent === null ? null : Number(coverage.branchCoveragePercent.toFixed(1))
-    }))).toEqual([
-      { coverage: 100.0, statement: 100.0, branch: null },
-      { coverage: 50.0, statement: 50.0, branch: 100.0 },
-      { coverage: 100.0, statement: 100.0, branch: null }
+    expect(methodCoverage.map(summarizeMethodCoverage)).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: null, status: "structural_na", reason: null }
+      },
+      {
+        coverage: { percent: 50.0, status: "measured", reason: null },
+        statement: { percent: 50.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      },
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: null, status: "structural_na", reason: null }
+      }
     ]);
   });
 
@@ -176,10 +184,63 @@ export const trim = (value: string) => value.trim();
       branches: []
     });
 
-    expect(methodCoverage).toEqual([
-      null,
-      null,
-      null
+    expect(methodCoverage.map(summarizeMethodCoverage)).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        branch: { percent: null, status: "structural_na", reason: null }
+      },
+      {
+        coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        branch: { percent: null, status: "unknown", reason: "branch_unattributed" }
+      },
+      {
+        coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        branch: { percent: null, status: "structural_na", reason: null }
+      }
+    ]);
+  });
+
+  it("preserves structural component statuses when file coverage is unavailable", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function empty(): void {}
+
+export function typeOnly(): void {
+  type Local = { value: string };
+  interface Shape { value: string }
+}
+
+export function branchy(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(coverageForMethods(methods, undefined, "missing_report").map(summarizeMethodCoverage)).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "missing_report" },
+        statement: { percent: null, status: "structural_na", reason: null },
+        branch: { percent: null, status: "structural_na", reason: null }
+      },
+      {
+        coverage: { percent: null, status: "unknown", reason: "missing_report" },
+        statement: { percent: null, status: "structural_na", reason: null },
+        branch: { percent: null, status: "structural_na", reason: null }
+      },
+      {
+        coverage: { percent: null, status: "unknown", reason: "missing_report" },
+        statement: { percent: null, status: "unknown", reason: "missing_report" },
+        branch: { percent: null, status: "unknown", reason: "missing_report" }
+      }
     ]);
   });
 
@@ -216,19 +277,31 @@ export function enumDeclOnly(): void {
     });
     const byName = new Map(methods.map((method, index) => [method.displayName, methodCoverage[index]]));
 
-    expect(byName.get("empty")).toEqual({
-      coveragePercent: 100,
-      statementCoveragePercent: null,
-      branchCoveragePercent: null
+    expect(summarizeMethodCoverage(byName.get("empty")!)).toEqual({
+      coverage: { percent: 100.0, status: "structural_na", reason: null },
+      statement: { percent: null, status: "structural_na", reason: null },
+      branch: { percent: null, status: "structural_na", reason: null }
     });
-    expect(byName.get("typeOnly")).toEqual({
-      coveragePercent: 100,
-      statementCoveragePercent: null,
-      branchCoveragePercent: null
+    expect(summarizeMethodCoverage(byName.get("typeOnly")!)).toEqual({
+      coverage: { percent: 100.0, status: "structural_na", reason: null },
+      statement: { percent: null, status: "structural_na", reason: null },
+      branch: { percent: null, status: "structural_na", reason: null }
     });
-    expect(byName.get("functionDeclOnly")).toBeNull();
-    expect(byName.get("classDeclOnly")).toBeNull();
-    expect(byName.get("enumDeclOnly")).toBeNull();
+    expect(summarizeMethodCoverage(byName.get("functionDeclOnly")!)).toEqual({
+      coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+      statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+      branch: { percent: null, status: "structural_na", reason: null }
+    });
+    expect(summarizeMethodCoverage(byName.get("classDeclOnly")!)).toEqual({
+      coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+      statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+      branch: { percent: null, status: "structural_na", reason: null }
+    });
+    expect(summarizeMethodCoverage(byName.get("enumDeclOnly")!)).toEqual({
+      coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+      statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+      branch: { percent: null, status: "structural_na", reason: null }
+    });
   });
 
   it("keeps coverage unknown when branch syntax exists but no branch counters can be attributed", async () => {
@@ -274,6 +347,40 @@ export function enumDeclOnly(): void {
       projectRoot
     );
 
-    expect(coverageForMethods(methods, [...coverageReport.values()][0])).toEqual([null]);
+    expect(coverageForMethods(methods, [...coverageReport.values()][0]).map(summarizeMethodCoverage)).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "branch_unattributed" },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: null, status: "unknown", reason: "branch_unattributed" }
+      }
+    ]);
   });
 });
+
+function summarizeMethodCoverage(coverage: {
+  coverage: { percent: number | null; status: string; unknownReason: string | null };
+  statementCoverage: { percent: number | null; status: string; unknownReason: string | null };
+  branchCoverage: { percent: number | null; status: string; unknownReason: string | null };
+}): {
+  coverage: { percent: number | null; status: string; reason: string | null };
+  statement: { percent: number | null; status: string; reason: string | null };
+  branch: { percent: number | null; status: string; reason: string | null };
+} {
+  return {
+    coverage: summarizeMetric(coverage.coverage),
+    statement: summarizeMetric(coverage.statementCoverage),
+    branch: summarizeMetric(coverage.branchCoverage)
+  };
+}
+
+function summarizeMetric(metric: {
+  percent: number | null;
+  status: string;
+  unknownReason: string | null;
+}): { percent: number | null; status: string; reason: string | null } {
+  return {
+    percent: metric.percent === null ? null : Number(metric.percent.toFixed(1)),
+    status: metric.status,
+    reason: metric.unknownReason
+  };
+}

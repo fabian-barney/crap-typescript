@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { normalizePathForMatch } from "./utils";
-import type { MethodDescriptor, SourceSpan } from "./types";
+import type { CoverageMetric, CoverageUnknownReason, MethodDescriptor, SourceSpan } from "./types";
 
 const MAX_COLUMN = Number.MAX_SAFE_INTEGER;
 
@@ -22,9 +22,9 @@ export interface FileCoverage {
 }
 
 export interface MethodCoverage {
-  coveragePercent: number;
-  statementCoveragePercent: number | null;
-  branchCoveragePercent: number | null;
+  coverage: CoverageMetric;
+  statementCoverage: CoverageMetric;
+  branchCoverage: CoverageMetric;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -65,10 +65,11 @@ export async function parseCoverageReport(
 
 export function coverageForMethods(
   methods: MethodDescriptor[],
-  fileCoverage: FileCoverage | undefined
-): Array<MethodCoverage | null> {
+  fileCoverage: FileCoverage | undefined,
+  fileUnknownReason: CoverageUnknownReason = "file_unmatched"
+): MethodCoverage[] {
   if (!fileCoverage) {
-    return methods.map(() => null);
+    return methods.map((method) => unavailableMethodCoverage(method, fileUnknownReason));
   }
 
   const attributed = methods.map(() => ({
@@ -99,21 +100,101 @@ function computeMethodCoverage(
   method: MethodDescriptor,
   statements: StatementCoverageUnit[],
   branches: BranchCoverageUnit[]
-): MethodCoverage | null {
-  const statementCoveragePercent = percentageOfCoveredStatements(statements);
-  if (statementCoveragePercent === null && method.expectsStatementCoverage) {
-    return null;
-  }
-
-  const branchCoveragePercent = percentageOfCoveredBranches(branches);
-  if (branchCoveragePercent === null && method.expectsBranchCoverage) {
-    return null;
-  }
+): MethodCoverage {
+  const statementCoverage = toStatementCoverageMetric(method, statements);
+  const branchCoverage = toBranchCoverageMetric(method, branches);
 
   return {
-    coveragePercent: Math.min(statementCoveragePercent ?? 100, branchCoveragePercent ?? 100),
-    statementCoveragePercent,
-    branchCoveragePercent
+    coverage: combineCoverageMetrics(statementCoverage, branchCoverage),
+    statementCoverage,
+    branchCoverage
+  };
+}
+
+function unavailableMethodCoverage(method: MethodDescriptor, reason: CoverageUnknownReason): MethodCoverage {
+  return {
+    coverage: unknownCoverageMetric(reason),
+    statementCoverage: method.expectsStatementCoverage
+      ? unknownCoverageMetric(reason)
+      : structuralNaCoverageMetric(),
+    branchCoverage: method.expectsBranchCoverage
+      ? unknownCoverageMetric(reason)
+      : structuralNaCoverageMetric()
+  };
+}
+
+function unknownMethodCoverage(reason: CoverageUnknownReason): MethodCoverage {
+  return {
+    coverage: unknownCoverageMetric(reason),
+    statementCoverage: unknownCoverageMetric(reason),
+    branchCoverage: unknownCoverageMetric(reason)
+  };
+}
+
+function toStatementCoverageMetric(
+  method: MethodDescriptor,
+  statements: StatementCoverageUnit[]
+): CoverageMetric {
+  const percent = percentageOfCoveredStatements(statements);
+  if (percent !== null) {
+    return measuredCoverageMetric(percent);
+  }
+  return method.expectsStatementCoverage
+    ? unknownCoverageMetric("statement_unattributed")
+    : structuralNaCoverageMetric();
+}
+
+function toBranchCoverageMetric(
+  method: MethodDescriptor,
+  branches: BranchCoverageUnit[]
+): CoverageMetric {
+  const percent = percentageOfCoveredBranches(branches);
+  if (percent !== null) {
+    return measuredCoverageMetric(percent);
+  }
+  return method.expectsBranchCoverage
+    ? unknownCoverageMetric("branch_unattributed")
+    : structuralNaCoverageMetric();
+}
+
+function combineCoverageMetrics(statementCoverage: CoverageMetric, branchCoverage: CoverageMetric): CoverageMetric {
+  if (statementCoverage.status === "unknown") {
+    return unknownCoverageMetric(statementCoverage.unknownReason!);
+  }
+  if (branchCoverage.status === "unknown") {
+    return unknownCoverageMetric(branchCoverage.unknownReason!);
+  }
+  if (statementCoverage.status === "structural_na" && branchCoverage.status === "structural_na") {
+    return {
+      percent: 100,
+      status: "structural_na",
+      unknownReason: null
+    };
+  }
+  return measuredCoverageMetric(Math.min(statementCoverage.percent ?? 100, branchCoverage.percent ?? 100));
+}
+
+function measuredCoverageMetric(percent: number): CoverageMetric {
+  return {
+    percent,
+    status: "measured",
+    unknownReason: null
+  };
+}
+
+function structuralNaCoverageMetric(): CoverageMetric {
+  return {
+    percent: null,
+    status: "structural_na",
+    unknownReason: null
+  };
+}
+
+function unknownCoverageMetric(reason: CoverageUnknownReason): CoverageMetric {
+  return {
+    percent: null,
+    status: "unknown",
+    unknownReason: reason
   };
 }
 
