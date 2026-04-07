@@ -16,9 +16,14 @@ interface BranchCoverageUnit {
   hits: number[];
 }
 
+interface FunctionCoverageUnit {
+  span: SourceSpan;
+}
+
 export interface FileCoverage {
   statements: StatementCoverageUnit[];
   branches: BranchCoverageUnit[];
+  functions: FunctionCoverageUnit[];
 }
 
 export interface MethodCoverage {
@@ -51,12 +56,14 @@ export async function parseCoverageReport(
       ? sourcePath
       : path.resolve(sourceRoot, sourcePath);
     const normalized = normalizePathForMatch(resolved);
-    const merged = records.get(normalized) ?? { statements: [], branches: [] };
+    const merged = records.get(normalized) ?? { statements: [], branches: [], functions: [] };
     merged.statements.push(...parseStatements(entryValue.statementMap, entryValue.s));
     merged.branches.push(...parseBranches(entryValue.branchMap, entryValue.b));
+    merged.functions.push(...parseFunctions(entryValue.fnMap));
     records.set(normalized, {
       statements: deduplicateStatements(merged.statements),
-      branches: deduplicateBranches(merged.branches)
+      branches: deduplicateBranches(merged.branches),
+      functions: deduplicateFunctions(merged.functions)
     });
   }
 
@@ -72,28 +79,87 @@ export function coverageForMethods(
     return methods.map((method) => unavailableMethodCoverage(method, fileUnknownReason));
   }
 
+  const attributableMethods = buildAttributableMethods(methods, fileCoverage.functions);
   const attributed = methods.map(() => ({
     statements: [] as StatementCoverageUnit[],
     branches: [] as BranchCoverageUnit[]
   }));
 
   for (const statement of fileCoverage.statements) {
-    const owner = findOwningMethodIndex(methods, statement.span);
+    const owner = findOwningMethodIndex(attributableMethods, statement.span);
     if (owner !== null) {
       attributed[owner].statements.push(statement);
     }
   }
 
   for (const branch of fileCoverage.branches) {
-    const owner = findOwningMethodIndex(methods, branch.span);
+    const owner = findOwningMethodIndex(attributableMethods, branch.span);
     if (owner !== null) {
       attributed[owner].branches.push(branch);
     }
   }
 
   return methods.map((method, index) =>
-    computeMethodCoverage(method, attributed[index].statements, attributed[index].branches)
+    attributableMethods[index].fnMapConflict
+      ? unavailableMethodCoverage(method, "fnmap_conflict")
+      : computeMethodCoverage(method, attributed[index].statements, attributed[index].branches)
   );
+}
+
+interface AttributableMethod {
+  span: SourceSpan;
+  fnMapConflict: boolean;
+}
+
+function buildAttributableMethods(
+  methods: MethodDescriptor[],
+  functions: FunctionCoverageUnit[]
+): AttributableMethod[] {
+  if (functions.length === 0) {
+    return methods.map((method) => ({
+      span: method.bodySpan,
+      fnMapConflict: false
+    }));
+  }
+
+  return methods.map((method) => {
+    const matchedFunction = matchFunctionCoverage(method.bodySpan, functions);
+    return {
+      span: matchedFunction?.span ?? method.bodySpan,
+      fnMapConflict: matchedFunction === null
+    };
+  });
+}
+
+function matchFunctionCoverage(
+  methodSpan: SourceSpan,
+  functions: FunctionCoverageUnit[]
+): FunctionCoverageUnit | null {
+  const exactMatches = functions.filter((entry) => spansEqual(entry.span, methodSpan));
+  if (exactMatches.length === 1) {
+    return exactMatches[0];
+  }
+  if (exactMatches.length > 1) {
+    return null;
+  }
+
+  const lineAlignedMatches = functions.filter((entry) => spansShareBoundaryLines(entry.span, methodSpan));
+  const overlappingLineAlignedMatches = lineAlignedMatches.filter((entry) => spansOverlap(entry.span, methodSpan));
+  if (overlappingLineAlignedMatches.length === 1) {
+    return overlappingLineAlignedMatches[0];
+  }
+  if (overlappingLineAlignedMatches.length > 1) {
+    return null;
+  }
+
+  const containingMatches = functions.filter((entry) =>
+    spanContains(entry.span, methodSpan) || spanContains(methodSpan, entry.span)
+  );
+  if (containingMatches.length === 1) {
+    return containingMatches[0];
+  }
+
+  return null;
 }
 
 function computeMethodCoverage(
@@ -223,15 +289,18 @@ function percentageOfCoveredBranches(branches: BranchCoverageUnit[]): number | n
   return (coveredBranches / totalBranches) * 100;
 }
 
-function findOwningMethodIndex(methods: MethodDescriptor[], span: SourceSpan): number | null {
+function findOwningMethodIndex(methods: AttributableMethod[], span: SourceSpan): number | null {
   let bestMatch: number | null = null;
 
   for (let index = 0; index < methods.length; index += 1) {
     const method = methods[index];
-    if (!spanContains(method.bodySpan, span) && !spanContainsPosition(method.bodySpan, span.startLine, span.startColumn)) {
+    if (method.fnMapConflict) {
       continue;
     }
-    if (bestMatch === null || spanContains(methods[bestMatch].bodySpan, method.bodySpan)) {
+    if (!spanContains(method.span, span) && !spanContainsPosition(method.span, span.startLine, span.startColumn)) {
+      continue;
+    }
+    if (bestMatch === null || spanContains(methods[bestMatch].span, method.span)) {
       bestMatch = index;
     }
   }
@@ -263,6 +332,23 @@ function comparePosition(
     return leftLine - rightLine;
   }
   return leftColumn - rightColumn;
+}
+
+function spansEqual(left: SourceSpan, right: SourceSpan): boolean {
+  return left.startLine === right.startLine &&
+    left.startColumn === right.startColumn &&
+    left.endLine === right.endLine &&
+    left.endColumn === right.endColumn;
+}
+
+function spansShareBoundaryLines(left: SourceSpan, right: SourceSpan): boolean {
+  return left.startLine === right.startLine &&
+    left.endLine === right.endLine;
+}
+
+function spansOverlap(left: SourceSpan, right: SourceSpan): boolean {
+  return comparePosition(left.startLine, left.startColumn, right.endLine, right.endColumn) < 0 &&
+    comparePosition(right.startLine, right.startColumn, left.endLine, left.endColumn) < 0;
 }
 
 function parseStatements(statementMapValue: unknown, hitsValue: unknown): StatementCoverageUnit[] {
@@ -306,6 +392,28 @@ function parseBranches(branchMapValue: unknown, hitsValue: unknown): BranchCover
   }
 
   return deduplicateBranches(branches);
+}
+
+function parseFunctions(fnMapValue: unknown): FunctionCoverageUnit[] {
+  if (!isRecord(fnMapValue)) {
+    return [];
+  }
+
+  const functions: FunctionCoverageUnit[] = [];
+  for (const entryValue of Object.values(fnMapValue)) {
+    if (!isRecord(entryValue)) {
+      continue;
+    }
+
+    const span = parseSpan(entryValue.loc) ??
+      parseSpan(entryValue.decl) ??
+      parseLineSpan(entryValue.line);
+    if (span) {
+      functions.push({ span });
+    }
+  }
+
+  return deduplicateFunctions(functions);
 }
 
 function parseFirstLocation(value: unknown): SourceSpan | null {
@@ -422,6 +530,15 @@ function deduplicateBranches(branches: BranchCoverageUnit[]): BranchCoverageUnit
       span: branch.span,
       hits: mergedHits
     });
+  }
+  return [...deduplicated.values()];
+}
+
+function deduplicateFunctions(functions: FunctionCoverageUnit[]): FunctionCoverageUnit[] {
+  const deduplicated = new Map<string, FunctionCoverageUnit>();
+  for (const entry of functions) {
+    const key = stringifySpan(entry.span);
+    deduplicated.set(key, entry);
   }
   return [...deduplicated.values()];
 }

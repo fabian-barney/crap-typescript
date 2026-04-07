@@ -89,6 +89,11 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
       for (const [index, descriptor] of descriptors.entries()) {
         const coverage = methodCoverage[index];
         const coveragePercent = coverage.coverage.percent;
+        if (coverage.coverage.unknownReason === "fnmap_conflict") {
+          const warning = `Warning: Function coverage metadata in ${relativePath} could not be matched unambiguously for ${descriptor.displayName}. Coverage will be N/A.`;
+          warnings.push(warning);
+          writeLine(options.stderr, warning);
+        }
         metrics.push({
           ...descriptor,
           filePath,

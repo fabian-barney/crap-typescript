@@ -148,4 +148,94 @@ describe("analyzeProject", () => {
     expect(result.metrics[0]?.statementCoverage.unknownReason).toBe("file_unmatched");
     expect(result.metrics[0]?.branchCoverage.unknownReason).toBe("file_unmatched");
   });
+
+  it("warns and reports fnMap conflicts as unknown coverage", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    const warnings: string[] = [];
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function risky(flagA: boolean, flagB: boolean): number {
+  if (flagA && flagB) {
+    return 1;
+  }
+  return 0;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 3, column: 4 },
+              end: { line: 3, column: 13 }
+            },
+            "1": {
+              start: { line: 5, column: 2 },
+              end: { line: 5, column: 11 }
+            }
+          },
+          fnMap: {
+            "0": {
+              name: "risky",
+              line: 1,
+              loc: {
+                start: { line: 1, column: 0 },
+                end: { line: 6, column: 1 }
+              }
+            },
+            "1": {
+              name: "risky_alt",
+              line: 1,
+              loc: {
+                start: { line: 1, column: 1 },
+                end: { line: 6, column: 2 }
+              }
+            }
+          },
+          branchMap: {
+            "0": {
+              line: 2,
+              type: "if",
+              loc: {
+                start: { line: 2, column: 2 },
+                end: { line: 4, column: 3 }
+              },
+              locations: [
+                {
+                  start: { line: 2, column: 2 },
+                  end: { line: 4, column: 3 }
+                },
+                {}
+              ]
+            }
+          },
+          s: {
+            "0": 1,
+            "1": 1
+          },
+          f: {},
+          b: {
+            "0": [1, 1]
+          }
+        }
+      })
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      coverageMode: "existing-only",
+      stderr: {
+        write(chunk: string) {
+          warnings.push(chunk);
+        }
+      }
+    });
+
+    expect(result.warnings).toHaveLength(1);
+    expect(warnings.join("")).toContain("could not be matched unambiguously");
+    expect(result.metrics[0]?.coveragePercent).toBeNull();
+    expect(result.metrics[0]?.crapScore).toBeNull();
+    expect(result.metrics[0]?.coverage.unknownReason).toBe("fnmap_conflict");
+  });
 });
