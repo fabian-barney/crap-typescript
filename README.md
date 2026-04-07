@@ -17,7 +17,7 @@ It combines cyclomatic complexity with function-level coverage derived from Ista
 
 - `CC` is cyclomatic complexity.
 - `coverage` is defined separately as the minimum of the function's statement coverage and branch coverage.
-- Structural non-applicability is treated as `100%` for the affected component metric only.
+- Structural non-applicability is treated as `100%` for the affected component metric only when the analyzer can prove it.
 - Unknown coverage remains `N/A`, and CRAP remains `N/A` for that function.
 
 ## Coverage Pipeline

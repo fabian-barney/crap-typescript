@@ -217,7 +217,7 @@ function toSourceSpan(node: ts.Node, sourceFile: ts.SourceFile): SourceSpan {
 
 function hasAttributableStatements(body: ts.ConciseBody): boolean {
   return ts.isBlock(body)
-    ? body.statements.some((statement) => !isNonExecutableDeclarationStatement(statement))
+    ? body.statements.some((statement) => !isProvablyNonExecutableDeclarationStatement(statement))
     : true;
 }
 
@@ -267,11 +267,7 @@ function isNestedBoundary(node: ts.Node): boolean {
     ts.isClassExpression(node);
 }
 
-function isNonExecutableDeclarationStatement(statement: ts.Statement): boolean {
-  return ts.isFunctionDeclaration(statement) ||
-    ts.isClassDeclaration(statement) ||
-    ts.isInterfaceDeclaration(statement) ||
-    ts.isTypeAliasDeclaration(statement) ||
-    ts.isEnumDeclaration(statement) ||
-    ts.isModuleDeclaration(statement);
+function isProvablyNonExecutableDeclarationStatement(statement: ts.Statement): boolean {
+  return ts.isInterfaceDeclaration(statement) ||
+    ts.isTypeAliasDeclaration(statement);
 }

@@ -182,4 +182,98 @@ export const trim = (value: string) => value.trim();
       null
     ]);
   });
+
+  it("keeps coverage unknown when a body is not provably structural N/A even if no statements were attributed", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function empty(): void {}
+
+export function typeOnly(): void {
+  type Local = { value: string };
+  interface Shape { value: string }
+}
+
+export function functionDeclOnly(): void {
+  function inner() {}
+}
+
+export function classDeclOnly(): void {
+  class Local {}
+}
+
+export function enumDeclOnly(): void {
+  enum LocalEnum { A }
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    const methodCoverage = coverageForMethods(methods, {
+      statements: [],
+      branches: []
+    });
+    const byName = new Map(methods.map((method, index) => [method.displayName, methodCoverage[index]]));
+
+    expect(byName.get("empty")).toEqual({
+      coveragePercent: 100,
+      statementCoveragePercent: null,
+      branchCoveragePercent: null
+    });
+    expect(byName.get("typeOnly")).toEqual({
+      coveragePercent: 100,
+      statementCoveragePercent: null,
+      branchCoveragePercent: null
+    });
+    expect(byName.get("functionDeclOnly")).toBeNull();
+    expect(byName.get("classDeclOnly")).toBeNull();
+    expect(byName.get("enumDeclOnly")).toBeNull();
+  });
+
+  it("keeps coverage unknown when branch syntax exists but no branch counters can be attributed", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function branchy(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 3, column: 4 },
+              end: { line: 3, column: 13 }
+            },
+            "1": {
+              start: { line: 5, column: 2 },
+              end: { line: 5, column: 11 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1,
+            "1": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    const coverageReport = await parseCoverageReport(
+      path.join(projectRoot, "coverage", "coverage-final.json"),
+      projectRoot
+    );
+
+    expect(coverageForMethods(methods, [...coverageReport.values()][0])).toEqual([null]);
+  });
 });

@@ -206,4 +206,42 @@ export function declarationsOnly(): void {
       }
     ]);
   });
+
+  it("keeps statement coverage expected for runtime declarations and only treats empty or type-only bodies as structural N/A", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "declarations.ts");
+    await writeFile(
+      filePath,
+      `export function empty(): void {}
+
+export function typeOnly(): void {
+  type Local = { value: string };
+  interface Shape { value: string }
+}
+
+export function functionDeclOnly(): void {
+  function inner() {}
+}
+
+export function classDeclOnly(): void {
+  class Local {}
+}
+
+export function enumDeclOnly(): void {
+  enum LocalEnum { A }
+}
+`,
+      "utf8"
+    );
+
+    const methods = await parseFileMethods(filePath);
+    const byName = new Map(methods.map((method) => [method.displayName, method]));
+
+    expect(byName.get("empty")?.expectsStatementCoverage).toBe(false);
+    expect(byName.get("typeOnly")?.expectsStatementCoverage).toBe(false);
+    expect(byName.get("functionDeclOnly")?.expectsStatementCoverage).toBe(true);
+    expect(byName.get("classDeclOnly")?.expectsStatementCoverage).toBe(true);
+    expect(byName.get("enumDeclOnly")?.expectsStatementCoverage).toBe(true);
+  });
 });
