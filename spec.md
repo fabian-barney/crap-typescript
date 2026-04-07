@@ -121,15 +121,17 @@ The parser shall use the TypeScript compiler API.
 It shall include:
 
 - function declarations with bodies
-- class methods with bodies
-- object literal methods with bodies
-- function expressions and arrow functions assigned to variables or properties
+- class and object literal methods with bodies
+- getters and setters with bodies
+- decorated and computed-property method or accessor forms
+- function expressions and arrow functions assigned to variables, object properties, class fields, or property access and element access assignments
 
 It shall ignore:
 
 - constructors
 - overload signatures
 - abstract, ambient, and declaration-only members
+- ambient and namespace-only declaration containers that do not contain concrete function bodies
 - declaration files
 
 Cyclomatic complexity shall start at `1` and increment for:

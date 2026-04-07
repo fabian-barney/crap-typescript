@@ -1,0 +1,39 @@
+{
+  "src/Widget.tsx": {
+    "path": "src/Widget.tsx",
+    "statementMap": {
+      "0": {
+        "start": { "line": 2, "column": 2 },
+        "end": { "line": 2, "column": 61 }
+      }
+    },
+    "fnMap": {},
+    "branchMap": {
+      "0": {
+        "line": 2,
+        "type": "cond-expr",
+        "loc": {
+          "start": { "line": 2, "column": 2 },
+          "end": { "line": 2, "column": 61 }
+        },
+        "locations": [
+          {
+            "start": { "line": 2, "column": 10 },
+            "end": { "line": 2, "column": 37 }
+          },
+          {
+            "start": { "line": 2, "column": 40 },
+            "end": { "line": 2, "column": 61 }
+          }
+        ]
+      }
+    },
+    "s": {
+      "0": 1
+    },
+    "f": {},
+    "b": {
+      "0": [1, 0]
+    }
+  }
+}

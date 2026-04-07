@@ -244,4 +244,190 @@ export function enumDeclOnly(): void {
     expect(byName.get("classDeclOnly")?.expectsStatementCoverage).toBe(true);
     expect(byName.get("enumDeclOnly")?.expectsStatementCoverage).toBe(true);
   });
+
+  it("supports accessors, decorated methods, computed property names, and additional property-assigned forms", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "shapes.ts");
+    await writeFile(
+      filePath,
+      `const renderKey = "render";
+declare const logged: MethodDecorator;
+
+class Example {
+  get value(): number {
+    if (true) {
+      return 1;
+    }
+    return 0;
+  }
+
+  set value(flag: boolean) {
+    if (flag) {
+      return;
+    }
+  }
+
+  @logged
+  [renderKey](flag: boolean): number {
+    return flag ? 1 : 0;
+  }
+
+  handler = (flag: boolean): number => flag ? 1 : 0;
+}
+
+const helper = {
+  [renderKey](value: string): string {
+    return value.trim();
+  }
+};
+
+const registry: Record<string, (value: string) => string> = {};
+registry.trim = (value: string) => value.trim();
+registry["upper"] = function (value: string): string {
+  return value ? value.toUpperCase() : value;
+};
+`,
+      "utf8"
+    );
+
+    const methods = await parseFileMethods(filePath);
+    const byName = new Map(methods.map((method) => [method.displayName, method]));
+
+    expect(methods.map((method) => method.displayName)).toEqual([
+      "Example.get value",
+      "Example.set value",
+      "Example[renderKey]",
+      "Example.handler",
+      "helper[renderKey]",
+      "registry.trim",
+      "registry[\"upper\"]"
+    ]);
+    expect(byName.get("Example.get value")).toMatchObject({
+      functionName: "get value",
+      containerName: "Example",
+      complexity: 2,
+      expectsStatementCoverage: true,
+      expectsBranchCoverage: true
+    });
+    expect(byName.get("Example.set value")).toMatchObject({
+      functionName: "set value",
+      containerName: "Example",
+      complexity: 2,
+      expectsStatementCoverage: true,
+      expectsBranchCoverage: true
+    });
+    expect(byName.get("Example[renderKey]")).toMatchObject({
+      functionName: "[renderKey]",
+      containerName: "Example",
+      complexity: 2
+    });
+    expect(byName.get("Example.handler")).toMatchObject({
+      functionName: "handler",
+      containerName: "Example",
+      complexity: 2
+    });
+    expect(byName.get("helper[renderKey]")).toMatchObject({
+      functionName: "[renderKey]",
+      containerName: "helper",
+      complexity: 1
+    });
+    expect(byName.get("registry.trim")).toMatchObject({
+      functionName: "trim",
+      containerName: "registry",
+      complexity: 1
+    });
+    expect(byName.get("registry[\"upper\"]")).toMatchObject({
+      functionName: "[\"upper\"]",
+      containerName: "registry",
+      complexity: 2
+    });
+  });
+
+  it("parses TSX-adjacent generic arrow functions", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "component.tsx");
+    await writeFile(
+      filePath,
+      `export const RenderValue = <T,>({ value }: { value: T | null }) =>
+  value ? <span>{String(value)}</span> : <span>empty</span>;
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toMatchObject([
+      {
+        functionName: "RenderValue",
+        containerName: null,
+        displayName: "RenderValue",
+        complexity: 2,
+        expectsStatementCoverage: true,
+        expectsBranchCoverage: true
+      }
+    ]);
+  });
+
+  it("ignores ambient and namespace-only declaration containers", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "ambient.ts");
+    await writeFile(
+      filePath,
+      `declare namespace Contracts {
+  interface Shape {
+    value: string;
+  }
+
+  function build(): string;
+}
+
+declare module "pkg" {
+  export function load(): void;
+}
+
+namespace TypesOnly {
+  export interface Config {
+    enabled: boolean;
+  }
+
+  export type Alias = string;
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toEqual([]);
+  });
+
+  it("preserves private member names for methods and accessors", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "private-members.ts");
+    await writeFile(
+      filePath,
+      `class Example {
+  get #value(): number {
+    return 1;
+  }
+
+  #render(): number {
+    return 1;
+  }
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toMatchObject([
+      {
+        functionName: "get #value",
+        displayName: "Example.get #value"
+      },
+      {
+        functionName: "#render",
+        displayName: "Example.#render"
+      }
+    ]);
+  });
 });
