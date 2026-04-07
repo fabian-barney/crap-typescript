@@ -1,10 +1,12 @@
 import path from "node:path";
 
 import { CRAP_THRESHOLD } from "./constants";
+import { coverageForMethods } from "./coverageAttribution";
 import { ensureCoverageReport, expectedCoveragePath } from "./coverage";
+import type { FileCoverage } from "./coverageUnits";
 import { calculateCrapScore, maxCrap } from "./crapScore";
 import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection";
-import { coverageForMethods, parseCoverageReport } from "./istanbul";
+import { parseCoverageReport } from "./istanbul";
 import { resolveModuleRoot } from "./moduleResolution";
 import { parseFileMethods } from "./parser";
 import { DefaultCommandExecutor, normalizePathForMatch, toRelativePath, writeLine } from "./utils";
@@ -15,7 +17,6 @@ import type {
   CoverageUnknownReason,
   MethodMetrics
 } from "./types";
-import type { FileCoverage } from "./istanbul";
 
 export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promise<AnalysisResult> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
