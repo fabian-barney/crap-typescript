@@ -24,7 +24,8 @@ export async function disposeTempDir(tempDir: string): Promise<void> {
 }
 
 export async function copyFixture(name: string): Promise<string> {
-  const tempDir = await createTempDir(`crap-typescript-${name}-`);
+  const safeName = name.replace(/[\\/]/g, "-");
+  const tempDir = await createTempDir(`crap-typescript-${safeName}-`);
   const sourceDir = path.join(process.cwd(), "tests", "fixtures", name);
   await cp(sourceDir, tempDir, { recursive: true });
   return tempDir;
@@ -84,4 +85,3 @@ export function repoPath(...parts: string[]): string {
 export async function readText(filePath: string): Promise<string> {
   return readFile(filePath, "utf8");
 }
-

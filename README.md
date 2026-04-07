@@ -31,6 +31,10 @@ For each resolved module today:
 5. Read `coverage/coverage-final.json` from the module root, falling back to the project root for workspace coverage.
 6. Derive function statement and branch coverage from the Istanbul coverage counters and use their minimum as CRAP coverage.
 
+## Compatibility Matrix
+
+Verified and unverified coverage-attribution shapes are tracked in [docs/compatibility-matrix.md](docs/compatibility-matrix.md). The matrix is backed by golden fixtures under `tests/fixtures/compatibility-matrix/`.
+
 ## Build and Test
 
 ```bash

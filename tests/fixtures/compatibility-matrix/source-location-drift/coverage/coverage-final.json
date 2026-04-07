@@ -1,0 +1,35 @@
+{
+  "src/sample.ts": {
+    "path": "src/sample.ts",
+    "statementMap": {
+      "0": {
+        "start": { "line": 3, "column": 0 },
+        "end": { "line": 3, "column": 40 }
+      },
+      "1": {
+        "start": { "line": 5, "column": 0 },
+        "end": { "line": 5, "column": 40 }
+      }
+    },
+    "fnMap": {},
+    "branchMap": {
+      "0": {
+        "line": 2,
+        "type": "if",
+        "loc": {},
+        "locations": [
+          {},
+          {}
+        ]
+      }
+    },
+    "s": {
+      "0": 1,
+      "1": 1
+    },
+    "f": {},
+    "b": {
+      "0": [1, 1]
+    }
+  }
+}
