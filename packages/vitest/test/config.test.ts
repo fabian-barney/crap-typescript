@@ -11,8 +11,10 @@ describe("withCrapTypescriptVitest", () => {
     });
 
     const reporters = config.test?.reporters;
+    const coverageReporters = config.test?.coverage?.reporter;
     expect(Array.isArray(reporters)).toBe(true);
     expect(reporters?.[0]).toBe("default");
     expect(reporters?.[1]).toBeInstanceOf(CrapTypescriptVitestReporter);
+    expect(coverageReporters).toEqual(["json", "text"]);
   });
 });

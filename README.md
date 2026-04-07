@@ -2,13 +2,13 @@
 
 `crap-typescript` is a shared CRAP metric toolkit for TypeScript projects.
 
-It combines cyclomatic complexity with LCOV line coverage and reports CRAP scores for concrete TypeScript function bodies. The repository publishes a standalone CLI plus dedicated Vitest and Jest adapters.
+It combines cyclomatic complexity with function-level coverage derived from Istanbul statement and branch counters and reports CRAP scores for concrete TypeScript function bodies. The repository publishes a standalone CLI plus dedicated Vitest and Jest adapters.
 
 ## Modules
 
 - `packages/core`: analysis engine, CLI orchestration, coverage detection, and report formatting
 - `packages/cli`: executable `crap-typescript` package
-- `packages/vitest`: helper that enables LCOV output and fails Vitest runs when the CRAP threshold is exceeded
+- `packages/vitest`: helper that enables the canonical Istanbul JSON coverage output and fails Vitest runs when the CRAP threshold is exceeded
 - `packages/jest`: helper and reporter for Jest runs
 
 ## Formula
@@ -16,18 +16,20 @@ It combines cyclomatic complexity with LCOV line coverage and reports CRAP score
 `CRAP = CC^2 * (1 - coverage)^3 + CC`
 
 - `CC` is cyclomatic complexity.
-- `coverage` is the covered executable line fraction for the function.
+- `coverage` is defined separately as the minimum of the function's statement coverage and branch coverage.
+- Structural non-applicability is treated as `100%` for the affected component metric only.
+- Unknown coverage remains `N/A`, and CRAP remains `N/A` for that function.
 
 ## Coverage Pipeline
 
 For each resolved module today:
 
 1. Detect the nearest module root by walking up to the closest `package.json`.
-2. Reuse `coverage/lcov.info` when it already exists.
+2. Reuse `coverage/coverage-final.json` when it already exists.
 3. Otherwise auto-detect the package manager and test runner unless the CLI forces them.
-4. Run the module tests with LCOV enabled.
-5. Read `coverage/lcov.info` from the module root, falling back to the project root for workspace coverage.
-6. Analyze the selected TypeScript files for that module.
+4. Run the module tests with JSON coverage enabled.
+5. Read `coverage/coverage-final.json` from the module root, falling back to the project root for workspace coverage.
+6. Derive function statement and branch coverage from the Istanbul coverage counters and use their minimum as CRAP coverage.
 
 ## Build and Test
 
@@ -126,4 +128,3 @@ Tag `v<version>` from `main` after the build workflow is green. The tag-triggere
 ## Contributing
 
 See `CONTRIBUTING.md` for the issue-linked branch, commit, and pull-request flow used in this repository.
-

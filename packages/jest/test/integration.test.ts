@@ -12,7 +12,7 @@ afterEach(async () => {
 });
 
 describe("crap-typescript-jest", () => {
-  it("writes LCOV coverage and fails the run when the CRAP threshold is exceeded", async () => {
+  it("writes Istanbul JSON coverage and fails the run when the CRAP threshold is exceeded", async () => {
     const projectRoot = await copyFixture("jest-project");
     tempDirs.push(projectRoot);
     const adapterPath = repoPath("packages", "jest", "dist", "index.js").replace(/\\/g, "/");
@@ -44,7 +44,7 @@ module.exports = withCrapTypescriptJest(
     );
 
     expect(result.exitCode).not.toBe(0);
-    await expect(access(path.join(projectRoot, "coverage", "lcov.info"))).resolves.toBeUndefined();
+    await expect(access(path.join(projectRoot, "coverage", "coverage-final.json"))).resolves.toBeUndefined();
     expect(`${result.stdout}\n${result.stderr}`).toContain("CRAP threshold exceeded");
   });
 
@@ -81,7 +81,7 @@ module.exports = withCrapTypescriptJest(
     );
 
     expect(result.exitCode).not.toBe(0);
-    await expect(access(path.join(projectRoot, "custom-coverage", "lcov.info"))).resolves.toBeUndefined();
+    await expect(access(path.join(projectRoot, "custom-coverage", "coverage-final.json"))).resolves.toBeUndefined();
     expect(`${result.stdout}\n${result.stderr}`).toContain("CRAP threshold exceeded");
     expect(`${result.stdout}\n${result.stderr}`).not.toContain("Coverage will be N/A");
   });

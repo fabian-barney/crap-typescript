@@ -50,16 +50,71 @@ export function risky(flagA: boolean, flagB: boolean): number {
   return 0;
 }
 `,
-      "coverage/lcov.info": `TN:
-SF:src/sample.ts
-DA:1,1
-DA:2,1
-DA:5,0
-DA:6,0
-DA:7,0
-DA:9,0
-end_of_record
-`
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            },
+            "1": {
+              start: { line: 7, column: 4 },
+              end: { line: 7, column: 13 }
+            },
+            "2": {
+              start: { line: 9, column: 2 },
+              end: { line: 9, column: 11 }
+            }
+          },
+          fnMap: {},
+          branchMap: {
+            "0": {
+              line: 6,
+              type: "if",
+              loc: {
+                start: { line: 6, column: 2 },
+                end: { line: 8, column: 3 }
+              },
+              locations: [
+                {
+                  start: { line: 6, column: 2 },
+                  end: { line: 8, column: 3 }
+                },
+                {}
+              ]
+            },
+            "1": {
+              line: 6,
+              type: "binary-expr",
+              loc: {
+                start: { line: 6, column: 6 },
+                end: { line: 6, column: 31 }
+              },
+              locations: [
+                {
+                  start: { line: 6, column: 6 },
+                  end: { line: 6, column: 20 }
+                },
+                {
+                  start: { line: 6, column: 24 },
+                  end: { line: 6, column: 29 }
+                }
+              ]
+            }
+          },
+          s: {
+            "0": 1,
+            "1": 0,
+            "2": 0
+          },
+          f: {},
+          b: {
+            "0": [0, 0],
+            "1": [0, 0]
+          }
+        }
+      })
     });
 
     const stdout = new StringWriter();
@@ -93,7 +148,7 @@ end_of_record
     await writeProjectFiles(projectRoot, {
       "package.json": '{"name":"fixture","private":true}',
       "src/types.ts": "export interface Foo { value: number; }\n",
-      "coverage/lcov.info": ""
+      "coverage/coverage-final.json": "{}"
     });
 
     const stdout = new StringWriter();

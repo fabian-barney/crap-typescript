@@ -2,7 +2,7 @@ node_modules/
 dist/
 coverage/
 !tests/fixtures/**/coverage/
-!tests/fixtures/**/coverage/lcov.info
+!tests/fixtures/**/coverage/coverage-final.json
 *.tsbuildinfo
 *.tgz
 .temp/

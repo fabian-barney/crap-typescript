@@ -5,6 +5,13 @@ export type TestRunner = "vitest" | "jest";
 export type TestRunnerSelection = TestRunner | "auto";
 export type CoverageMode = "auto" | "existing-only";
 
+export interface SourceSpan {
+  startLine: number;
+  startColumn: number;
+  endLine: number;
+  endColumn: number;
+}
+
 export interface Writer {
   write(chunk: string): unknown;
 }
@@ -23,6 +30,9 @@ export interface MethodDescriptor {
   startLine: number;
   endLine: number;
   complexity: number;
+  bodySpan: SourceSpan;
+  expectsStatementCoverage: boolean;
+  expectsBranchCoverage: boolean;
 }
 
 export interface MethodMetrics extends MethodDescriptor {

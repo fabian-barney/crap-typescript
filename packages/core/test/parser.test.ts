@@ -62,14 +62,20 @@ const arrow = (items: number[]) => {
     );
 
     const methods = await parseFileMethods(filePath);
-    expect(methods).toEqual([
+    expect(methods).toMatchObject([
       {
         functionName: "value",
         containerName: "Example",
         displayName: "Example.value",
         startLine: 2,
         endLine: 7,
-        complexity: 3
+        complexity: 3,
+        bodySpan: {
+          startLine: 2,
+          endLine: 7
+        },
+        expectsStatementCoverage: true,
+        expectsBranchCoverage: true
       },
       {
         functionName: "callback",
@@ -77,7 +83,13 @@ const arrow = (items: number[]) => {
         displayName: "Example.callback",
         startLine: 9,
         endLine: 17,
-        complexity: 1
+        complexity: 1,
+        bodySpan: {
+          startLine: 9,
+          endLine: 17
+        },
+        expectsStatementCoverage: true,
+        expectsBranchCoverage: false
       },
       {
         functionName: "inner",
@@ -85,7 +97,13 @@ const arrow = (items: number[]) => {
         displayName: "Example.inner",
         startLine: 10,
         endLine: 15,
-        complexity: 2
+        complexity: 2,
+        bodySpan: {
+          startLine: 10,
+          endLine: 15
+        },
+        expectsStatementCoverage: true,
+        expectsBranchCoverage: true
       },
       {
         functionName: "score",
@@ -93,7 +111,13 @@ const arrow = (items: number[]) => {
         displayName: "helper.score",
         startLine: 21,
         endLine: 28,
-        complexity: 2
+        complexity: 2,
+        bodySpan: {
+          startLine: 21,
+          endLine: 28
+        },
+        expectsStatementCoverage: true,
+        expectsBranchCoverage: true
       },
       {
         functionName: "arrow",
@@ -101,7 +125,13 @@ const arrow = (items: number[]) => {
         displayName: "arrow",
         startLine: 31,
         endLine: 38,
-        complexity: 3
+        complexity: 3,
+        bodySpan: {
+          startLine: 31,
+          endLine: 38
+        },
+        expectsStatementCoverage: true,
+        expectsBranchCoverage: true
       }
     ]);
   });
@@ -131,14 +161,48 @@ const arrow = (items: number[]) => {
       "utf8"
     );
 
-    expect(await parseFileMethods(filePath)).toEqual([
+    expect(await parseFileMethods(filePath)).toMatchObject([
       {
         functionName: "default",
         containerName: null,
         displayName: "default",
         startLine: 1,
         endLine: 6,
-        complexity: 2
+        complexity: 2,
+        bodySpan: {
+          startLine: 1,
+          endLine: 6
+        },
+        expectsStatementCoverage: true,
+        expectsBranchCoverage: true
+      }
+    ]);
+  });
+
+  it("treats expression-bodied functions as having attributable statements and ignores type-only declarations", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "expression.ts");
+    await writeFile(
+      filePath,
+      `export const trim = (value: string) => value.trim();
+
+export function declarationsOnly(): void {
+  type Local = { value: string };
+  interface Shape { value: string }
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toMatchObject([
+      {
+        functionName: "trim",
+        expectsStatementCoverage: true
+      },
+      {
+        functionName: "declarationsOnly",
+        expectsStatementCoverage: false
       }
     ]);
   });

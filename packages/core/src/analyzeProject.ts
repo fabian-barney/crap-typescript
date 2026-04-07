@@ -4,11 +4,12 @@ import { CRAP_THRESHOLD } from "./constants";
 import { ensureCoverageReport, expectedCoveragePath } from "./coverage";
 import { calculateCrapScore, maxCrap } from "./crapScore";
 import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection";
-import { coverageForLineRange, parseLcov } from "./lcov";
+import { coverageForMethods, parseCoverageReport } from "./istanbul";
 import { resolveModuleRoot } from "./moduleResolution";
 import { parseFileMethods } from "./parser";
 import { DefaultCommandExecutor, normalizePathForMatch, toRelativePath, writeLine } from "./utils";
 import type { AnalysisResult, AnalyzeProjectOptions, MethodMetrics, CoverageCommand } from "./types";
+import type { FileCoverage } from "./istanbul";
 
 export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promise<AnalysisResult> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
@@ -56,11 +57,17 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
       coverageCommands.push(coverageResult.command);
     }
 
-    let lineCoverage = new Map<string, { lineHits: Map<number, number> }>();
+    let coverageByFile = new Map<string, FileCoverage>();
     if (coverageResult.coverageSourcePath && coverageResult.coverageSourceRoot) {
-      lineCoverage = await parseLcov(coverageResult.coverageSourcePath, coverageResult.coverageSourceRoot);
+      try {
+        coverageByFile = await parseCoverageReport(coverageResult.coverageSourcePath, coverageResult.coverageSourceRoot);
+      } catch (error) {
+        const warning = `Warning: Coverage report at ${coverageResult.coverageSourcePath} could not be parsed: ${(error as Error).message}. Coverage will be N/A.`;
+        warnings.push(warning);
+        writeLine(options.stderr, warning);
+      }
     } else {
-      const warning = `Warning: LCOV report not found at ${expectedCoveragePath(moduleRoot, coverageReportPath)}. Coverage will be N/A.`;
+      const warning = `Warning: Coverage report not found at ${expectedCoveragePath(moduleRoot, coverageReportPath)}. Coverage will be N/A.`;
       warnings.push(warning);
       writeLine(options.stderr, warning);
     }
@@ -68,9 +75,11 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
     for (const filePath of moduleFiles) {
       const descriptors = await parseFileMethods(filePath);
       const relativePath = toRelativePath(projectRoot, filePath);
-      const fileCoverage = resolveFileCoverage(lineCoverage, filePath, relativePath);
-      for (const descriptor of descriptors) {
-        const coveragePercent = coverageForLineRange(fileCoverage, descriptor.startLine, descriptor.endLine);
+      const fileCoverage = resolveFileCoverage(coverageByFile, filePath, relativePath);
+      const methodCoverage = coverageForMethods(descriptors, fileCoverage);
+      for (const [index, descriptor] of descriptors.entries()) {
+        const coverage = methodCoverage[index];
+        const coveragePercent = coverage?.coveragePercent ?? null;
         metrics.push({
           ...descriptor,
           filePath,
@@ -110,19 +119,19 @@ async function selectFiles(
 }
 
 function resolveFileCoverage(
-  lineCoverage: Map<string, { lineHits: Map<number, number> }>,
+  coverageByFile: Map<string, FileCoverage>,
   filePath: string,
   relativePath: string
-): Map<number, number> | undefined {
-  const exact = lineCoverage.get(normalizePathForMatch(filePath))?.lineHits;
+): FileCoverage | undefined {
+  const exact = coverageByFile.get(normalizePathForMatch(filePath));
   if (exact) {
     return exact;
   }
 
   const suffix = `/${relativePath.replace(/\\/g, "/").toLowerCase()}`;
-  for (const [candidatePath, coverage] of lineCoverage.entries()) {
+  for (const [candidatePath, coverage] of coverageByFile.entries()) {
     if (candidatePath.endsWith(suffix)) {
-      return coverage.lineHits;
+      return coverage;
     }
   }
   return undefined;
