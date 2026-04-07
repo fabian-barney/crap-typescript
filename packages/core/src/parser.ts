@@ -190,7 +190,10 @@ function toDisplayName(containerName: string | null, functionName: string): stri
 }
 
 function propertyName(name: ts.PropertyName): string {
-  if (ts.isIdentifier(name) || ts.isPrivateIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+  if (ts.isPrivateIdentifier(name)) {
+    return name.getText();
+  }
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
     return name.text;
   }
   return name.getText();

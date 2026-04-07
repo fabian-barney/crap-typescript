@@ -399,4 +399,35 @@ namespace TypesOnly {
 
     expect(await parseFileMethods(filePath)).toEqual([]);
   });
+
+  it("preserves private member names for methods and accessors", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "private-members.ts");
+    await writeFile(
+      filePath,
+      `class Example {
+  get #value(): number {
+    return 1;
+  }
+
+  #render(): number {
+    return 1;
+  }
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toMatchObject([
+      {
+        functionName: "get #value",
+        displayName: "Example.get #value"
+      },
+      {
+        functionName: "#render",
+        displayName: "Example.#render"
+      }
+    ]);
+  });
 });
