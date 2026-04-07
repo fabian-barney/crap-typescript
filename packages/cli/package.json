@@ -2,18 +2,36 @@
   "name": "crap-typescript",
   "version": "0.1.0",
   "description": "CLI for CRAP metric analysis in TypeScript projects.",
+  "license": "Apache-2.0",
+  "author": "Fabian Barney (https://github.com/fabian-barney)",
+  "keywords": [
+    "crap",
+    "crap-score",
+    "cyclomatic-complexity",
+    "code-coverage",
+    "code-quality",
+    "typescript",
+    "static-analysis",
+    "cli"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fabian-barney/crap-typescript.git"
   },
   "homepage": "https://github.com/fabian-barney/crap-typescript",
+  "bugs": {
+    "url": "https://github.com/fabian-barney/crap-typescript/issues"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "crap-typescript": "dist/bin.js"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "files": [
     "dist"
@@ -22,6 +40,9 @@
     "access": "public"
   },
   "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "crap-typescript-core": "^0.1.0"
   }
