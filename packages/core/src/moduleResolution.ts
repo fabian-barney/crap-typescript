@@ -5,7 +5,7 @@ import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants";
 import type { PackageManager, PackageManagerSelection, TestRunner, TestRunnerSelection } from "./types";
 
 export interface CoverageSource {
-  lcovPath: string;
+  reportPath: string;
   sourceRoot: string;
 }
 
@@ -36,7 +36,7 @@ export async function locateCoverageReport(
   const moduleReportPath = resolveCoveragePath(moduleRoot, coverageReportPath);
   if (await exists(moduleReportPath)) {
     return {
-      lcovPath: moduleReportPath,
+      reportPath: moduleReportPath,
       sourceRoot: moduleRoot
     };
   }
@@ -44,7 +44,7 @@ export async function locateCoverageReport(
   const projectReportPath = resolveCoveragePath(projectRoot, coverageReportPath);
   if (await exists(projectReportPath)) {
     return {
-      lcovPath: projectReportPath,
+      reportPath: projectReportPath,
       sourceRoot: projectRoot
     };
   }

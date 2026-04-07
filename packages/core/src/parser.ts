@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 import { resolveScriptKind } from "./utils";
-import type { MethodDescriptor } from "./types";
+import type { MethodDescriptor, SourceSpan } from "./types";
 
 export async function parseFileMethods(filePath: string): Promise<MethodDescriptor[]> {
   const sourceText = await readFile(filePath, "utf8");
@@ -66,7 +66,7 @@ function buildMethodDescriptor(
   sourceFile: ts.SourceFile
 ): MethodDescriptor {
   const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-  const bodyNode = node.body ?? node;
+  const bodyNode = node.body!;
   const endLine = sourceFile.getLineAndCharacterOfPosition(Math.max(bodyNode.end - 1, bodyNode.getStart(sourceFile))).line + 1;
   return {
     functionName,
@@ -74,7 +74,10 @@ function buildMethodDescriptor(
     displayName: containerName ? `${containerName}.${functionName}` : functionName,
     startLine,
     endLine,
-    complexity: countCyclomaticComplexity(node)
+    complexity: countCyclomaticComplexity(node),
+    bodySpan: toSourceSpan(bodyNode, sourceFile),
+    expectsStatementCoverage: hasAttributableStatements(bodyNode),
+    expectsBranchCoverage: hasAttributableBranches(bodyNode)
   };
 }
 
@@ -199,6 +202,60 @@ function countCyclomaticComplexity(node: ts.FunctionLikeDeclarationBase): number
     visit(node.body);
   }
   return complexity;
+}
+
+function toSourceSpan(node: ts.Node, sourceFile: ts.SourceFile): SourceSpan {
+  const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+  const end = sourceFile.getLineAndCharacterOfPosition(node.end);
+  return {
+    startLine: start.line + 1,
+    startColumn: start.character,
+    endLine: end.line + 1,
+    endColumn: end.character
+  };
+}
+
+function hasAttributableStatements(body: ts.ConciseBody): boolean {
+  return ts.isBlock(body)
+    ? body.statements.some((statement) => !ts.isFunctionDeclaration(statement) && !ts.isClassDeclaration(statement))
+    : false;
+}
+
+function hasAttributableBranches(body: ts.ConciseBody): boolean {
+  let found = false;
+
+  const visit = (current: ts.Node): void => {
+    if (found) {
+      return;
+    }
+    if (current !== body && isNestedBoundary(current)) {
+      return;
+    }
+    if (
+      ts.isIfStatement(current) ||
+      ts.isConditionalExpression(current) ||
+      ts.isSwitchStatement(current)
+    ) {
+      found = true;
+      return;
+    }
+    if (ts.isBinaryExpression(current)) {
+      const kind = current.operatorToken.kind;
+      if (
+        kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+        kind === ts.SyntaxKind.BarBarToken ||
+        kind === ts.SyntaxKind.QuestionQuestionToken
+      ) {
+        found = true;
+        return;
+      }
+    }
+
+    ts.forEachChild(current, visit);
+  };
+
+  visit(body);
+  return found;
 }
 
 function isNestedBoundary(node: ts.Node): boolean {

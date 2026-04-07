@@ -7,7 +7,7 @@
 It shall:
 
 - locate TypeScript source files to analyze
-- generate or reuse LCOV coverage for the owning package of each analyzed file set
+- generate or reuse Istanbul JSON coverage for the owning package of each analyzed file set
 - parse TypeScript function-like bodies and estimate cyclomatic complexity
 - combine complexity and coverage into CRAP scores
 - print a tabular report sorted by worst score first
@@ -21,6 +21,7 @@ This specification defines:
 - source file selection rules
 - coverage generation behavior
 - function parsing behavior
+- coverage attribution and normalization
 - CRAP score computation
 - report ordering and exit codes
 
@@ -30,6 +31,7 @@ This specification does not define:
 - support for non-TypeScript source files
 - machine-readable report formats
 - adapters beyond Vitest and Jest
+- cross-ecosystem normalization for coverage formats beyond Istanbul JSON
 
 ## 3. Command-Line Interface
 
@@ -100,14 +102,14 @@ Coverage lookup and coverage generation occur once per module group.
 
 For each module group, the tool shall:
 
-1. reuse `coverage/lcov.info` when present in the module root
-2. otherwise reuse `coverage/lcov.info` from the project root when present
+1. reuse `coverage/coverage-final.json` when present in the module root
+2. otherwise reuse `coverage/coverage-final.json` from the project root when present
 3. otherwise detect the package manager and test runner unless explicitly forced
-4. run the detected test command with LCOV enabled
-5. read the resulting `coverage/lcov.info`
+4. run the detected test command with JSON coverage enabled
+5. read the resulting `coverage/coverage-final.json`
 6. analyze the selected TypeScript files in that module
 
-If the expected LCOV file is still missing after these steps:
+If the expected coverage report is still missing after these steps:
 
 - the tool shall print a warning to stderr
 - coverage for methods in that module shall be reported as `N/A`
@@ -143,9 +145,41 @@ Nested functions and class bodies shall not contribute to the enclosing function
 
 ## 8. Coverage Attribution
 
-Coverage shall be attributed by matching the analyzed source file to an LCOV record, then computing line coverage over the function's start and end line range.
+Coverage shall be attributed by matching the analyzed source file to an Istanbul coverage record and assigning statement and branch counters to function bodies.
 
-If no executable lines exist in that range:
+Statement attribution:
+
+- a statement counter belongs to the innermost analyzed function body that contains the counter location
+- statement coverage is the fraction of attributable statements whose hit count is greater than `0`
+
+Branch attribution:
+
+- a branch counter belongs to the innermost analyzed function body that contains the branch location
+- branch coverage is the fraction of attributable branch outcomes whose hit count is greater than `0`
+
+The reported function coverage shall be defined as:
+
+`coverage = min(statementCoverage', branchCoverage')`
+
+Where:
+
+- `statementCoverage'` is `statementCoverage` when measurable, otherwise `100%` if statement coverage is structurally not applicable for that function
+- `branchCoverage'` is `branchCoverage` when measurable, otherwise `100%` if branch coverage is structurally not applicable for that function
+
+Structural non-applicability means the metric has no meaningful denominator for the function, for example:
+
+- no attributable statements inside the function for statement coverage
+- no measurable branches inside the function for branch coverage
+
+Unknown coverage is distinct from structural non-applicability.
+
+Unknown coverage includes cases such as:
+
+- missing coverage report
+- analyzed file not present in the report
+- missing or unusable statement or branch attribution for a function that should have such coverage data
+
+If coverage is unknown for non-structural reasons:
 
 - coverage shall be reported as `N/A`
 - CRAP shall be reported as `N/A`
@@ -156,7 +190,7 @@ For functions with known coverage:
 
 `CRAP = CC^2 * (1 - coverage)^3 + CC`
 
-Where `coverage` is the covered executable line fraction in the range `0.0..1.0`.
+Where `coverage` is the normalized function coverage fraction in the range `0.0..1.0`, as defined in Section 8.
 
 ## 10. Report
 

@@ -16,7 +16,7 @@ export async function ensureCoverageReport(
   const existing = await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath);
   if (existing) {
     return {
-      coverageSourcePath: existing.lcovPath,
+      coverageSourcePath: existing.reportPath,
       coverageSourceRoot: existing.sourceRoot,
       command: null
     };
@@ -40,7 +40,7 @@ export async function ensureCoverageReport(
 
   const generated = await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath);
   return {
-    coverageSourcePath: generated?.lcovPath ?? null,
+    coverageSourcePath: generated?.reportPath ?? null,
     coverageSourceRoot: generated?.sourceRoot ?? null,
     command
   };
@@ -80,7 +80,7 @@ function vitestArguments(packageManager: PackageManager, coverageReportPath: str
         "vitest",
         "run",
         "--coverage.enabled=true",
-        "--coverage.reporter=lcov",
+        "--coverage.reporter=json",
         "--coverage.reporter=text",
         `--coverage.reportsDirectory=${reportsDirectory}`
       ];
@@ -90,7 +90,7 @@ function vitestArguments(packageManager: PackageManager, coverageReportPath: str
         "vitest",
         "run",
         "--coverage.enabled=true",
-        "--coverage.reporter=lcov",
+        "--coverage.reporter=json",
         "--coverage.reporter=text",
         `--coverage.reportsDirectory=${reportsDirectory}`
       ];
@@ -99,7 +99,7 @@ function vitestArguments(packageManager: PackageManager, coverageReportPath: str
         "vitest",
         "run",
         "--coverage.enabled=true",
-        "--coverage.reporter=lcov",
+        "--coverage.reporter=json",
         "--coverage.reporter=text",
         `--coverage.reportsDirectory=${reportsDirectory}`
       ];
@@ -117,7 +117,7 @@ function jestArguments(packageManager: PackageManager, coverageReportPath: strin
         "jest",
         "--coverage",
         "--runInBand",
-        "--coverageReporters=lcov",
+        "--coverageReporters=json",
         "--coverageReporters=text",
         `--coverageDirectory=${coverageDirectory}`
       ];
@@ -127,7 +127,7 @@ function jestArguments(packageManager: PackageManager, coverageReportPath: strin
         "jest",
         "--coverage",
         "--runInBand",
-        "--coverageReporters=lcov",
+        "--coverageReporters=json",
         "--coverageReporters=text",
         `--coverageDirectory=${coverageDirectory}`
       ];
@@ -136,7 +136,7 @@ function jestArguments(packageManager: PackageManager, coverageReportPath: strin
         "jest",
         "--coverage",
         "--runInBand",
-        "--coverageReporters=lcov",
+        "--coverageReporters=json",
         "--coverageReporters=text",
         `--coverageDirectory=${coverageDirectory}`
       ];

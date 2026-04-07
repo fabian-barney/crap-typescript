@@ -13,7 +13,7 @@ afterEach(async () => {
 });
 
 describe("analyzeProject", () => {
-  it("analyzes a multi-package workspace using existing LCOV reports", async () => {
+  it("analyzes a multi-package workspace using existing Istanbul coverage reports", async () => {
     const projectRoot = await copyFixture("workspace-project");
     tempDirs.push(projectRoot);
 
@@ -70,4 +70,3 @@ describe("analyzeProject", () => {
     expect(result.metrics[0]?.crapScore).toBeNull();
   });
 });
-

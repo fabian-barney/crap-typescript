@@ -65,7 +65,7 @@ export function withCrapTypescriptVitest(
 ): VitestConfig {
   const testConfig = config.test ?? {};
   const coverage = testConfig.coverage ?? {};
-  const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "lcov", "text");
+  const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "json", "text");
   const reporters = ensureDefaultReporter(asArray(testConfig.reporters));
   reporters.push(new CrapTypescriptVitestReporter({
     ...options,
@@ -119,5 +119,5 @@ function ensureDefaultReporter(existing: VitestReporterEntry[]): VitestReporterE
 }
 
 function buildCoverageReportPath(reportsDirectory: string | undefined): string {
-  return `${reportsDirectory ?? "coverage"}/lcov.info`;
+  return `${reportsDirectory ?? "coverage"}/coverage-final.json`;
 }

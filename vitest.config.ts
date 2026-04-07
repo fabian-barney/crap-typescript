@@ -4,11 +4,10 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
-      reporter: ["text", "lcov"],
+      reporter: ["text", "json"],
       reportsDirectory: "coverage"
     },
     include: ["packages/*/test/**/*.test.ts"],
     testTimeout: 120000
   }
 });
-

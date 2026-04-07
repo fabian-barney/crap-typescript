@@ -20,7 +20,7 @@ export function withCrapTypescriptJest(
 ): Record<string, unknown> {
   const coverageReporters = ensureEntries(
     asArray<JestReporterEntry>(config.coverageReporters as JestReporterEntry[] | undefined),
-    "lcov",
+    "json",
     "text"
   );
   const reporters = ensureDefaultReporter(
@@ -74,5 +74,5 @@ export { CrapTypescriptJestReporter };
 export default CrapTypescriptJestReporter;
 
 function buildCoverageReportPath(coverageDirectory: string | undefined): string {
-  return `${coverageDirectory ?? "coverage"}/lcov.info`;
+  return `${coverageDirectory ?? "coverage"}/coverage-final.json`;
 }
