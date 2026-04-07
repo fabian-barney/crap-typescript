@@ -1,0 +1,119 @@
+{
+  "cases": [
+    {
+      "name": "Vitest-style Istanbul JSON",
+      "fixture": "compatibility-matrix/vitest-style-report",
+      "expectedMetrics": [
+        {
+          "name": "vitestStyle",
+          "coverage": 50
+        }
+      ]
+    },
+    {
+      "name": "Jest-style Istanbul JSON",
+      "fixture": "compatibility-matrix/jest-style-report",
+      "pathMode": "absolute",
+      "expectedMetrics": [
+        {
+          "name": "jestStyle",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "workspace layout",
+      "fixture": "workspace-project",
+      "expectedSelectedFiles": [
+        "packages/package-a/src/math.ts",
+        "packages/package-b/src/text.ts"
+      ],
+      "expectedMetrics": [
+        {
+          "name": "add",
+          "coverage": 100
+        },
+        {
+          "name": "risky",
+          "coverage": 0
+        },
+        {
+          "name": "upper",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "TSX parsing",
+      "fixture": "compatibility-matrix/tsx-component",
+      "expectedMetrics": [
+        {
+          "name": "Widget",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "nested functions",
+      "fixture": "compatibility-matrix/nested-functions",
+      "expectedMetrics": [
+        {
+          "name": "outer",
+          "coverage": 100
+        },
+        {
+          "name": "inner",
+          "coverage": 50
+        }
+      ]
+    },
+    {
+      "name": "anonymous default exports",
+      "fixture": "compatibility-matrix/default-export",
+      "expectedMetrics": [
+        {
+          "name": "default",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "class and object methods",
+      "fixture": "compatibility-matrix/object-and-class-methods",
+      "expectedMetrics": [
+        {
+          "name": "Example.value",
+          "coverage": 50
+        },
+        {
+          "name": "helper.score",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "expression-bodied arrows and declaration-only bodies",
+      "fixture": "compatibility-matrix/expression-and-declarations",
+      "expectedMetrics": [
+        {
+          "name": "trim",
+          "coverage": 100
+        },
+        {
+          "name": "declarationsOnly",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "source-location drift",
+      "fixture": "compatibility-matrix/source-location-drift",
+      "expectedMetrics": [
+        {
+          "name": "drift",
+          "coverage": 100
+        }
+      ]
+    }
+  ]
+}
