@@ -9,6 +9,7 @@ export type CoverageUnknownReason =
   | "missing_report"
   | "unparseable_report"
   | "file_unmatched"
+  | "fnmap_conflict"
   | "statement_unattributed"
   | "branch_unattributed";
 

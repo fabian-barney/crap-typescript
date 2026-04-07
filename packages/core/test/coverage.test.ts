@@ -181,7 +181,8 @@ export const trim = (value: string) => value.trim();
     const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
     const methodCoverage = coverageForMethods(methods, {
       statements: [],
-      branches: []
+      branches: [],
+      functions: []
     });
 
     expect(methodCoverage.map(summarizeMethodCoverage)).toEqual([
@@ -273,7 +274,8 @@ export function enumDeclOnly(): void {
     const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
     const methodCoverage = coverageForMethods(methods, {
       statements: [],
-      branches: []
+      branches: [],
+      functions: []
     });
     const byName = new Map(methods.map((method, index) => [method.displayName, methodCoverage[index]]));
 
@@ -352,6 +354,87 @@ export function enumDeclOnly(): void {
         coverage: { percent: null, status: "unknown", reason: "branch_unattributed" },
         statement: { percent: 100.0, status: "measured", reason: null },
         branch: { percent: null, status: "unknown", reason: "branch_unattributed" }
+      }
+    ]);
+  });
+
+  it("accepts exact fnMap matches during attribution", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function exact(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    const [method] = methods;
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 3, startColumn: 4, endLine: 3, endColumn: 13 }, hits: 1 },
+          { span: { startLine: 5, startColumn: 2, endLine: 5, endColumn: 11 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 2, startColumn: 2, endLine: 4, endColumn: 3 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          { span: method.bodySpan }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      }
+    ]);
+  });
+
+  it("uses fnMap as a secondary matching aid when function columns drift", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function drift(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 3, startColumn: 4, endLine: 3, endColumn: 13 }, hits: 1 },
+          { span: { startLine: 5, startColumn: 2, endLine: 5, endColumn: 11 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 1, startColumn: 0, endLine: 4, endColumn: 3 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          { span: { startLine: 1, startColumn: 0, endLine: 6, endColumn: 1 } }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
       }
     ]);
   });

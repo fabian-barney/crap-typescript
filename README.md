@@ -29,7 +29,8 @@ For each resolved module today:
 3. Otherwise auto-detect the package manager and test runner unless the CLI forces them.
 4. Run the module tests with JSON coverage enabled.
 5. Read `coverage/coverage-final.json` from the module root, falling back to the project root for workspace coverage.
-6. Derive function statement and branch coverage from the Istanbul coverage counters and use their minimum as CRAP coverage.
+6. Use Istanbul `fnMap` as a validation and secondary matching aid when it is present.
+7. Derive function statement and branch coverage from the Istanbul coverage counters and use their minimum as CRAP coverage.
 
 ## Compatibility Matrix
 

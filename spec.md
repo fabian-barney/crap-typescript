@@ -147,6 +147,12 @@ Nested functions and class bodies shall not contribute to the enclosing function
 
 Coverage shall be attributed by matching the analyzed source file to an Istanbul coverage record and assigning statement and branch counters to function bodies.
 
+When Istanbul `fnMap` data is present for a file:
+
+- the analyzer shall first prefer exact body-span agreement between the TypeScript AST method body and the Istanbul function span
+- if exact agreement is absent, the analyzer shall accept a single unambiguous overlapping match when the spans share the same boundary lines but differ in columns, or when one span fully contains the other
+- if no unambiguous match exists, coverage for that function shall be reported as `N/A` and the analyzer shall emit a warning instead of forcing attribution
+
 Statement attribution:
 
 - a statement counter belongs to the innermost analyzed function body that contains the counter location
