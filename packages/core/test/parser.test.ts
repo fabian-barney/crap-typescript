@@ -178,4 +178,32 @@ const arrow = (items: number[]) => {
       }
     ]);
   });
+
+  it("treats expression-bodied functions as having attributable statements and ignores type-only declarations", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "expression.ts");
+    await writeFile(
+      filePath,
+      `export const trim = (value: string) => value.trim();
+
+export function declarationsOnly(): void {
+  type Local = { value: string };
+  interface Shape { value: string }
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toMatchObject([
+      {
+        functionName: "trim",
+        expectsStatementCoverage: true
+      },
+      {
+        functionName: "declarationsOnly",
+        expectsStatementCoverage: false
+      }
+    ]);
+  });
 });

@@ -69,4 +69,36 @@ describe("analyzeProject", () => {
     expect(result.metrics[0]?.coveragePercent).toBeNull();
     expect(result.metrics[0]?.crapScore).toBeNull();
   });
+
+  it("warns and reports N/A coverage when the coverage report cannot be parsed", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    const warnings: string[] = [];
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function risky(flagA: boolean, flagB: boolean): number {
+  if (flagA && flagB) {
+    return 1;
+  }
+  return 0;
+}
+`,
+      "coverage/coverage-final.json": "{not-json"
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      coverageMode: "existing-only",
+      stderr: {
+        write(chunk: string) {
+          warnings.push(chunk);
+        }
+      }
+    });
+
+    expect(result.warnings).toHaveLength(1);
+    expect(warnings.join("")).toContain("could not be parsed");
+    expect(result.metrics[0]?.coveragePercent).toBeNull();
+    expect(result.metrics[0]?.crapScore).toBeNull();
+  });
 });

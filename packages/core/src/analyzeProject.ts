@@ -59,7 +59,13 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
 
     let coverageByFile = new Map<string, FileCoverage>();
     if (coverageResult.coverageSourcePath && coverageResult.coverageSourceRoot) {
-      coverageByFile = await parseCoverageReport(coverageResult.coverageSourcePath, coverageResult.coverageSourceRoot);
+      try {
+        coverageByFile = await parseCoverageReport(coverageResult.coverageSourcePath, coverageResult.coverageSourceRoot);
+      } catch (error) {
+        const warning = `Warning: Coverage report at ${coverageResult.coverageSourcePath} could not be parsed: ${(error as Error).message}. Coverage will be N/A.`;
+        warnings.push(warning);
+        writeLine(options.stderr, warning);
+      }
     } else {
       const warning = `Warning: Coverage report not found at ${expectedCoveragePath(moduleRoot, coverageReportPath)}. Coverage will be N/A.`;
       warnings.push(warning);

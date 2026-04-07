@@ -93,6 +93,10 @@ export const trim = (value: string) => value.trim();
             "2": {
               start: { line: 9, column: 2 },
               end: { line: 9, column: 26 }
+            },
+            "3": {
+              start: { line: 12, column: 39 },
+              end: { line: 12, column: 51 }
             }
           },
           fnMap: {},
@@ -116,7 +120,8 @@ export const trim = (value: string) => value.trim();
           s: {
             "0": 1,
             "1": 1,
-            "2": 0
+            "2": 0,
+            "3": 1
           },
           f: {},
           b: {
@@ -141,7 +146,7 @@ export const trim = (value: string) => value.trim();
     }))).toEqual([
       { coverage: 100.0, statement: 100.0, branch: null },
       { coverage: 50.0, statement: 50.0, branch: 100.0 },
-      { coverage: 100.0, statement: null, branch: null }
+      { coverage: 100.0, statement: 100.0, branch: null }
     ]);
   });
 
@@ -174,11 +179,7 @@ export const trim = (value: string) => value.trim();
     expect(methodCoverage).toEqual([
       null,
       null,
-      {
-        coveragePercent: 100,
-        statementCoveragePercent: null,
-        branchCoveragePercent: null
-      }
+      null
     ]);
   });
 });
