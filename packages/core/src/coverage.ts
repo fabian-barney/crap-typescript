@@ -13,37 +13,19 @@ export async function ensureCoverageReport(
   coverageReportPath: string | undefined,
   executor: CommandExecutor
 ): Promise<{ coverageSourcePath: string | null; coverageSourceRoot: string | null; command: CoverageCommand | null }> {
-  const existing = await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath);
+  const existing = await resolveExistingCoverage(projectRoot, moduleRoot, coverageReportPath);
   if (existing) {
-    return {
-      coverageSourcePath: existing.reportPath,
-      coverageSourceRoot: existing.sourceRoot,
-      command: null
-    };
+    return existing;
   }
-
   if (coverageMode === "existing-only") {
-    return {
-      coverageSourcePath: null,
-      coverageSourceRoot: null,
-      command: null
-    };
+    return emptyCoverageResolution();
   }
 
   const packageManager = await resolvePackageManager(packageManagerSelection, projectRoot, moduleRoot);
   const testRunner = await resolveTestRunner(testRunnerSelection, projectRoot, moduleRoot);
   const command = buildCoverageCommand(packageManager, testRunner, moduleRoot, coverageReportPath);
-  const exitCode = await executor.execute(command);
-  if (exitCode !== 0) {
-    throw new Error(`Coverage command failed with exit ${exitCode}`);
-  }
-
-  const generated = await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath);
-  return {
-    coverageSourcePath: generated?.reportPath ?? null,
-    coverageSourceRoot: generated?.sourceRoot ?? null,
-    command
-  };
+  await executeCoverageCommand(command, executor);
+  return attachCoverageCommand(await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath), command);
 }
 
 export function expectedCoveragePath(moduleRoot: string, coverageReportPath = COVERAGE_REPORT_RELATIVE_PATH): string {
@@ -66,6 +48,41 @@ export function buildCoverageCommand(
     cwd,
     packageManager,
     testRunner
+  };
+}
+
+async function resolveExistingCoverage(
+  projectRoot: string,
+  moduleRoot: string,
+  coverageReportPath: string | undefined
+): Promise<{ coverageSourcePath: string | null; coverageSourceRoot: string | null; command: CoverageCommand | null } | null> {
+  const existing = await locateCoverageReport(projectRoot, moduleRoot, coverageReportPath);
+  return existing ? attachCoverageCommand(existing, null) : null;
+}
+
+function emptyCoverageResolution(): { coverageSourcePath: null; coverageSourceRoot: null; command: null } {
+  return {
+    coverageSourcePath: null,
+    coverageSourceRoot: null,
+    command: null
+  };
+}
+
+async function executeCoverageCommand(command: CoverageCommand, executor: CommandExecutor): Promise<void> {
+  const exitCode = await executor.execute(command);
+  if (exitCode !== 0) {
+    throw new Error(`Coverage command failed with exit ${exitCode}`);
+  }
+}
+
+function attachCoverageCommand(
+  coverageSource: { reportPath: string; sourceRoot: string } | null,
+  command: CoverageCommand | null
+): { coverageSourcePath: string | null; coverageSourceRoot: string | null; command: CoverageCommand | null } {
+  return {
+    coverageSourcePath: coverageSource?.reportPath ?? null,
+    coverageSourceRoot: coverageSource?.sourceRoot ?? null,
+    command
   };
 }
 

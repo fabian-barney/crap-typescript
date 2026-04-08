@@ -10,8 +10,18 @@ export interface BranchCoverageUnit {
   hits: number[];
 }
 
+export interface CoveragePosition {
+  line: number;
+  column: number;
+}
+
+export type FunctionSpanSource = "loc" | "decl" | "line";
+
 export interface FunctionCoverageUnit {
   span: SourceSpan;
+  name?: string;
+  declarationStart?: CoveragePosition;
+  spanSource?: FunctionSpanSource;
 }
 
 export interface FileCoverage {

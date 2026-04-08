@@ -67,6 +67,17 @@ describe("cli", () => {
     expect(stderr.toString()).toBe("");
   });
 
+  it("prints usage and exits with an error for invalid cli arguments", async () => {
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+
+    const exitCode = await runCli(["--unknown"], process.cwd(), stdout, stderr);
+
+    expect(exitCode).toBe(1);
+    expect(stdout.toString()).toContain("Usage:");
+    expect(stderr.toString()).toContain("Unknown option: --unknown");
+  });
+
   it("prints a report and exits with threshold failure when CRAP exceeds the threshold", async () => {
     const projectRoot = await createTempDir("crap-cli-");
     tempDirs.push(projectRoot);
@@ -159,6 +170,70 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
   });
 
+  it("prints a report and exits cleanly when CRAP stays below the threshold", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 3, column: 4 },
+              end: { line: 3, column: 13 }
+            },
+            "1": {
+              start: { line: 5, column: 2 },
+              end: { line: 5, column: 11 }
+            }
+          },
+          fnMap: {},
+          branchMap: {
+            "0": {
+              line: 2,
+              type: "if",
+              loc: {
+                start: { line: 2, column: 2 },
+                end: { line: 4, column: 3 }
+              },
+              locations: [
+                {
+                  start: { line: 2, column: 2 },
+                  end: { line: 4, column: 3 }
+                },
+                {}
+              ]
+            }
+          },
+          s: {
+            "0": 1,
+            "1": 1
+          },
+          f: {},
+          b: {
+            "0": [1, 1]
+          }
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli([], projectRoot, stdout, stderr);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toContain("safe");
+    expect(stderr.toString()).toBe("");
+  });
+
   it("prints the no-files message for an empty project", async () => {
     const projectRoot = await createTempDir("crap-cli-");
     tempDirs.push(projectRoot);
@@ -192,5 +267,21 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(stdout.toString()).toContain("No analyzable functions found.");
     expect(stdout.toString()).not.toContain("Function  CC  Coverage  CRAP  Location");
     expect(stderr.toString()).toBe("");
+  });
+
+  it("prints analysis errors to stderr and exits with code 1", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli(["missing.ts"], projectRoot, stdout, stderr);
+
+    expect(exitCode).toBe(1);
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toContain("ENOENT");
   });
 });
