@@ -1,12 +1,17 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { StringWriter, createTempDir, disposeTempDir, writeProjectFiles } from "../../core/test/testUtils";
 import { CrapTypescriptVitestReporter } from "../src/index";
 
 const tempDirs: string[] = [];
+let originalExitCode: number | undefined;
+
+beforeEach(() => {
+  originalExitCode = process.exitCode;
+});
 
 afterEach(async () => {
-  process.exitCode = 0;
+  process.exitCode = originalExitCode;
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
 });
 
