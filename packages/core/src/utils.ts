@@ -15,6 +15,10 @@ export function normalizePathForMatch(filePath: string): string {
   return normalizeSlashes(path.resolve(filePath)).toLowerCase();
 }
 
+export function isAbsolutePath(filePath: string): boolean {
+  return path.isAbsolute(filePath) || path.win32.isAbsolute(filePath);
+}
+
 export function toRelativePath(projectRoot: string, filePath: string): string {
   const relative = path.relative(projectRoot, filePath);
   return normalizeSlashes(relative || path.basename(filePath));
@@ -64,4 +68,3 @@ export class DefaultCommandExecutor {
     return result.exitCode;
   }
 }
-

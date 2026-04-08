@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants";
 import { locateCoverageReport, resolvePackageManager, resolveTestRunner } from "./moduleResolution";
+import { isAbsolutePath } from "./utils";
 import type { CommandExecutor, CoverageMode, CoverageCommand, PackageManager, TestRunner } from "./types";
 
 export async function ensureCoverageReport(
@@ -29,7 +30,7 @@ export async function ensureCoverageReport(
 }
 
 export function expectedCoveragePath(moduleRoot: string, coverageReportPath = COVERAGE_REPORT_RELATIVE_PATH): string {
-  return path.isAbsolute(coverageReportPath)
+  return isAbsolutePath(coverageReportPath)
     ? coverageReportPath
     : path.join(moduleRoot, coverageReportPath);
 }

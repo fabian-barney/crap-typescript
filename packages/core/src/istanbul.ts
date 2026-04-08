@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { normalizePathForMatch } from "./utils";
+import { isAbsolutePath, normalizePathForMatch } from "./utils";
 import type { SourceSpan } from "./types";
 import type {
   BranchCoverageUnit,
@@ -88,7 +88,7 @@ function parseCoverageEntry(
     return null;
   }
 
-  const resolved = path.isAbsolute(sourcePath)
+  const resolved = isAbsolutePath(sourcePath)
     ? sourcePath
     : path.resolve(sourceRoot, sourcePath);
   return {

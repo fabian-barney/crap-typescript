@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants";
+import { isAbsolutePath } from "./utils";
 import type { PackageManager, PackageManagerSelection, TestRunner, TestRunnerSelection } from "./types";
 
 export interface CoverageSource {
@@ -168,7 +169,7 @@ function isWithinOrEqual(candidate: string, root: string): boolean {
 }
 
 function resolveCoveragePath(root: string, coverageReportPath: string): string {
-  return path.isAbsolute(coverageReportPath)
+  return isAbsolutePath(coverageReportPath)
     ? coverageReportPath
     : path.join(root, coverageReportPath);
 }
