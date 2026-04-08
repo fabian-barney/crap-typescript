@@ -4,6 +4,38 @@ import ts from "typescript";
 import { resolveScriptKind } from "./utils";
 import type { MethodDescriptor, SourceSpan } from "./types";
 
+const COMPLEXITY_INCREMENT_KINDS = new Set([
+  ts.SyntaxKind.IfStatement,
+  ts.SyntaxKind.ForStatement,
+  ts.SyntaxKind.ForInStatement,
+  ts.SyntaxKind.ForOfStatement,
+  ts.SyntaxKind.WhileStatement,
+  ts.SyntaxKind.DoStatement,
+  ts.SyntaxKind.CatchClause,
+  ts.SyntaxKind.ConditionalExpression,
+  ts.SyntaxKind.CaseClause
+]);
+const SHORT_CIRCUIT_KINDS = new Set([
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.QuestionQuestionToken
+]);
+const BRANCH_SYNTAX_KINDS = new Set([
+  ts.SyntaxKind.IfStatement,
+  ts.SyntaxKind.ConditionalExpression,
+  ts.SyntaxKind.SwitchStatement
+]);
+const NESTED_BOUNDARY_KINDS = new Set([
+  ts.SyntaxKind.FunctionDeclaration,
+  ts.SyntaxKind.FunctionExpression,
+  ts.SyntaxKind.ArrowFunction,
+  ts.SyntaxKind.MethodDeclaration,
+  ts.SyntaxKind.GetAccessor,
+  ts.SyntaxKind.SetAccessor,
+  ts.SyntaxKind.ClassDeclaration,
+  ts.SyntaxKind.ClassExpression
+]);
+
 export async function parseFileMethods(filePath: string): Promise<MethodDescriptor[]> {
   const sourceText = await readFile(filePath, "utf8");
   const scriptKind = resolveScriptKind(filePath) === "tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
@@ -23,40 +55,59 @@ export async function parseFileMethods(filePath: string): Promise<MethodDescript
 }
 
 function toMethodDescriptor(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
-  if (ts.isFunctionDeclaration(node)) {
-    if (!node.body) {
-      return null;
+  for (const builder of DESCRIPTOR_BUILDERS) {
+    const descriptor = builder(node, sourceFile);
+    if (descriptor) {
+      return descriptor;
     }
-    const functionName = node.name?.text ?? inferFunctionDeclarationName(node);
-    if (!functionName) {
-      return null;
-    }
-    return buildMethodDescriptor(functionName, findContainerName(node), node, sourceFile);
-  }
-
-  if (ts.isMethodDeclaration(node)) {
-    if (!node.body) {
-      return null;
-    }
-    return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, sourceFile);
-  }
-
-  if (ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) {
-    if (!node.body) {
-      return null;
-    }
-    return buildMethodDescriptor(accessorName(node), findContainerName(node), node, sourceFile);
-  }
-
-  if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
-    const assignedName = findAssignedFunctionName(node);
-    if (!assignedName) {
-      return null;
-    }
-    return buildMethodDescriptor(assignedName.name, assignedName.containerName, node, sourceFile);
   }
 
   return null;
+}
+
+type DescriptorBuilder = (node: ts.Node, sourceFile: ts.SourceFile) => MethodDescriptor | null;
+
+const DESCRIPTOR_BUILDERS: DescriptorBuilder[] = [
+  descriptorFromFunctionDeclaration,
+  descriptorFromMethodDeclaration,
+  descriptorFromAccessorDeclaration,
+  descriptorFromAssignedFunction
+];
+
+function descriptorFromFunctionDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
+  if (!ts.isFunctionDeclaration(node) || !node.body) {
+    return null;
+  }
+  const functionName = node.name?.text ?? inferFunctionDeclarationName(node);
+  if (!functionName) {
+    return null;
+  }
+  return buildMethodDescriptor(functionName, findContainerName(node), node, sourceFile);
+}
+
+function descriptorFromMethodDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
+  if (!ts.isMethodDeclaration(node) || !node.body) {
+    return null;
+  }
+  return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, sourceFile);
+}
+
+function descriptorFromAccessorDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
+  if (!(ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) || !node.body) {
+    return null;
+  }
+  return buildMethodDescriptor(accessorName(node), findContainerName(node), node, sourceFile);
+}
+
+function descriptorFromAssignedFunction(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
+  if (!(ts.isFunctionExpression(node) || ts.isArrowFunction(node))) {
+    return null;
+  }
+  const assignedName = findAssignedFunctionName(node);
+  if (!assignedName) {
+    return null;
+  }
+  return buildMethodDescriptor(assignedName.name, assignedName.containerName, node, sourceFile);
 }
 
 function inferFunctionDeclarationName(node: ts.FunctionDeclaration): string | null {
@@ -134,46 +185,102 @@ function findContainerName(node: ts.Node): string | null {
 }
 
 function inferObjectContainerName(node: ts.ObjectLiteralExpression): string | null {
-  const parent = node.parent;
-  if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
-    return parent.name.text;
-  }
-  if (ts.isPropertyAssignment(parent)) {
-    return propertyName(parent.name);
-  }
-  if (ts.isPropertyDeclaration(parent)) {
-    return propertyName(parent.name);
-  }
-  if (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-    const target = assignmentTarget(parent.left);
-    return toDisplayName(target.containerName, target.name);
+  for (const resolver of OBJECT_CONTAINER_RESOLVERS) {
+    const containerName = resolver(node.parent);
+    if (containerName) {
+      return containerName;
+    }
   }
   return null;
 }
 
 function assignmentTarget(node: ts.Expression): { name: string; containerName: string | null } {
+  for (const resolver of ASSIGNMENT_TARGET_RESOLVERS) {
+    const target = resolver(node);
+    if (target) {
+      return target;
+    }
+  }
+  return {
+    name: "<assigned>",
+    containerName: null
+  };
+}
+
+type ObjectContainerResolver = (parent: ts.Node) => string | null;
+
+const OBJECT_CONTAINER_RESOLVERS: ObjectContainerResolver[] = [
+  containerFromVariableDeclaration,
+  containerFromPropertyAssignment,
+  containerFromPropertyDeclaration,
+  containerFromBinaryAssignment
+];
+
+function containerFromVariableDeclaration(parent: ts.Node): string | null {
+  if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
+    return parent.name.text;
+  }
+  return null;
+}
+
+function containerFromPropertyAssignment(parent: ts.Node): string | null {
+  if (ts.isPropertyAssignment(parent)) {
+    return propertyName(parent.name);
+  }
+  return null;
+}
+
+function containerFromPropertyDeclaration(parent: ts.Node): string | null {
+  if (ts.isPropertyDeclaration(parent)) {
+    return propertyName(parent.name);
+  }
+  return null;
+}
+
+function containerFromBinaryAssignment(parent: ts.Node): string | null {
+  if (!isAssignmentExpression(parent)) {
+    return null;
+  }
+  const target = assignmentTarget(parent.left);
+  return toDisplayName(target.containerName, target.name);
+}
+
+type AssignmentTargetResolver = (node: ts.Expression) => { name: string; containerName: string | null } | null;
+
+const ASSIGNMENT_TARGET_RESOLVERS: AssignmentTargetResolver[] = [
+  assignmentFromIdentifier,
+  assignmentFromPropertyAccess,
+  assignmentFromElementAccess
+];
+
+function assignmentFromIdentifier(node: ts.Expression): { name: string; containerName: string | null } | null {
   if (ts.isIdentifier(node)) {
     return {
       name: node.text,
       containerName: null
     };
   }
+  return null;
+}
+
+function assignmentFromPropertyAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
   if (ts.isPropertyAccessExpression(node)) {
     return {
       name: node.name.text,
       containerName: node.expression.getText()
     };
   }
+  return null;
+}
+
+function assignmentFromElementAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
   if (ts.isElementAccessExpression(node)) {
     return {
       name: `[${node.argumentExpression?.getText() ?? ""}]`,
       containerName: node.expression.getText()
     };
   }
-  return {
-    name: "<assigned>",
-    containerName: null
-  };
+  return null;
 }
 
 function accessorName(node: ts.GetAccessorDeclaration | ts.SetAccessorDeclaration): string {
@@ -206,31 +313,7 @@ function countCyclomaticComplexity(node: ts.FunctionLikeDeclaration): number {
     if (current !== node && isNestedBoundary(current)) {
       return;
     }
-
-    if (
-      ts.isIfStatement(current) ||
-      ts.isForStatement(current) ||
-      ts.isForInStatement(current) ||
-      ts.isForOfStatement(current) ||
-      ts.isWhileStatement(current) ||
-      ts.isDoStatement(current) ||
-      ts.isCatchClause(current) ||
-      ts.isConditionalExpression(current)
-    ) {
-      complexity += 1;
-    } else if (ts.isCaseClause(current)) {
-      complexity += 1;
-    } else if (ts.isBinaryExpression(current)) {
-      const kind = current.operatorToken.kind;
-      if (
-        kind === ts.SyntaxKind.AmpersandAmpersandToken ||
-        kind === ts.SyntaxKind.BarBarToken ||
-        kind === ts.SyntaxKind.QuestionQuestionToken
-      ) {
-        complexity += 1;
-      }
-    }
-
+    complexity += complexityContribution(current);
     ts.forEachChild(current, visit);
   };
 
@@ -267,24 +350,9 @@ function hasAttributableBranches(body: ts.ConciseBody): boolean {
     if (current !== body && isNestedBoundary(current)) {
       return;
     }
-    if (
-      ts.isIfStatement(current) ||
-      ts.isConditionalExpression(current) ||
-      ts.isSwitchStatement(current)
-    ) {
+    if (hasBranchSyntax(current)) {
       found = true;
       return;
-    }
-    if (ts.isBinaryExpression(current)) {
-      const kind = current.operatorToken.kind;
-      if (
-        kind === ts.SyntaxKind.AmpersandAmpersandToken ||
-        kind === ts.SyntaxKind.BarBarToken ||
-        kind === ts.SyntaxKind.QuestionQuestionToken
-      ) {
-        found = true;
-        return;
-      }
     }
 
     ts.forEachChild(current, visit);
@@ -295,17 +363,31 @@ function hasAttributableBranches(body: ts.ConciseBody): boolean {
 }
 
 function isNestedBoundary(node: ts.Node): boolean {
-  return ts.isFunctionDeclaration(node) ||
-    ts.isFunctionExpression(node) ||
-    ts.isArrowFunction(node) ||
-    ts.isMethodDeclaration(node) ||
-    ts.isGetAccessorDeclaration(node) ||
-    ts.isSetAccessorDeclaration(node) ||
-    ts.isClassDeclaration(node) ||
-    ts.isClassExpression(node);
+  return NESTED_BOUNDARY_KINDS.has(node.kind);
 }
 
 function isProvablyNonExecutableDeclarationStatement(statement: ts.Statement): boolean {
   return ts.isInterfaceDeclaration(statement) ||
     ts.isTypeAliasDeclaration(statement);
+}
+
+function complexityContribution(node: ts.Node): number {
+  if (COMPLEXITY_INCREMENT_KINDS.has(node.kind)) {
+    return 1;
+  }
+  if (!ts.isBinaryExpression(node)) {
+    return 0;
+  }
+  return SHORT_CIRCUIT_KINDS.has(node.operatorToken.kind) ? 1 : 0;
+}
+
+function hasBranchSyntax(node: ts.Node): boolean {
+  if (BRANCH_SYNTAX_KINDS.has(node.kind)) {
+    return true;
+  }
+  return ts.isBinaryExpression(node) && SHORT_CIRCUIT_KINDS.has(node.operatorToken.kind);
+}
+
+function isAssignmentExpression(node: ts.Node): node is ts.BinaryExpression {
+  return ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken;
 }

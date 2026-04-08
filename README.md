@@ -42,8 +42,11 @@ Verified and unverified coverage-attribution shapes are tracked in [docs/compati
 npm ci
 npm run build
 npm test
+npm run crap-typescript-check
 npm pack --workspaces
 ```
+
+`npm run crap-typescript-check` runs the repository through its own CRAP threshold gate for the published package sources under `packages/`.
 
 ## Install
 

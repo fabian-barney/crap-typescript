@@ -23,6 +23,39 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--changed", "src/app.ts"])).toThrow("--changed cannot be combined");
   });
 
+  it("parses explicit paths, help mode, and alternate package-manager and test-runner selections", () => {
+    expect(parseCliArguments(["packages/core", "--package-manager", "pnpm", "--test-runner", "jest"])).toEqual({
+      mode: "explicit",
+      fileArgs: ["packages/core"],
+      packageManager: "pnpm",
+      testRunner: "jest"
+    });
+    expect(parseCliArguments(["--help", "--package-manager", "yarn"])).toEqual({
+      mode: "help",
+      fileArgs: [],
+      packageManager: "yarn",
+      testRunner: "auto"
+    });
+  });
+
+  it("rejects duplicate, missing, invalid, and unknown options", () => {
+    expect(() => parseCliArguments(["--package-manager", "npm", "--package-manager", "pnpm"])).toThrow(
+      "--package-manager can only be provided once"
+    );
+    expect(() => parseCliArguments(["--test-runner", "vitest", "--test-runner", "jest"])).toThrow(
+      "--test-runner can only be provided once"
+    );
+    expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn");
+    expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest");
+    expect(() => parseCliArguments(["--package-manager", "bun"])).toThrow(
+      "--package-manager requires one of: auto, npm, pnpm, yarn"
+    );
+    expect(() => parseCliArguments(["--test-runner", "mocha"])).toThrow(
+      "--test-runner requires one of: auto, vitest, jest"
+    );
+    expect(() => parseCliArguments(["--unknown"])).toThrow("Unknown option: --unknown");
+  });
+
   it("prints help", async () => {
     const stdout = new StringWriter();
     const stderr = new StringWriter();

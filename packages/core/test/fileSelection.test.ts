@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   changedTypeScriptFilesUnderSourceRoots,
   expandExplicitPaths,
-  findAllTypeScriptFilesUnderSourceRoots
+  findAllTypeScriptFilesUnderSourceRoots,
+  isAnalyzableFile
 } from "../src/fileSelection";
 import { createTempDir, disposeTempDir, initGitRepository, runProcess, writeProjectFiles } from "./testUtils";
 
@@ -107,5 +108,63 @@ describe("file selection", () => {
     expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
       "src/hello world.ts"
     ]);
+  });
+
+  it("tracks renamed source files under src trees", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await initGitRepository(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/old-name.ts": "export const app = 1;\n"
+    });
+    await runProcess("git", ["add", "."], tempDir);
+    await runProcess("git", ["commit", "-m", "initial"], tempDir);
+
+    await runProcess("git", ["mv", "src/old-name.ts", "src/new-name.ts"], tempDir);
+
+    const files = await changedTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/new-name.ts"
+    ]);
+  });
+
+  it("filters declaration, test, dist, coverage, and node_modules paths from analyzable files", () => {
+    expect(isAnalyzableFile("C:/repo/src/app.ts")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/component.tsx")).toBe(true);
+    expect(isAnalyzableFile("C:/repo/src/types.d.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/src/app.spec.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/src/app.test.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/src/__tests__/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/dist/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/coverage/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/node_modules/pkg/index.ts")).toBe(false);
+  });
+
+  it("ignores deleted and non-source changes and reports git errors clearly", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await initGitRepository(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/app.ts": "export const app = 1;\n",
+      "src/remove.ts": "export const removeMe = 1;\n",
+      "docs/readme.ts": "export const docs = 1;\n"
+    });
+    await runProcess("git", ["add", "."], tempDir);
+    await runProcess("git", ["commit", "-m", "initial"], tempDir);
+
+    await writeFile(path.join(tempDir, "src/app.ts"), "export const app = 2;\n", "utf8");
+    await writeFile(path.join(tempDir, "docs/readme.ts"), "export const docs = 2;\n", "utf8");
+    await runProcess("git", ["rm", "src/remove.ts"], tempDir);
+
+    const files = await changedTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/app.ts"
+    ]);
+
+    const nonRepoDir = await createTempDir("crap-files-nonrepo-");
+    tempDirs.push(nonRepoDir);
+    await expect(changedTypeScriptFilesUnderSourceRoots(nonRepoDir)).rejects.toThrow("not a git repository");
   });
 });

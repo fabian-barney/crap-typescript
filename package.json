@@ -22,6 +22,7 @@
   ],
   "scripts": {
     "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
+    "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
     "test": "npm run build && vitest run",
     "pack": "npm pack --workspaces",
     "verify-release-version": "node ./scripts/verify-release-version.mjs"
