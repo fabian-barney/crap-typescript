@@ -467,6 +467,108 @@ export function enumDeclOnly(): void {
       }
     ]);
   });
+
+  it("parses fallback branch and function spans and deduplicates hits conservatively", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            },
+            "1": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          branchMap: {
+            "0": {
+              line: 3,
+              locations: [
+                {
+                  start: { line: 3, column: 2 },
+                  end: { line: 5, column: 3 }
+                }
+              ]
+            },
+            "1": {
+              loc: {
+                start: { line: 3, column: 2 },
+                end: { line: 5, column: 3 }
+              }
+            }
+          },
+          fnMap: {
+            "0": {
+              decl: {
+                start: { line: 1, column: 0 },
+                end: { line: 6, column: 1 }
+              }
+            },
+            "1": {
+              line: 1
+            }
+          },
+          s: {
+            "0": 1,
+            "1": 3
+          },
+          b: {
+            "0": [1, 0],
+            "1": [0, 2, 4]
+          },
+          f: {}
+        }
+      })
+    });
+
+    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+    expect(fileCoverage.statements).toEqual([
+      {
+        span: {
+          startLine: 2,
+          startColumn: 2,
+          endLine: 2,
+          endColumn: 19
+        },
+        hits: 3
+      }
+    ]);
+    expect(fileCoverage.branches).toEqual([
+      {
+        span: {
+          startLine: 3,
+          startColumn: 2,
+          endLine: 5,
+          endColumn: 3
+        },
+        hits: [1, 2, 4]
+      }
+    ]);
+    expect(fileCoverage.functions).toEqual([
+      {
+        span: {
+          startLine: 1,
+          startColumn: 0,
+          endLine: 6,
+          endColumn: 1
+        }
+      },
+      {
+        span: {
+          startLine: 1,
+          startColumn: 0,
+          endLine: 1,
+          endColumn: Number.MAX_SAFE_INTEGER
+        }
+      }
+    ]);
+  });
 });
 
 function summarizeMethodCoverage(coverage: {

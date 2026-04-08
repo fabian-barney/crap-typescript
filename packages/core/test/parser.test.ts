@@ -430,4 +430,105 @@ namespace TypesOnly {
       }
     ]);
   });
+
+  it("infers container names for nested object literals and assignment targets", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "containers.ts");
+    await writeFile(
+      filePath,
+      `const registry: Record<string, unknown> = {};
+
+registry.render = {
+  nested(value: string): string {
+    return value.trim();
+  }
+};
+
+const root = {
+  child: {
+    leaf(value: number): number {
+      return value + 1;
+    }
+  }
+};
+
+class Example {
+  helper = {
+    format(value: string): string {
+      return value.toUpperCase();
+    }
+  };
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toMatchObject([
+      {
+        displayName: "registry.render.nested"
+      },
+      {
+        displayName: "child.leaf"
+      },
+      {
+        displayName: "helper.format"
+      }
+    ]);
+  });
+
+  it("handles identifier, property, element, fallback, and unowned object-literal assignment targets", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "assignment-targets.ts");
+    await writeFile(
+      filePath,
+      `let direct: ((value: string) => string) | undefined;
+const registry: Record<string, unknown> = {};
+
+direct = function (value: string): string {
+  return value.trim();
+};
+
+registry.format = function (value: string): string {
+  return value.toUpperCase();
+};
+
+registry["upper"] = function (value: string): string {
+  return value ? value.toUpperCase() : value;
+};
+
+(registry as Record<string, unknown>) = function (value: string): string {
+  return value;
+};
+
+export function createHandlers() {
+  return {
+    returned(value: number): number {
+      return value + 1;
+    }
+  };
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        displayName: "direct"
+      }),
+      expect.objectContaining({
+        displayName: "registry.format"
+      }),
+      expect.objectContaining({
+        displayName: "registry[\"upper\"]"
+      }),
+      expect.objectContaining({
+        displayName: "<assigned>"
+      }),
+      expect.objectContaining({
+        displayName: "returned"
+      })
+    ]));
+  });
 });

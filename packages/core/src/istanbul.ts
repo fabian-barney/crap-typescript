@@ -75,19 +75,10 @@ function parseBranches(branchMapValue: unknown, hitsValue: unknown): BranchCover
 
   const branches: BranchCoverageUnit[] = [];
   for (const [key, branchValue] of Object.entries(branchMapValue)) {
-    if (!isRecord(branchValue)) {
-      continue;
+    const branch = toBranchCoverageUnit(branchValue, hitsValue[key]);
+    if (branch) {
+      branches.push(branch);
     }
-
-    const hits = parseHitArray(hitsValue[key]);
-    const span = parseSpan(branchValue.loc) ??
-      parseFirstLocation(branchValue.locations) ??
-      parseLineSpan(branchValue.line);
-    if (hits.length === 0 || span === null) {
-      continue;
-    }
-
-    branches.push({ span, hits });
   }
 
   return deduplicateBranches(branches);
@@ -100,13 +91,7 @@ function parseFunctions(fnMapValue: unknown): FunctionCoverageUnit[] {
 
   const functions: FunctionCoverageUnit[] = [];
   for (const entryValue of Object.values(fnMapValue)) {
-    if (!isRecord(entryValue)) {
-      continue;
-    }
-
-    const span = parseSpan(entryValue.loc) ??
-      parseSpan(entryValue.decl) ??
-      parseLineSpan(entryValue.line);
+    const span = resolveFunctionSpan(entryValue);
     if (span) {
       functions.push({ span });
     }
@@ -218,16 +203,9 @@ function deduplicateBranches(branches: BranchCoverageUnit[]): BranchCoverageUnit
       deduplicated.set(key, branch);
       continue;
     }
-
-    const mergedHits = branch.hits.map((hits, index) => Math.max(hits, existing.hits[index] ?? 0));
-    if (existing.hits.length > mergedHits.length) {
-      for (let index = mergedHits.length; index < existing.hits.length; index += 1) {
-        mergedHits.push(existing.hits[index]);
-      }
-    }
     deduplicated.set(key, {
       span: branch.span,
-      hits: mergedHits
+      hits: mergeBranchHits(existing.hits, branch.hits)
     });
   }
   return [...deduplicated.values()];
@@ -253,4 +231,40 @@ function stringifySpan(span: SourceSpan): string {
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toBranchCoverageUnit(branchValue: unknown, hitsValue: unknown): BranchCoverageUnit | null {
+  if (!isRecord(branchValue)) {
+    return null;
+  }
+
+  const hits = parseHitArray(hitsValue);
+  const span = resolveBranchSpan(branchValue);
+  if (hits.length === 0 || span === null) {
+    return null;
+  }
+  return { span, hits };
+}
+
+function resolveBranchSpan(branchValue: JsonRecord): SourceSpan | null {
+  return parseSpan(branchValue.loc) ??
+    parseFirstLocation(branchValue.locations) ??
+    parseLineSpan(branchValue.line);
+}
+
+function resolveFunctionSpan(entryValue: unknown): SourceSpan | null {
+  if (!isRecord(entryValue)) {
+    return null;
+  }
+  return parseSpan(entryValue.loc) ??
+    parseSpan(entryValue.decl) ??
+    parseLineSpan(entryValue.line);
+}
+
+function mergeBranchHits(existingHits: number[], nextHits: number[]): number[] {
+  const mergedHits = nextHits.map((hits, index) => Math.max(hits, existingHits[index] ?? 0));
+  for (let index = mergedHits.length; index < existingHits.length; index += 1) {
+    mergedHits.push(existingHits[index]);
+  }
+  return mergedHits;
 }

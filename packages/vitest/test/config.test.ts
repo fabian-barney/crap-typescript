@@ -17,4 +17,23 @@ describe("withCrapTypescriptVitest", () => {
     expect(reporters?.[1]).toBeInstanceOf(CrapTypescriptVitestReporter);
     expect(coverageReporters).toEqual(["json", "text"]);
   });
+
+  it("preserves existing default reporters and augments single coverage reporter values", () => {
+    const config = withCrapTypescriptVitest({
+      test: {
+        reporters: ["default"],
+        coverage: {
+          reporter: "json",
+          reportsDirectory: "custom-coverage"
+        }
+      }
+    });
+
+    expect(config.test?.reporters).toEqual([
+      "default",
+      expect.any(CrapTypescriptVitestReporter)
+    ]);
+    expect(config.test?.coverage?.reporter).toEqual(["json", "text"]);
+    expect(config.test?.coverage?.reportsDirectory).toBe("custom-coverage");
+  });
 });

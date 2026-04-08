@@ -39,62 +39,98 @@ export function parseCliArguments(args: string[]): CliArguments {
     };
   }
 
-  let help = false;
-  let changed = false;
-  let packageManager: PackageManagerSelection = "auto";
-  let testRunner: TestRunnerSelection = "auto";
-  let packageManagerSeen = false;
-  let testRunnerSeen = false;
-  const fileArgs: string[] = [];
+  const state = createParseState();
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    switch (arg) {
-      case "--help":
-        help = true;
-        break;
-      case "--changed":
-        changed = true;
-        break;
-      case "--package-manager":
-        if (packageManagerSeen) {
-          throw new Error("--package-manager can only be provided once");
-        }
-        packageManager = parsePackageManagerSelection(args[++index]);
-        packageManagerSeen = true;
-        break;
-      case "--test-runner":
-        if (testRunnerSeen) {
-          throw new Error("--test-runner can only be provided once");
-        }
-        testRunner = parseTestRunnerSelection(args[++index]);
-        testRunnerSeen = true;
-        break;
-      default:
-        if (arg.startsWith("--")) {
-          throw new Error(`Unknown option: ${arg}`);
-        }
-        fileArgs.push(arg);
-        break;
+    if (!arg.startsWith("--")) {
+      state.fileArgs.push(arg);
+      continue;
     }
+    index = consumeOption(state, args, index);
   }
 
-  if (help) {
+  return finalizeCliArguments(state);
+}
+
+interface ParseState {
+  help: boolean;
+  changed: boolean;
+  packageManager: PackageManagerSelection;
+  testRunner: TestRunnerSelection;
+  packageManagerSeen: boolean;
+  testRunnerSeen: boolean;
+  fileArgs: string[];
+}
+
+type OptionHandler = (state: ParseState, args: string[], index: number) => number;
+
+const OPTION_HANDLERS: Record<string, OptionHandler> = {
+  "--help": (state, _args, index) => {
+    state.help = true;
+    return index;
+  },
+  "--changed": (state, _args, index) => {
+    state.changed = true;
+    return index;
+  },
+  "--package-manager": (state, args, index) => {
+    ensureOptionIsUnique(state.packageManagerSeen, "--package-manager");
+    state.packageManager = parsePackageManagerSelection(args[index + 1]);
+    state.packageManagerSeen = true;
+    return index + 1;
+  },
+  "--test-runner": (state, args, index) => {
+    ensureOptionIsUnique(state.testRunnerSeen, "--test-runner");
+    state.testRunner = parseTestRunnerSelection(args[index + 1]);
+    state.testRunnerSeen = true;
+    return index + 1;
+  }
+};
+
+function createParseState(): ParseState {
+  return {
+    help: false,
+    changed: false,
+    packageManager: "auto",
+    testRunner: "auto",
+    packageManagerSeen: false,
+    testRunnerSeen: false,
+    fileArgs: []
+  };
+}
+
+function consumeOption(state: ParseState, args: string[], index: number): number {
+  const handler = OPTION_HANDLERS[args[index]];
+  if (!handler) {
+    throw new Error(`Unknown option: ${args[index]}`);
+  }
+  return handler(state, args, index);
+}
+
+function ensureOptionIsUnique(seen: boolean, option: string): void {
+  if (seen) {
+    throw new Error(`${option} can only be provided once`);
+  }
+}
+
+function finalizeCliArguments(state: ParseState): CliArguments {
+  if (state.help) {
     return {
       mode: "help",
       fileArgs: [],
-      packageManager,
-      testRunner
+      packageManager: state.packageManager,
+      testRunner: state.testRunner
     };
   }
-  if (changed && fileArgs.length > 0) {
+  if (state.changed && state.fileArgs.length > 0) {
     throw new Error("--changed cannot be combined with file arguments");
   }
   return {
-    mode: changed ? "changed" : fileArgs.length > 0 ? "explicit" : "all",
-    fileArgs,
-    packageManager,
-    testRunner
+    mode: state.changed ? "changed" : state.fileArgs.length > 0 ? "explicit" : "all",
+    fileArgs: state.fileArgs,
+    packageManager: state.packageManager,
+    testRunner: state.testRunner
   };
 }
 

@@ -4,6 +4,10 @@ import path from "node:path";
 import { IGNORED_DIRECTORIES } from "./constants";
 import { runCommand, toRelativePath } from "./utils";
 
+const ANALYZABLE_EXTENSIONS = [".ts", ".tsx"];
+const TEST_FILE_MARKERS = [".test.", ".spec."];
+const EXCLUDED_PATH_SEGMENTS = ["/__tests__/", "/dist/", "/coverage/", "/node_modules/"];
+
 export async function findAllTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
   const files = new Set<string>();
   await walkForSourceRoots(projectRoot, async (sourceRoot) => {
@@ -38,52 +42,65 @@ export async function changedTypeScriptFilesUnderSourceRoots(projectRoot: string
   if (result.exitCode !== 0) {
     throw new Error(result.stderr.trim() || "git status --porcelain failed");
   }
-
-  const files = new Set<string>();
-  const entries = result.stdout.split("\0");
-  for (let index = 0; index < entries.length; index += 1) {
-    const entry = entries[index];
-    if (!entry) {
-      continue;
-    }
-    const status = entry.slice(0, 2);
-    const pathValue = entry.slice(3);
-    if (!isIncludedGitStatus(status)) {
-      if (isRenameOrCopyStatus(status)) {
-        index += 1;
-      }
-      continue;
-    }
-    const resolvedPath = path.resolve(projectRoot, pathValue);
-    if (isAnalyzableFile(resolvedPath) && isUnderSourceTree(projectRoot, resolvedPath)) {
-      files.add(resolvedPath);
-    }
-    if (isRenameOrCopyStatus(status)) {
-      index += 1;
-    }
-  }
-  return Array.from(files).sort();
+  return Array.from(collectChangedFilesFromStatus(projectRoot, result.stdout.split("\0"))).sort();
 }
 
 export function isAnalyzableFile(filePath: string): boolean {
   const normalized = toRelativePath(path.parse(filePath).root, filePath).toLowerCase();
   const baseName = path.basename(normalized);
-  if (!(normalized.endsWith(".ts") || normalized.endsWith(".tsx"))) {
+  if (!hasAnySuffix(normalized, ANALYZABLE_EXTENSIONS)) {
     return false;
   }
   if (normalized.endsWith(".d.ts")) {
     return false;
   }
-  if (baseName.includes(".test.") || baseName.includes(".spec.")) {
+  if (containsAny(baseName, TEST_FILE_MARKERS)) {
     return false;
   }
-  if (normalized.includes("/__tests__/")) {
-    return false;
-  }
-  if (normalized.includes("/dist/") || normalized.includes("/coverage/") || normalized.includes("/node_modules/")) {
+  if (containsAny(normalized, EXCLUDED_PATH_SEGMENTS)) {
     return false;
   }
   return true;
+}
+
+interface GitStatusEntry {
+  status: string;
+  pathValue: string;
+}
+
+function parseGitStatusEntry(entry: string): GitStatusEntry | null {
+  if (!entry) {
+    return null;
+  }
+  return {
+    status: entry.slice(0, 2),
+    pathValue: entry.slice(3)
+  };
+}
+
+function collectChangedFile(projectRoot: string, entry: GitStatusEntry, files: Set<string>): void {
+  if (!isIncludedGitStatus(entry.status)) {
+    return;
+  }
+  const resolvedPath = path.resolve(projectRoot, entry.pathValue);
+  if (isAnalyzableFile(resolvedPath) && isUnderSourceTree(projectRoot, resolvedPath)) {
+    files.add(resolvedPath);
+  }
+}
+
+function collectChangedFilesFromStatus(projectRoot: string, entries: string[]): Set<string> {
+  const files = new Set<string>();
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = parseGitStatusEntry(entries[index]);
+    if (!entry) {
+      continue;
+    }
+    collectChangedFile(projectRoot, entry, files);
+    if (isRenameOrCopyStatus(entry.status)) {
+      index += 1;
+    }
+  }
+  return files;
 }
 
 function isUnderSourceTree(projectRoot: string, filePath: string): boolean {
@@ -100,6 +117,14 @@ function isIncludedGitStatus(status: string): boolean {
 
 function isRenameOrCopyStatus(status: string): boolean {
   return status.includes("R") || status.includes("C");
+}
+
+function containsAny(value: string, fragments: string[]): boolean {
+  return fragments.some((fragment) => value.includes(fragment));
+}
+
+function hasAnySuffix(value: string, suffixes: string[]): boolean {
+  return suffixes.some((suffix) => value.endsWith(suffix));
 }
 
 async function walkForSourceRoots(

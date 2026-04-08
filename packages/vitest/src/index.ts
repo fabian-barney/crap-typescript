@@ -31,29 +31,28 @@ export class CrapTypescriptVitestReporter {
   constructor(private readonly options: CrapTypescriptVitestOptions = {}) {}
 
   async onFinishedReportCoverage(): Promise<void> {
-    const stdout = this.options.stdout ?? process.stdout;
-    const stderr = this.options.stderr ?? process.stderr;
+    const options = resolveReporterOptions(this.options);
     const result = await analyzeProject({
-      projectRoot: this.options.projectRoot ?? process.cwd(),
-      explicitPaths: this.options.paths ?? [],
-      changedOnly: this.options.changedOnly ?? false,
-      packageManager: this.options.packageManager ?? "auto",
+      projectRoot: options.projectRoot,
+      explicitPaths: options.paths,
+      changedOnly: options.changedOnly,
+      packageManager: options.packageManager,
       testRunner: "vitest",
       coverageMode: "existing-only",
-      coverageReportPath: this.options.coverageReportPath,
-      stdout,
-      stderr
+      coverageReportPath: options.coverageReportPath,
+      stdout: options.stdout,
+      stderr: options.stderr
     });
 
     if (result.selectedFiles.length === 0) {
-      stdout.write(`${NO_FILES_MESSAGE}\n`);
+      options.stdout.write(`${NO_FILES_MESSAGE}\n`);
       return;
     }
 
-    stdout.write(`${formatReport(result.metrics)}\n`);
+    options.stdout.write(`${formatReport(result.metrics)}\n`);
     if (result.thresholdExceeded) {
       const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${CRAP_THRESHOLD.toFixed(1)}`;
-      stderr.write(`${error}\n`);
+      options.stderr.write(`${error}\n`);
       process.exitCode = 1;
     }
   }
@@ -120,4 +119,26 @@ function ensureDefaultReporter(existing: VitestReporterEntry[]): VitestReporterE
 
 function buildCoverageReportPath(reportsDirectory: string | undefined): string {
   return `${reportsDirectory ?? "coverage"}/coverage-final.json`;
+}
+
+interface ResolvedReporterOptions {
+  projectRoot: string;
+  paths: string[];
+  changedOnly: boolean;
+  packageManager: PackageManagerSelection;
+  coverageReportPath: string | undefined;
+  stdout: Writer;
+  stderr: Writer;
+}
+
+function resolveReporterOptions(options: CrapTypescriptVitestOptions): ResolvedReporterOptions {
+  return {
+    projectRoot: options.projectRoot ?? process.cwd(),
+    paths: options.paths ?? [],
+    changedOnly: options.changedOnly ?? false,
+    packageManager: options.packageManager ?? "auto",
+    coverageReportPath: options.coverageReportPath,
+    stdout: options.stdout ?? process.stdout,
+    stderr: options.stderr ?? process.stderr
+  };
 }
