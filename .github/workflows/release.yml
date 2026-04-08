@@ -40,24 +40,16 @@ jobs:
         run: npm test
 
       - name: Publish core
-        run: npm publish --workspace packages/core --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace packages/core --access public
 
       - name: Publish CLI
-        run: npm publish --workspace packages/cli --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace packages/cli --access public
 
       - name: Publish Vitest adapter
-        run: npm publish --workspace packages/vitest --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace packages/vitest --access public
 
       - name: Publish Jest adapter
-        run: npm publish --workspace packages/jest --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace packages/jest --access public
 
       - name: Create GitHub release
         env:
