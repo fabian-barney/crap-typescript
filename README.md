@@ -50,19 +50,19 @@ npm pack --workspaces
 CLI:
 
 ```bash
-npm install --save-dev crap-typescript
+npm install --save-dev @barney-media/crap-typescript
 ```
 
 Vitest adapter:
 
 ```bash
-npm install --save-dev crap-typescript-vitest
+npm install --save-dev @barney-media/crap-typescript-vitest
 ```
 
 Jest adapter:
 
 ```bash
-npm install --save-dev crap-typescript-jest jest
+npm install --save-dev @barney-media/crap-typescript-jest jest
 ```
 
 ## Run
@@ -101,7 +101,7 @@ npx crap-typescript packages/api packages/web
 Vitest:
 
 ```js
-const { withCrapTypescriptVitest } = require("crap-typescript-vitest");
+const { withCrapTypescriptVitest } = require("@barney-media/crap-typescript-vitest");
 
 module.exports = withCrapTypescriptVitest({
   test: {
@@ -113,7 +113,7 @@ module.exports = withCrapTypescriptVitest({
 Jest:
 
 ```js
-const { withCrapTypescriptJest } = require("crap-typescript-jest");
+const { withCrapTypescriptJest } = require("@barney-media/crap-typescript-jest");
 
 module.exports = withCrapTypescriptJest({
   testEnvironment: "node"

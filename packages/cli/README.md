@@ -1,11 +1,11 @@
-# crap-typescript
+# @barney-media/crap-typescript
 
 CLI for CRAP (Change Risk Anti-Pattern) metric analysis in TypeScript projects.
 
 ## Install
 
 ```bash
-npm install --save-dev crap-typescript
+npm install --save-dev @barney-media/crap-typescript
 ```
 
 ## Usage

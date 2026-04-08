@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   publish:
@@ -26,6 +27,9 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: npm
 
+      - name: Set up npm 11.6.2
+        run: npm install --global npm@11.6.2
+
       - name: Install dependencies
         run: npm ci
 
@@ -36,22 +40,22 @@ jobs:
         run: npm test
 
       - name: Publish core
-        run: npm publish --workspace packages/core --access public
+        run: npm publish --workspace packages/core --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish CLI
-        run: npm publish --workspace packages/cli --access public
+        run: npm publish --workspace packages/cli --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish Vitest adapter
-        run: npm publish --workspace packages/vitest --access public
+        run: npm publish --workspace packages/vitest --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish Jest adapter
-        run: npm publish --workspace packages/jest --access public
+        run: npm publish --workspace packages/jest --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -63,10 +67,10 @@ jobs:
           cat > release-notes.md <<EOF
           ## Packages
 
-          - \`crap-typescript-core@${version}\`
-          - \`crap-typescript@${version}\`
-          - \`crap-typescript-vitest@${version}\`
-          - \`crap-typescript-jest@${version}\`
+          - \`@barney-media/crap-typescript-core@${version}\`
+          - \`@barney-media/crap-typescript@${version}\`
+          - \`@barney-media/crap-typescript-vitest@${version}\`
+          - \`@barney-media/crap-typescript-jest@${version}\`
           EOF
 
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then

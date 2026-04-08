@@ -1,6 +1,6 @@
 {
-  "name": "crap-typescript-jest",
-  "version": "0.1.0",
+  "name": "@barney-media/crap-typescript-jest",
+  "version": "0.2.0",
   "description": "Jest integration for crap-typescript.",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
@@ -44,7 +44,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "crap-typescript-core": "^0.1.0"
+    "@barney-media/crap-typescript-core": "^0.2.0"
   },
   "peerDependencies": {
     "jest": "^30.0.0"
