@@ -137,12 +137,12 @@ describe("ensureCoverageReport", () => {
 
 describe("expectedCoveragePath", () => {
   it("keeps absolute paths and resolves relative paths from the module root", () => {
+    const absoluteCoveragePath = path.join(path.parse(process.cwd()).root, "coverage", "coverage-final.json");
+
     expect(expectedCoveragePath("C:/repo/packages/demo")).toBe(path.join("C:/repo/packages/demo", "coverage", "coverage-final.json"));
     expect(expectedCoveragePath("C:/repo/packages/demo", "custom/coverage-final.json")).toBe(
       path.join("C:/repo/packages/demo", "custom", "coverage-final.json")
     );
-    expect(expectedCoveragePath("C:/repo/packages/demo", "D:/coverage/coverage-final.json")).toBe(
-      "D:/coverage/coverage-final.json"
-    );
+    expect(expectedCoveragePath("C:/repo/packages/demo", absoluteCoveragePath)).toBe(absoluteCoveragePath);
   });
 });
