@@ -439,6 +439,381 @@ export function enumDeclOnly(): void {
     ]);
   });
 
+  it("canonicalizes duplicate fnMap variants for the same logical function", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function deduped(flag: boolean): number
+{
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    await writeProjectFiles(projectRoot, {
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 4, column: 4 },
+              end: { line: 4, column: 13 }
+            },
+            "1": {
+              start: { line: 6, column: 2 },
+              end: { line: 6, column: 11 }
+            }
+          },
+          fnMap: {
+            "0": {
+              name: "deduped",
+              decl: {
+                start: { line: 1, column: 0 },
+                end: { line: 1, column: 15 }
+              },
+              loc: {
+                start: { line: 2, column: 0 },
+                end: { line: 7, column: 1 }
+              }
+            },
+            "1": {
+              name: "deduped",
+              decl: {
+                start: { line: 1, column: 0 },
+                end: { line: 1, column: 15 }
+              },
+              loc: {
+                start: { line: 1, column: 0 },
+                end: { line: 7, column: null }
+              }
+            }
+          },
+          branchMap: {
+            "0": {
+              line: 3,
+              type: "if",
+              loc: {
+                start: { line: 3, column: 2 },
+                end: { line: 5, column: 3 }
+              },
+              locations: [
+                {
+                  start: { line: 3, column: 2 },
+                  end: { line: 5, column: 3 }
+                },
+                {}
+              ]
+            }
+          },
+          s: {
+            "0": 1,
+            "1": 1
+          },
+          f: {},
+          b: {
+            "0": [1, 1]
+          }
+        }
+      })
+    });
+
+    const coverageReport = await parseCoverageReport(
+      path.join(projectRoot, "coverage", "coverage-final.json"),
+      projectRoot
+    );
+
+    expect(coverageForMethods(methods, [...coverageReport.values()][0]).map(summarizeMethodCoverage)).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      }
+    ]);
+  });
+
+  it("matches fnMap coverage when the function location stops before the closing brace line", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function finalize(values: string[]): string[]
+{
+  if (values.length === 0) {
+    return ["default"];
+  }
+  return values;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    const [method] = methods;
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 4, startColumn: 4, endLine: 4, endColumn: 22 }, hits: 1 },
+          { span: { startLine: 6, startColumn: 2, endLine: 6, endColumn: 15 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 3, startColumn: 2, endLine: 5, endColumn: 3 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          {
+            name: "finalize",
+            declarationStart: { line: 1, column: 0 },
+            span: {
+              startLine: method.bodySpan.startLine,
+              startColumn: method.bodySpan.startColumn,
+              endLine: method.bodySpan.endLine - 1,
+              endColumn: Number.MAX_SAFE_INTEGER
+            },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      }
+    ]);
+  });
+
+  it("preserves fnMap conflicts for genuinely competing function candidates", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function conflict(flag: boolean): number
+{
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 4, startColumn: 4, endLine: 4, endColumn: 13 }, hits: 1 },
+          { span: { startLine: 6, startColumn: 2, endLine: 6, endColumn: 11 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 3, startColumn: 2, endLine: 5, endColumn: 3 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          {
+            name: "conflict",
+            declarationStart: { line: 1, column: 0 },
+            span: { startLine: 1, startColumn: 0, endLine: 7, endColumn: 1 },
+            spanSource: "loc"
+          },
+          {
+            name: "conflict_alt",
+            declarationStart: { line: 1, column: 1 },
+            span: { startLine: 1, startColumn: 1, endLine: 7, endColumn: 2 },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "fnmap_conflict" },
+        statement: { percent: null, status: "unknown", reason: "fnmap_conflict" },
+        branch: { percent: null, status: "unknown", reason: "fnmap_conflict" }
+      }
+    ]);
+  });
+
+  it("uses containing fnMap entries when the method body is nested inside a wider function span", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function wrapped(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 3, startColumn: 4, endLine: 3, endColumn: 13 }, hits: 1 },
+          { span: { startLine: 5, startColumn: 2, endLine: 5, endColumn: 11 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 2, startColumn: 2, endLine: 4, endColumn: 3 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          {
+            name: "wrapped",
+            declarationStart: { line: 1, column: 0 },
+            span: { startLine: 1, startColumn: 0, endLine: 6, endColumn: 1 },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      }
+    ]);
+  });
+
+  it("falls back to declaration-line matches when fnMap spans stop before trailing closing braces", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function branchy(mode: "a" | "b"): number {
+  switch (mode) {
+    case "a":
+      return 1;
+    default:
+      return 0;
+  }
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 4, startColumn: 6, endLine: 4, endColumn: 15 }, hits: 1 },
+          { span: { startLine: 6, startColumn: 6, endLine: 6, endColumn: 15 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 2, startColumn: 2, endLine: 6, endColumn: 3 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          {
+            name: "branchy",
+            declarationStart: { line: 1, column: 0 },
+            span: { startLine: 2, startColumn: 2, endLine: 6, endColumn: Number.MAX_SAFE_INTEGER },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      }
+    ]);
+  });
+
+  it("treats unmatched fnMap entries as plain unattributed coverage instead of fnMap conflicts", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function unmatched(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [],
+        branches: [],
+        functions: [
+          {
+            name: "different",
+            declarationStart: { line: 10, column: 0 },
+            span: { startLine: 10, startColumn: 0, endLine: 12, endColumn: Number.MAX_SAFE_INTEGER },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        branch: { percent: null, status: "unknown", reason: "branch_unattributed" }
+      }
+    ]);
+  });
+
+  it("normalizes indented closing-brace lines even when the brace column is greater than one", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `class Example {
+  render(flag: boolean): number {
+    if (flag) {
+      return 1;
+    }
+    return 0;
+  }
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 4, startColumn: 6, endLine: 4, endColumn: 15 }, hits: 1 },
+          { span: { startLine: 6, startColumn: 4, endLine: 6, endColumn: 13 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 3, startColumn: 4, endLine: 5, endColumn: 5 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          {
+            span: { startLine: 2, startColumn: 29, endLine: 5, endColumn: Number.MAX_SAFE_INTEGER },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      }
+    ]);
+  });
+
   it("rejects line-aligned fnMap matches when the columns do not overlap", async () => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);
@@ -461,8 +836,8 @@ export function enumDeclOnly(): void {
       }).map(summarizeMethodCoverage)
     ).toEqual([
       {
-        coverage: { percent: null, status: "unknown", reason: "fnmap_conflict" },
-        statement: { percent: null, status: "unknown", reason: "fnmap_conflict" },
+        coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
         branch: { percent: null, status: "structural_na", reason: null }
       }
     ]);
@@ -557,7 +932,12 @@ export function enumDeclOnly(): void {
           startColumn: 0,
           endLine: 6,
           endColumn: 1
-        }
+        },
+        declarationStart: {
+          line: 1,
+          column: 0
+        },
+        spanSource: "decl"
       },
       {
         span: {
@@ -565,7 +945,76 @@ export function enumDeclOnly(): void {
           startColumn: 0,
           endLine: 1,
           endColumn: Number.MAX_SAFE_INTEGER
+        },
+        spanSource: "line"
+      }
+    ]);
+  });
+
+  it("prefers the most specific loc span when duplicate fnMap entries share an identity", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {},
+          branchMap: {},
+          fnMap: {
+            "0": {
+              name: "preferLoc",
+              decl: {
+                start: { line: 1, column: 0 },
+                end: { line: 1, column: 18 }
+              },
+              loc: {
+                start: { line: 2, column: 0 },
+                end: { line: 6, column: 1 }
+              }
+            },
+            "1": {
+              name: "preferLoc",
+              decl: {
+                start: { line: 1, column: 0 },
+                end: { line: 1, column: 18 }
+              }
+            },
+            "2": {
+              name: "preferLoc",
+              decl: {
+                start: { line: 1, column: 0 },
+                end: { line: 1, column: 18 }
+              },
+              loc: {
+                start: { line: 3, column: 0 },
+                end: { line: 5, column: 1 }
+              }
+            }
+          },
+          s: {},
+          b: {},
+          f: {}
         }
+      })
+    });
+
+    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+
+    expect(fileCoverage.functions).toEqual([
+      {
+        name: "preferLoc",
+        declarationStart: {
+          line: 1,
+          column: 0
+        },
+        span: {
+          startLine: 3,
+          startColumn: 0,
+          endLine: 5,
+          endColumn: 1
+        },
+        spanSource: "loc"
       }
     ]);
   });

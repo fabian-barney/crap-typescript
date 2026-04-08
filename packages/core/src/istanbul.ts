@@ -1,9 +1,16 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { normalizePathForMatch } from "./utils";
+import { isAbsolutePath, normalizePathForMatch } from "./utils";
 import type { SourceSpan } from "./types";
-import type { BranchCoverageUnit, FileCoverage, FunctionCoverageUnit, StatementCoverageUnit } from "./coverageUnits";
+import type {
+  BranchCoverageUnit,
+  CoveragePosition,
+  FileCoverage,
+  FunctionCoverageUnit,
+  FunctionSpanSource,
+  StatementCoverageUnit
+} from "./coverageUnits";
 
 const MAX_COLUMN = Number.MAX_SAFE_INTEGER;
 
@@ -22,28 +29,11 @@ export async function parseCoverageReport(
   const records = new Map<string, FileCoverage>();
 
   for (const [entryKey, entryValue] of Object.entries(report)) {
-    if (!isRecord(entryValue)) {
+    const parsedEntry = parseCoverageEntry(entryKey, entryValue, sourceRoot);
+    if (!parsedEntry) {
       continue;
     }
-
-    const sourcePath = typeof entryValue.path === "string" ? entryValue.path : entryKey;
-    if (!sourcePath) {
-      continue;
-    }
-
-    const resolved = path.isAbsolute(sourcePath)
-      ? sourcePath
-      : path.resolve(sourceRoot, sourcePath);
-    const normalized = normalizePathForMatch(resolved);
-    const merged = records.get(normalized) ?? { statements: [], branches: [], functions: [] };
-    merged.statements.push(...parseStatements(entryValue.statementMap, entryValue.s));
-    merged.branches.push(...parseBranches(entryValue.branchMap, entryValue.b));
-    merged.functions.push(...parseFunctions(entryValue.fnMap));
-    records.set(normalized, {
-      statements: deduplicateStatements(merged.statements),
-      branches: deduplicateBranches(merged.branches),
-      functions: deduplicateFunctions(merged.functions)
-    });
+    mergeCoverageEntry(records, parsedEntry);
   }
 
   return records;
@@ -84,6 +74,48 @@ function parseBranches(branchMapValue: unknown, hitsValue: unknown): BranchCover
   return deduplicateBranches(branches);
 }
 
+function parseCoverageEntry(
+  entryKey: string,
+  entryValue: unknown,
+  sourceRoot: string
+): { normalizedPath: string; coverage: FileCoverage } | null {
+  if (!isRecord(entryValue)) {
+    return null;
+  }
+
+  const sourcePath = typeof entryValue.path === "string" ? entryValue.path : entryKey;
+  if (!sourcePath) {
+    return null;
+  }
+
+  const resolved = isAbsolutePath(sourcePath)
+    ? sourcePath
+    : path.resolve(sourceRoot, sourcePath);
+  return {
+    normalizedPath: normalizePathForMatch(resolved),
+    coverage: {
+      statements: parseStatements(entryValue.statementMap, entryValue.s),
+      branches: parseBranches(entryValue.branchMap, entryValue.b),
+      functions: parseFunctions(entryValue.fnMap)
+    }
+  };
+}
+
+function mergeCoverageEntry(
+  records: Map<string, FileCoverage>,
+  entry: { normalizedPath: string; coverage: FileCoverage }
+): void {
+  const merged = records.get(entry.normalizedPath) ?? { statements: [], branches: [], functions: [] };
+  merged.statements.push(...entry.coverage.statements);
+  merged.branches.push(...entry.coverage.branches);
+  merged.functions.push(...entry.coverage.functions);
+  records.set(entry.normalizedPath, {
+    statements: deduplicateStatements(merged.statements),
+    branches: deduplicateBranches(merged.branches),
+    functions: deduplicateFunctions(merged.functions)
+  });
+}
+
 function parseFunctions(fnMapValue: unknown): FunctionCoverageUnit[] {
   if (!isRecord(fnMapValue)) {
     return [];
@@ -91,9 +123,9 @@ function parseFunctions(fnMapValue: unknown): FunctionCoverageUnit[] {
 
   const functions: FunctionCoverageUnit[] = [];
   for (const entryValue of Object.values(fnMapValue)) {
-    const span = resolveFunctionSpan(entryValue);
-    if (span) {
-      functions.push({ span });
+    const entry = resolveFunctionEntry(entryValue);
+    if (entry) {
+      functions.push(entry);
     }
   }
 
@@ -212,12 +244,14 @@ function deduplicateBranches(branches: BranchCoverageUnit[]): BranchCoverageUnit
 }
 
 function deduplicateFunctions(functions: FunctionCoverageUnit[]): FunctionCoverageUnit[] {
-  const deduplicated = new Map<string, FunctionCoverageUnit>();
+  const deduplicated = new Map<string, FunctionCoverageUnit[]>();
   for (const entry of functions) {
-    const key = stringifySpan(entry.span);
-    deduplicated.set(key, entry);
+    const key = functionIdentityKey(entry);
+    const grouped = deduplicated.get(key) ?? [];
+    grouped.push(entry);
+    deduplicated.set(key, grouped);
   }
-  return [...deduplicated.values()];
+  return [...deduplicated.values()].map(selectCanonicalFunctionEntry);
 }
 
 function stringifySpan(span: SourceSpan): string {
@@ -252,13 +286,115 @@ function resolveBranchSpan(branchValue: JsonRecord): SourceSpan | null {
     parseLineSpan(branchValue.line);
 }
 
-function resolveFunctionSpan(entryValue: unknown): SourceSpan | null {
+function resolveFunctionEntry(entryValue: unknown): FunctionCoverageUnit | null {
   if (!isRecord(entryValue)) {
     return null;
   }
-  return parseSpan(entryValue.loc) ??
-    parseSpan(entryValue.decl) ??
-    parseLineSpan(entryValue.line);
+
+  const resolved = resolveFunctionSpanWithSource(entryValue);
+  if (!resolved) {
+    return null;
+  }
+  const declarationStart = resolveDeclarationStart(entryValue);
+  const name = typeof entryValue.name === "string" ? entryValue.name : undefined;
+
+  return {
+    span: resolved.span,
+    spanSource: resolved.source,
+    ...(name ? { name } : {}),
+    ...(declarationStart ? { declarationStart } : {})
+  };
+}
+
+function resolveFunctionSpanWithSource(entryValue: JsonRecord): { span: SourceSpan; source: FunctionSpanSource } | null {
+  const loc = parseSpan(entryValue.loc);
+  if (loc) {
+    return { span: loc, source: "loc" };
+  }
+
+  const decl = parseSpan(entryValue.decl);
+  if (decl) {
+    return { span: decl, source: "decl" };
+  }
+
+  const line = parseLineSpan(entryValue.line);
+  if (line) {
+    return { span: line, source: "line" };
+  }
+
+  return null;
+}
+
+function resolveDeclarationStart(entryValue: JsonRecord): CoveragePosition | undefined {
+  if (!isRecord(entryValue.decl)) {
+    return undefined;
+  }
+
+  return parsePosition(entryValue.decl.start) ?? undefined;
+}
+
+function functionIdentityKey(entry: FunctionCoverageUnit): string {
+  if (entry.name && entry.declarationStart) {
+    return `decl:${entry.name}:${entry.declarationStart.line}:${entry.declarationStart.column}`;
+  }
+
+  if (entry.name) {
+    return `named-span:${entry.name}:${stringifySpan(entry.span)}`;
+  }
+
+  return `span:${stringifySpan(entry.span)}`;
+}
+
+function selectCanonicalFunctionEntry(entries: FunctionCoverageUnit[]): FunctionCoverageUnit {
+  const uniqueBySpan = new Map<string, FunctionCoverageUnit>();
+  for (const entry of entries) {
+    const key = stringifySpan(entry.span);
+    const existing = uniqueBySpan.get(key);
+    if (!existing || compareFunctionSpecificity(entry, existing) < 0) {
+      uniqueBySpan.set(key, entry);
+    }
+  }
+
+  return [...uniqueBySpan.values()].sort(compareFunctionSpecificity)[0];
+}
+
+function compareFunctionSpecificity(left: FunctionCoverageUnit, right: FunctionCoverageUnit): number {
+  return firstNonZeroComparison([
+    functionSpanSourceRank(left.spanSource) - functionSpanSourceRank(right.spanSource),
+    spanLineCount(left.span) - spanLineCount(right.span),
+    comparePosition(right.span.startLine, right.span.startColumn, left.span.startLine, left.span.startColumn),
+    comparePosition(left.span.endLine, left.span.endColumn, right.span.endLine, right.span.endColumn)
+  ]);
+}
+
+const FUNCTION_SPAN_SOURCE_RANK: Record<FunctionSpanSource, number> = {
+  loc: 0,
+  decl: 1,
+  line: 2
+};
+
+function functionSpanSourceRank(source: FunctionSpanSource | undefined): number {
+  return source ? FUNCTION_SPAN_SOURCE_RANK[source] : 3;
+}
+
+function spanLineCount(span: SourceSpan): number {
+  return span.endLine - span.startLine;
+}
+
+function firstNonZeroComparison(comparisons: number[]): number {
+  return comparisons.find((comparison) => comparison !== 0) ?? 0;
+}
+
+function comparePosition(
+  leftLine: number,
+  leftColumn: number,
+  rightLine: number,
+  rightColumn: number
+): number {
+  if (leftLine !== rightLine) {
+    return leftLine - rightLine;
+  }
+  return leftColumn - rightColumn;
 }
 
 function mergeBranchHits(existingHits: number[], nextHits: number[]): number[] {

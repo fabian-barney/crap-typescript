@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants";
+import { isAbsolutePath } from "./utils";
 import type { PackageManager, PackageManagerSelection, TestRunner, TestRunnerSelection } from "./types";
 
 export interface CoverageSource {
@@ -59,18 +60,9 @@ export async function resolvePackageManager(
   if (selection !== "auto") {
     return selection;
   }
-  for (const root of [moduleRoot, projectRoot]) {
-    if (await exists(path.join(root, "pnpm-lock.yaml"))) {
-      return "pnpm";
-    }
-    if (await exists(path.join(root, "yarn.lock"))) {
-      return "yarn";
-    }
-    if (await exists(path.join(root, "package-lock.json")) || await exists(path.join(root, "npm-shrinkwrap.json"))) {
-      return "npm";
-    }
-  }
-  return "npm";
+  return await detectPackageManagerAtRoot(moduleRoot) ??
+    await detectPackageManagerAtRoot(projectRoot) ??
+    "npm";
 }
 
 export async function resolveTestRunner(
@@ -82,23 +74,38 @@ export async function resolveTestRunner(
     return selection;
   }
 
-  for (const root of [moduleRoot, projectRoot]) {
-    const packageJson = await readPackageJson(root);
-    if (!packageJson) {
-      continue;
-    }
-    const scriptRunner = detectRunnerFromScripts(packageJson.scripts ?? {});
-    if (scriptRunner) {
-      return scriptRunner;
-    }
-
-    const dependencyRunner = detectRunnerFromDependencies(packageJson);
-    if (dependencyRunner) {
-      return dependencyRunner;
-    }
+  const detected = await detectTestRunnerAtRoot(moduleRoot) ??
+    await detectTestRunnerAtRoot(projectRoot);
+  if (detected) {
+    return detected;
   }
 
   throw new Error(`Unable to detect a test runner from ${path.join(moduleRoot, "package.json")}`);
+}
+
+async function detectPackageManagerAtRoot(root: string): Promise<PackageManager | null> {
+  for (const [packageManager, lockfiles] of PACKAGE_MANAGER_LOCKFILES) {
+    if (await anyExists(root, lockfiles)) {
+      return packageManager;
+    }
+  }
+  return null;
+}
+
+const PACKAGE_MANAGER_LOCKFILES: [PackageManager, string[]][] = [
+  ["pnpm", ["pnpm-lock.yaml"]],
+  ["yarn", ["yarn.lock"]],
+  ["npm", ["package-lock.json", "npm-shrinkwrap.json"]]
+];
+
+async function detectTestRunnerAtRoot(root: string): Promise<TestRunner | null> {
+  const packageJson = await readPackageJson(root);
+  if (!packageJson) {
+    return null;
+  }
+
+  return detectRunnerFromScripts(packageJson.scripts ?? {}) ??
+    detectRunnerFromDependencies(packageJson);
 }
 
 interface PackageJsonShape {
@@ -147,13 +154,22 @@ async function exists(filePath: string): Promise<boolean> {
   }
 }
 
+async function anyExists(root: string, fileNames: string[]): Promise<boolean> {
+  for (const fileName of fileNames) {
+    if (await exists(path.join(root, fileName))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function isWithinOrEqual(candidate: string, root: string): boolean {
   const relative = path.relative(root, candidate);
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 function resolveCoveragePath(root: string, coverageReportPath: string): string {
-  return path.isAbsolute(coverageReportPath)
+  return isAbsolutePath(coverageReportPath)
     ? coverageReportPath
     : path.join(root, coverageReportPath);
 }

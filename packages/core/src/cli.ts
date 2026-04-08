@@ -160,23 +160,36 @@ export async function runCli(
   stdout: Writer = process.stdout,
   stderr: Writer = process.stderr
 ): Promise<number> {
-  let parsed: CliArguments;
-  try {
-    parsed = parseCliArguments(args);
-  } catch (error) {
-    writeLine(stderr, (error as Error).message);
-    writeLine(stdout, usage());
-    return 1;
+  const parsed = parseCliInputs(args, stdout, stderr);
+  if (typeof parsed === "number") {
+    return parsed;
   }
-
   if (parsed.mode === "help") {
     writeLine(stdout, usage());
     return 0;
   }
 
-  let result;
+  return handleCliResult(await analyzeCliProject(parsed, projectRoot, stdout, stderr), stdout, stderr);
+}
+
+function parseCliInputs(args: string[], stdout: Writer, stderr: Writer): CliArguments | number {
   try {
-    result = await analyzeProject({
+    return parseCliArguments(args);
+  } catch (error) {
+    writeLine(stderr, (error as Error).message);
+    writeLine(stdout, usage());
+    return 1;
+  }
+}
+
+async function analyzeCliProject(
+  parsed: CliArguments,
+  projectRoot: string,
+  stdout: Writer,
+  stderr: Writer
+) {
+  try {
+    return await analyzeProject({
       projectRoot: path.resolve(projectRoot),
       explicitPaths: parsed.mode === "explicit" ? parsed.fileArgs : [],
       changedOnly: parsed.mode === "changed",
@@ -187,9 +200,32 @@ export async function runCli(
     });
   } catch (error) {
     writeLine(stderr, (error as Error).message);
+    return null;
+  }
+}
+
+function handleCliResult(
+  result: Awaited<ReturnType<typeof analyzeProject>> | null,
+  stdout: Writer,
+  stderr: Writer
+): number {
+  if (!result) {
     return 1;
   }
 
+  const earlyExit = writeCliEarlyExit(result, stdout);
+  if (earlyExit !== null) {
+    return earlyExit;
+  }
+
+  writeLine(stdout, formatReport(result.metrics));
+  return writeCliThresholdStatus(result, stderr);
+}
+
+function writeCliEarlyExit(
+  result: Awaited<ReturnType<typeof analyzeProject>>,
+  stdout: Writer
+): number | null {
   if (result.selectedFiles.length === 0) {
     writeLine(stdout, NO_FILES_MESSAGE);
     return 0;
@@ -198,11 +234,16 @@ export async function runCli(
     writeLine(stdout, NO_ANALYZABLE_FUNCTIONS_MESSAGE);
     return 0;
   }
+  return null;
+}
 
-  writeLine(stdout, formatReport(result.metrics));
-  if (result.thresholdExceeded) {
-    writeLine(stderr, `CRAP threshold exceeded: ${formatNumber(result.maxCrap)} > ${formatNumber(CRAP_THRESHOLD)}`);
-    return 2;
+function writeCliThresholdStatus(
+  result: Awaited<ReturnType<typeof analyzeProject>>,
+  stderr: Writer
+): number {
+  if (!result.thresholdExceeded) {
+    return 0;
   }
-  return 0;
+  writeLine(stderr, `CRAP threshold exceeded: ${formatNumber(result.maxCrap)} > ${formatNumber(CRAP_THRESHOLD)}`);
+  return 2;
 }

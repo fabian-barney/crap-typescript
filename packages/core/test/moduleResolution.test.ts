@@ -80,22 +80,37 @@ describe("resolvePackageManager", () => {
 
     await expect(resolvePackageManager("pnpm", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("pnpm");
     await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("yarn");
-
-    await writeProjectFiles(tempDir, {
-      "packages/demo/yarn.lock": ""
-    });
   });
 
-  it("falls back to npm when npm lockfiles are present or nothing is detected", async () => {
+  it("falls back to project-level lockfiles and then to npm defaults", async () => {
     const tempDir = await createTempDir("crap-package-manager-");
     tempDirs.push(tempDir);
     await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"root","private":true}',
+      "package-lock.json": "{}",
+      "packages/demo/package.json": '{"name":"demo","private":true}'
+    });
+
+    await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("npm");
+
+    const shrinkwrapDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(shrinkwrapDir);
+    await writeProjectFiles(shrinkwrapDir, {
       "package.json": '{"name":"root","private":true}',
       "npm-shrinkwrap.json": "{}",
       "packages/demo/package.json": '{"name":"demo","private":true}'
     });
 
-    await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("npm");
+    await expect(resolvePackageManager("auto", shrinkwrapDir, `${shrinkwrapDir}/packages/demo`)).resolves.toBe("npm");
+
+    const defaultDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(defaultDir);
+    await writeProjectFiles(defaultDir, {
+      "package.json": '{"name":"root","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}'
+    });
+
+    await expect(resolvePackageManager("auto", defaultDir, `${defaultDir}/packages/demo`)).resolves.toBe("npm");
   });
 });
 
@@ -120,7 +135,7 @@ describe("resolveTestRunner", () => {
     await expect(resolveTestRunner("auto", tempDir, tempDir)).resolves.toBe("jest");
   });
 
-  it("honors explicit selection, falls back to dependencies, and errors when nothing can be detected", async () => {
+  it("honors explicit selection, falls back from module to project dependencies, and errors when nothing can be detected", async () => {
     const tempDir = await createTempDir("crap-runner-");
     tempDirs.push(tempDir);
     await writeProjectFiles(tempDir, {
@@ -142,5 +157,62 @@ describe("resolveTestRunner", () => {
     await expect(resolveTestRunner("auto", `${tempDir}/packages/demo`, `${tempDir}/packages/demo`)).rejects.toThrow(
       "Unable to detect a test runner"
     );
+  });
+
+  it("prefers module scripts, detects runners from peer dependencies, and skips missing package.json files", async () => {
+    const tempDir = await createTempDir("crap-runner-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "jest --runInBand"
+        }
+      }),
+      "packages/demo/package.json": JSON.stringify({
+        name: "demo",
+        private: true,
+        peerDependencies: {
+          "ts-jest": "^29.0.0"
+        },
+        scripts: {
+          test: "vitest run"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("vitest");
+
+    const peerDependencyDir = await createTempDir("crap-runner-");
+    tempDirs.push(peerDependencyDir);
+    await writeProjectFiles(peerDependencyDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/package.json": JSON.stringify({
+        name: "demo",
+        private: true,
+        peerDependencies: {
+          "ts-jest": "^29.0.0"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", peerDependencyDir, `${peerDependencyDir}/packages/demo`)).resolves.toBe("jest");
+
+    const missingModulePackageDir = await createTempDir("crap-runner-");
+    tempDirs.push(missingModulePackageDir);
+    await writeProjectFiles(missingModulePackageDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        devDependencies: {
+          vitest: "^4.0.0"
+        }
+      })
+    });
+
+    await expect(
+      resolveTestRunner("auto", missingModulePackageDir, `${missingModulePackageDir}/packages/demo`)
+    ).resolves.toBe("vitest");
   });
 });

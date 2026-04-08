@@ -3,10 +3,15 @@ import { computeMethodCoverage, unavailableMethodCoverage } from "./coverageNorm
 import type { FileCoverage, FunctionCoverageUnit } from "./coverageUnits";
 import type { MethodCoverage } from "./coverageNormalization";
 
+const MAX_COLUMN = Number.MAX_SAFE_INTEGER;
+
 interface AttributableMethod {
   span: SourceSpan;
   fnMapConflict: boolean;
 }
+
+const AMBIGUOUS_MATCH = Symbol("ambiguous_match");
+type MatchOutcome = FunctionCoverageUnit | null | undefined;
 
 export function coverageForMethods(
   methods: MethodDescriptor[],
@@ -56,7 +61,7 @@ function buildAttributableMethods(
   }
 
   return methods.map((method) => {
-    const matchedFunction = matchFunctionCoverage(method.bodySpan, functions);
+    const matchedFunction = matchFunctionCoverage(method, functions);
     return {
       span: matchedFunction?.span ?? method.bodySpan,
       fnMapConflict: matchedFunction === null
@@ -65,34 +70,70 @@ function buildAttributableMethods(
 }
 
 function matchFunctionCoverage(
-  methodSpan: SourceSpan,
+  method: MethodDescriptor,
   functions: FunctionCoverageUnit[]
-): FunctionCoverageUnit | null {
-  const exactMatches = functions.filter((entry) => spansEqual(entry.span, methodSpan));
-  if (exactMatches.length === 1) {
-    return exactMatches[0];
-  }
-  if (exactMatches.length > 1) {
-    return null;
+): MatchOutcome {
+  return resolveMatchOutcome([
+    matchByCandidateSpans(method.bodySpan, functions),
+    matchByContainingSpan(method.bodySpan, functions),
+    matchByDeclaration(method, functions)
+  ]);
+}
+
+function fnMapMatchSpans(methodSpan: SourceSpan): SourceSpan[] {
+  const normalized = normalizeMethodSpanForFnMap(methodSpan);
+  return spansEqual(methodSpan, normalized)
+    ? [methodSpan]
+    : [methodSpan, normalized];
+}
+
+function matchByCandidateSpans(methodSpan: SourceSpan, functions: FunctionCoverageUnit[]): MatchOutcome {
+  for (const candidateSpan of fnMapMatchSpans(methodSpan)) {
+    const exactMatch = uniqueMatchOutcome(functions.filter((entry) => spansEqual(entry.span, candidateSpan)));
+    if (exactMatch !== undefined) {
+      return exactMatch;
+    }
+
+    const lineAlignedMatch = uniqueMatchOutcome(
+      functions.filter((entry) => spansShareBoundaryLines(entry.span, candidateSpan) && spansOverlap(entry.span, candidateSpan))
+    );
+    if (lineAlignedMatch !== undefined) {
+      return lineAlignedMatch;
+    }
   }
 
-  const lineAlignedMatches = functions.filter((entry) => spansShareBoundaryLines(entry.span, methodSpan));
-  const overlappingLineAlignedMatches = lineAlignedMatches.filter((entry) => spansOverlap(entry.span, methodSpan));
-  if (overlappingLineAlignedMatches.length === 1) {
-    return overlappingLineAlignedMatches[0];
+  return undefined;
+}
+
+function matchByContainingSpan(methodSpan: SourceSpan, functions: FunctionCoverageUnit[]): MatchOutcome {
+  return uniqueMatchOutcome(functions.filter((entry) => spanContains(entry.span, normalizeMethodSpanForFnMap(methodSpan))));
+}
+
+function matchByDeclaration(method: MethodDescriptor, functions: FunctionCoverageUnit[]): MatchOutcome {
+  return uniqueMatchOutcome(functions.filter((entry) => matchesMethodDeclaration(entry, method)));
+}
+
+function resolveMatchOutcome(outcomes: MatchOutcome[]): MatchOutcome {
+  for (const outcome of outcomes) {
+    if (outcome === undefined) {
+      continue;
+    }
+    return outcome;
   }
-  if (overlappingLineAlignedMatches.length > 1) {
-    return null;
+  return undefined;
+}
+
+function normalizeMethodSpanForFnMap(methodSpan: SourceSpan): SourceSpan {
+  if (methodSpan.endLine <= methodSpan.startLine) {
+    return methodSpan;
   }
 
-  const containingMatches = functions.filter((entry) =>
-    spanContains(entry.span, methodSpan) || spanContains(methodSpan, entry.span)
-  );
-  if (containingMatches.length === 1) {
-    return containingMatches[0];
-  }
-
-  return null;
+  return {
+    startLine: methodSpan.startLine,
+    startColumn: methodSpan.startColumn,
+    endLine: methodSpan.endLine - 1,
+    endColumn: MAX_COLUMN
+  };
 }
 
 function findOwningMethodIndex(methods: AttributableMethod[], span: SourceSpan): number | null {
@@ -155,4 +196,31 @@ function spansShareBoundaryLines(left: SourceSpan, right: SourceSpan): boolean {
 function spansOverlap(left: SourceSpan, right: SourceSpan): boolean {
   return comparePosition(left.startLine, left.startColumn, right.endLine, right.endColumn) < 0 &&
     comparePosition(right.startLine, right.startColumn, left.endLine, left.endColumn) < 0;
+}
+
+function matchesMethodDeclaration(entry: FunctionCoverageUnit, method: MethodDescriptor): boolean {
+  const declarationLine = entry.declarationStart?.line ?? entry.span.startLine;
+  if (declarationLine !== method.startLine) {
+    return false;
+  }
+
+  return !entry.name || entry.name.startsWith("(") || entry.name === method.functionName;
+}
+
+function resolveUniqueMatch(matches: FunctionCoverageUnit[]): FunctionCoverageUnit | typeof AMBIGUOUS_MATCH | null {
+  if (matches.length === 1) {
+    return matches[0];
+  }
+  if (matches.length > 1) {
+    return AMBIGUOUS_MATCH;
+  }
+  return null;
+}
+
+function uniqueMatchOutcome(matches: FunctionCoverageUnit[]): MatchOutcome {
+  const resolved = resolveUniqueMatch(matches);
+  if (resolved === AMBIGUOUS_MATCH) {
+    return null;
+  }
+  return resolved ?? undefined;
 }

@@ -68,6 +68,26 @@ describe("file selection", () => {
     ]);
   });
 
+  it("recurses through nested src folders and skips ignored directories inside source trees", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/app.ts": "export const app = 1;",
+      "src/nested/util.ts": "export const util = 1;",
+      "src/__tests__/ignored.ts": "export const ignored = 1;",
+      "src/coverage/ignored.ts": "export const ignored = 1;",
+      "src/dist/ignored.ts": "export const ignored = 1;",
+      "src/node_modules/ignored.ts": "export const ignored = 1;"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/app.ts",
+      "src/nested/util.ts"
+    ]);
+  });
+
   it("finds changed TypeScript files under src trees from git status", async () => {
     const tempDir = await createTempDir("crap-files-");
     tempDirs.push(tempDir);

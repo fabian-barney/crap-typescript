@@ -143,24 +143,61 @@ function findAssignedFunctionName(
   node: ts.FunctionExpression | ts.ArrowFunction
 ): { name: string; containerName: string | null } | null {
   const parent = node.parent;
+  for (const resolver of ASSIGNED_FUNCTION_NAME_RESOLVERS) {
+    const assignedName = resolver(parent, node);
+    if (assignedName) {
+      return assignedName;
+    }
+  }
+  return null;
+}
+
+type AssignedFunctionNameResolver = (
+  parent: ts.Node,
+  node: ts.FunctionExpression | ts.ArrowFunction
+) => { name: string; containerName: string | null } | null;
+
+const ASSIGNED_FUNCTION_NAME_RESOLVERS: AssignedFunctionNameResolver[] = [
+  assignedNameFromVariableDeclaration,
+  assignedNameFromPropertyAssignment,
+  assignedNameFromPropertyDeclaration,
+  assignedNameFromBinaryExpression
+];
+
+function assignedNameFromVariableDeclaration(parent: ts.Node): { name: string; containerName: string | null } | null {
   if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
     return {
       name: parent.name.text,
       containerName: findContainerName(parent)
     };
   }
+  return null;
+}
+
+function assignedNameFromPropertyAssignment(parent: ts.Node): { name: string; containerName: string | null } | null {
   if (ts.isPropertyAssignment(parent)) {
     return {
       name: propertyName(parent.name),
       containerName: inferObjectContainerName(parent.parent)
     };
   }
+  return null;
+}
+
+function assignedNameFromPropertyDeclaration(parent: ts.Node): { name: string; containerName: string | null } | null {
   if (ts.isPropertyDeclaration(parent)) {
     return {
       name: propertyName(parent.name),
       containerName: findContainerName(parent)
     };
   }
+  return null;
+}
+
+function assignedNameFromBinaryExpression(
+  parent: ts.Node,
+  node: ts.FunctionExpression | ts.ArrowFunction
+): { name: string; containerName: string | null } | null {
   if (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === node) {
     return assignmentTarget(parent.left);
   }

@@ -185,6 +185,26 @@
           "coverage": 100
         }
       ]
+    },
+    {
+      "name": "duplicate fnMap variants",
+      "fixture": "compatibility-matrix/fnmap-duplicate-variants",
+      "expectedMetrics": [
+        {
+          "name": "deduped",
+          "coverage": 100
+        }
+      ]
+    },
+    {
+      "name": "closing-brace fnMap span mismatch",
+      "fixture": "compatibility-matrix/fnmap-closing-brace-span",
+      "expectedMetrics": [
+        {
+          "name": "finalize",
+          "coverage": 100
+        }
+      ]
     }
   ]
 }
