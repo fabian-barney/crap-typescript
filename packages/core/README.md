@@ -1,17 +1,17 @@
-# crap-typescript-core
+# @barney-media/crap-typescript-core
 
 Core analysis engine for computing CRAP (Change Risk Anti-Pattern) scores on TypeScript projects. Combines cyclomatic complexity with function-level Istanbul coverage data.
 
 ## Install
 
 ```bash
-npm install crap-typescript-core
+npm install @barney-media/crap-typescript-core
 ```
 
 ## API
 
 ```ts
-import { analyzeProject, formatReport } from "crap-typescript-core";
+import { analyzeProject, formatReport } from "@barney-media/crap-typescript-core";
 
 const result = await analyzeProject({ projectRoot: "." });
 const report = formatReport(result.metrics);

@@ -1,4 +1,4 @@
-import type { PackageManagerSelection, Writer } from "crap-typescript-core";
+import type { PackageManagerSelection, Writer } from "@barney-media/crap-typescript-core";
 
 import CrapTypescriptJestReporter from "./reporter";
 

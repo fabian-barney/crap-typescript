@@ -1,2 +1,2 @@
-export { runCli, usage } from "crap-typescript-core";
+export { runCli, usage } from "@barney-media/crap-typescript-core";
 

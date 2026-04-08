@@ -7,8 +7,8 @@ import {
   CRAP_THRESHOLD,
   formatReport,
   NO_FILES_MESSAGE
-} from "crap-typescript-core";
-import type { PackageManagerSelection, Writer } from "crap-typescript-core";
+} from "@barney-media/crap-typescript-core";
+import type { PackageManagerSelection, Writer } from "@barney-media/crap-typescript-core";
 
 export interface CrapTypescriptJestOptions {
   projectRoot?: string;

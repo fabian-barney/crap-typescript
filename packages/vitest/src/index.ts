@@ -1,5 +1,5 @@
-import { analyzeProject, CRAP_THRESHOLD, formatReport, NO_FILES_MESSAGE } from "crap-typescript-core";
-import type { PackageManagerSelection, Writer } from "crap-typescript-core";
+import { analyzeProject, CRAP_THRESHOLD, formatReport, NO_FILES_MESSAGE } from "@barney-media/crap-typescript-core";
+import type { PackageManagerSelection, Writer } from "@barney-media/crap-typescript-core";
 
 type VitestReporterEntry = string | [string, unknown] | {
   onTestRunEnd?: () => Promise<void>;

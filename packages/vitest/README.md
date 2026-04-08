@@ -1,17 +1,17 @@
-# crap-typescript-vitest
+# @barney-media/crap-typescript-vitest
 
 Vitest adapter for [crap-typescript](https://github.com/fabian-barney/crap-typescript). Enables Istanbul JSON coverage output and reports CRAP scores after test runs.
 
 ## Install
 
 ```bash
-npm install --save-dev crap-typescript-vitest
+npm install --save-dev @barney-media/crap-typescript-vitest
 ```
 
 ## Setup
 
 ```js
-const { withCrapTypescriptVitest } = require("crap-typescript-vitest");
+const { withCrapTypescriptVitest } = require("@barney-media/crap-typescript-vitest");
 
 module.exports = withCrapTypescriptVitest({
   test: {
