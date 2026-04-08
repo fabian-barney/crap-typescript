@@ -35,7 +35,7 @@ describe("CrapTypescriptVitestReporter", () => {
 
     expect(stdout.toString()).toContain("No TypeScript files to analyze.");
     expect(stderr.toString()).toBe("");
-    expect(process.exitCode).toBeUndefined();
+    expect(process.exitCode).toBe(originalExitCode);
   });
 
   it("prints the CRAP report and sets a failure exit code when the threshold is exceeded", async () => {
