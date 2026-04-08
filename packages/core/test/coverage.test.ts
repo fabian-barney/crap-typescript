@@ -732,6 +732,88 @@ export function enumDeclOnly(): void {
     ]);
   });
 
+  it("treats unmatched fnMap entries as plain unattributed coverage instead of fnMap conflicts", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function unmatched(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [],
+        branches: [],
+        functions: [
+          {
+            name: "different",
+            declarationStart: { line: 10, column: 0 },
+            span: { startLine: 10, startColumn: 0, endLine: 12, endColumn: Number.MAX_SAFE_INTEGER },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        branch: { percent: null, status: "unknown", reason: "branch_unattributed" }
+      }
+    ]);
+  });
+
+  it("normalizes indented closing-brace lines even when the brace column is greater than one", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `class Example {
+  render(flag: boolean): number {
+    if (flag) {
+      return 1;
+    }
+    return 0;
+  }
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [
+          { span: { startLine: 4, startColumn: 6, endLine: 4, endColumn: 15 }, hits: 1 },
+          { span: { startLine: 6, startColumn: 4, endLine: 6, endColumn: 13 }, hits: 1 }
+        ],
+        branches: [
+          {
+            span: { startLine: 3, startColumn: 4, endLine: 5, endColumn: 5 },
+            hits: [1, 1]
+          }
+        ],
+        functions: [
+          {
+            span: { startLine: 2, startColumn: 29, endLine: 5, endColumn: Number.MAX_SAFE_INTEGER },
+            spanSource: "loc"
+          }
+        ]
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 100.0, status: "measured", reason: null },
+        statement: { percent: 100.0, status: "measured", reason: null },
+        branch: { percent: 100.0, status: "measured", reason: null }
+      }
+    ]);
+  });
+
   it("rejects line-aligned fnMap matches when the columns do not overlap", async () => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);

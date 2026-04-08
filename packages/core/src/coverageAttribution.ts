@@ -72,7 +72,7 @@ function buildAttributableMethods(
 function matchFunctionCoverage(
   method: MethodDescriptor,
   functions: FunctionCoverageUnit[]
-): FunctionCoverageUnit | null {
+): MatchOutcome {
   return resolveMatchOutcome([
     matchByCandidateSpans(method.bodySpan, functions),
     matchByContainingSpan(method.bodySpan, functions),
@@ -113,18 +113,18 @@ function matchByDeclaration(method: MethodDescriptor, functions: FunctionCoverag
   return uniqueMatchOutcome(functions.filter((entry) => matchesMethodDeclaration(entry, method)));
 }
 
-function resolveMatchOutcome(outcomes: MatchOutcome[]): FunctionCoverageUnit | null {
+function resolveMatchOutcome(outcomes: MatchOutcome[]): MatchOutcome {
   for (const outcome of outcomes) {
     if (outcome === undefined) {
       continue;
     }
     return outcome;
   }
-  return null;
+  return undefined;
 }
 
 function normalizeMethodSpanForFnMap(methodSpan: SourceSpan): SourceSpan {
-  if (methodSpan.endLine <= methodSpan.startLine || methodSpan.endColumn > 1) {
+  if (methodSpan.endLine <= methodSpan.startLine) {
     return methodSpan;
   }
 
