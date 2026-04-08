@@ -3,7 +3,7 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "tsBuildInfoFile": "dist/vitest.tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "references": [
     {
@@ -12,4 +12,3 @@
   ],
   "include": ["src/**/*.ts"]
 }
-
