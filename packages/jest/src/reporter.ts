@@ -20,6 +20,16 @@ export interface CrapTypescriptJestOptions {
   stderr?: Writer;
 }
 
+interface ResolvedReporterOptions {
+  projectRoot: string;
+  paths: string[];
+  changedOnly: boolean;
+  packageManager: PackageManagerSelection;
+  coverageReportPath: string;
+  stdout: Writer;
+  stderr: Writer;
+}
+
 export default class CrapTypescriptJestReporter {
   private error: Error | undefined;
   private finalizeScheduled = false;
@@ -40,40 +50,35 @@ export default class CrapTypescriptJestReporter {
   }
 
   private async finalize(): Promise<void> {
-    const projectRoot = this.options.projectRoot ?? process.cwd();
-    const stdout = this.options.stdout ?? process.stdout;
-    const stderr = this.options.stderr ?? process.stderr;
-    const coverageReportPath = this.options.coverageReportPath ?? COVERAGE_REPORT_RELATIVE_PATH;
+    const options = resolveReporterOptions(this.options);
     try {
-      await waitForCoverageReport(projectRoot, coverageReportPath);
+      await waitForCoverageReport(options.projectRoot, options.coverageReportPath);
       const result = await analyzeProject({
-        projectRoot,
-        explicitPaths: this.options.paths ?? [],
-        changedOnly: this.options.changedOnly ?? false,
-        packageManager: this.options.packageManager ?? "auto",
+        projectRoot: options.projectRoot,
+        explicitPaths: options.paths,
+        changedOnly: options.changedOnly,
+        packageManager: options.packageManager,
         testRunner: "jest",
         coverageMode: "existing-only",
-        coverageReportPath,
-        stdout,
-        stderr
+        coverageReportPath: options.coverageReportPath,
+        stdout: options.stdout,
+        stderr: options.stderr
       });
 
       if (result.selectedFiles.length === 0) {
-        stdout.write(`${NO_FILES_MESSAGE}\n`);
+        options.stdout.write(`${NO_FILES_MESSAGE}\n`);
         return;
       }
 
-      stdout.write(`${formatReport(result.metrics)}\n`);
+      options.stdout.write(`${formatReport(result.metrics)}\n`);
       if (result.thresholdExceeded) {
-        this.error = new Error(
-          `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${CRAP_THRESHOLD.toFixed(1)}`
-        );
-        stderr.write(`${this.error.message}\n`);
+        this.error = createThresholdExceededError(result.maxCrap);
+        options.stderr.write(`${this.error.message}\n`);
         process.exitCode = 1;
       }
     } catch (error) {
-      this.error = error as Error;
-      stderr.write(`${this.error.message}\n`);
+      this.error = toError(error);
+      options.stderr.write(`${this.error.message}\n`);
       process.exitCode = 1;
     }
   }
@@ -101,4 +106,40 @@ function resolveCoveragePath(projectRoot: string, coverageReportPath: string): s
   return path.isAbsolute(coverageReportPath)
     ? coverageReportPath
     : path.join(projectRoot, coverageReportPath);
+}
+
+function resolveReporterOptions(options: CrapTypescriptJestOptions): ResolvedReporterOptions {
+  return {
+    ...resolveAnalysisOptions(options),
+    ...resolveOutputWriters(options)
+  };
+}
+
+function createThresholdExceededError(maxCrap: number): Error {
+  return new Error(`CRAP threshold exceeded: ${maxCrap.toFixed(1)} > ${CRAP_THRESHOLD.toFixed(1)}`);
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function resolveAnalysisOptions(
+  options: CrapTypescriptJestOptions
+): Omit<ResolvedReporterOptions, "stdout" | "stderr"> {
+  return {
+    projectRoot: options.projectRoot ?? process.cwd(),
+    paths: options.paths ?? [],
+    changedOnly: options.changedOnly ?? false,
+    packageManager: options.packageManager ?? "auto",
+    coverageReportPath: options.coverageReportPath ?? COVERAGE_REPORT_RELATIVE_PATH
+  };
+}
+
+function resolveOutputWriters(
+  options: CrapTypescriptJestOptions
+): Pick<ResolvedReporterOptions, "stdout" | "stderr"> {
+  return {
+    stdout: options.stdout ?? process.stdout,
+    stderr: options.stderr ?? process.stderr
+  };
 }
