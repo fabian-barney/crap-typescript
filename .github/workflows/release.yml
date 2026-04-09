@@ -37,7 +37,7 @@ jobs:
         run: npm run verify-release-version
 
       - name: Render release notes
-        run: npm run render-release-notes -- "${GITHUB_REF_NAME}" > release-notes.md
+        run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
 
       - name: Run build and tests
         run: npm test
