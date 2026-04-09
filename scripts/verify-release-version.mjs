@@ -7,18 +7,18 @@ if (!tagRef) {
 }
 
 const expectedVersion = tagRef.startsWith("v") ? tagRef.slice(1) : tagRef;
-const packageFiles = [
+const versionFiles = [
+  "package.json",
   "packages/core/package.json",
   "packages/cli/package.json",
   "packages/vitest/package.json",
   "packages/jest/package.json"
 ];
 
-for (const packageFile of packageFiles) {
-  const raw = await readFile(path.resolve(packageFile), "utf8");
+for (const versionFile of versionFiles) {
+  const raw = await readFile(path.resolve(versionFile), "utf8");
   const parsed = JSON.parse(raw);
   if (parsed.version !== expectedVersion) {
-    throw new Error(`${packageFile} has version ${parsed.version}, expected ${expectedVersion}`);
+    throw new Error(`${versionFile} has version ${parsed.version}, expected ${expectedVersion}`);
   }
 }
-
