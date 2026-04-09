@@ -131,7 +131,7 @@ module.exports = withCrapTypescriptJest({
 
 ## Release
 
-Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies the package versions, publishes the four npm packages, and creates the GitHub release.
+Update `CHANGELOG.md` with the tagged version entry before releasing. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies the package versions, renders the GitHub release notes from `CHANGELOG.md`, publishes the four npm packages, and creates the GitHub release.
 
 ## Contributing
 

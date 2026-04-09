@@ -36,6 +36,9 @@ jobs:
       - name: Verify release versions
         run: npm run verify-release-version
 
+      - name: Render release notes
+        run: npm run render-release-notes -- "${GITHUB_REF_NAME}" > release-notes.md
+
       - name: Run build and tests
         run: npm test
 
@@ -57,16 +60,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          cat > release-notes.md <<EOF
-          ## Packages
-
-          - \`@barney-media/crap-typescript-core@${version}\`
-          - \`@barney-media/crap-typescript@${version}\`
-          - \`@barney-media/crap-typescript-vitest@${version}\`
-          - \`@barney-media/crap-typescript-jest@${version}\`
-          EOF
-
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md
           else

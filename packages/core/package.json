@@ -1,6 +1,6 @@
 {
   "name": "@barney-media/crap-typescript-core",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Core CRAP metric analyzer for TypeScript projects.",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
