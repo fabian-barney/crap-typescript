@@ -22,6 +22,7 @@
   ],
   "scripts": {
     "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
+    "cognitive-typescript-check": "node ./scripts/run-cognitive-typescript-gate.mjs packages",
     "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
     "test": "npm run build && vitest run",
     "pack": "npm pack --workspaces",
