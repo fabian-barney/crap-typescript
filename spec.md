@@ -45,7 +45,8 @@ The tool shall support these forms:
 It shall also accept optional overrides:
 
 - `--package-manager auto|npm|pnpm|yarn`
-- `--test-runner auto|vitest|jest`
+- `--test-runner auto|vitest|jest|karma`
+- `--coverage-report-path <path>`
 
 Invalid argument parsing shall exit with usage error and print the usage text.
 
@@ -108,6 +109,10 @@ For each module group, the tool shall:
 4. run the detected test command with JSON coverage enabled
 5. read the resulting `coverage/coverage-final.json`
 6. analyze the selected TypeScript files in that module
+
+When `--coverage-report-path` is supplied, the provided path replaces `coverage/coverage-final.json` for existing report lookup, generated report lookup, and warning messages.
+
+For the `karma` test runner, the tool shall target Angular CLI Karma/Jasmine projects by invoking `ng test --watch=false --code-coverage` through the selected package manager. The project is responsible for configuring Karma coverage to emit Istanbul JSON at the configured report path.
 
 If the expected coverage report is still missing after these steps:
 

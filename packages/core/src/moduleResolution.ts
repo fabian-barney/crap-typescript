@@ -130,10 +130,18 @@ function detectRunnerFromDependencies(packageJson: PackageJsonShape): TestRunner
 function detectSingleRunner(text: string): TestRunner | null {
   const hasVitest = /\bvitest\b/.test(text);
   const hasJest = /\bjest\b/.test(text) || /\bts-jest\b/.test(text);
-  if (hasVitest === hasJest) {
-    return null;
+  const hasKarma = /\bkarma\b/.test(text);
+  const detected: TestRunner[] = [];
+  if (hasVitest) {
+    detected.push("vitest");
   }
-  return hasVitest ? "vitest" : "jest";
+  if (hasJest) {
+    detected.push("jest");
+  }
+  if (hasKarma) {
+    detected.push("karma");
+  }
+  return detected.length === 1 ? detected[0] : null;
 }
 
 async function readPackageJson(root: string): Promise<PackageJsonShape | null> {

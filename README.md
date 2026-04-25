@@ -2,7 +2,7 @@
 
 `crap-typescript` is a shared CRAP metric toolkit for TypeScript projects.
 
-It combines cyclomatic complexity with function-level coverage derived from Istanbul statement and branch counters and reports CRAP scores for concrete TypeScript function bodies. The repository publishes a standalone CLI plus dedicated Vitest and Jest adapters.
+It combines cyclomatic complexity with function-level coverage derived from Istanbul statement and branch counters and reports CRAP scores for concrete TypeScript function bodies. The repository publishes a standalone CLI plus dedicated Vitest and Jest adapters. The CLI can also drive Angular CLI Karma/Jasmine test suites when they emit Istanbul JSON coverage.
 
 ## Modules
 
@@ -83,7 +83,9 @@ npx crap-typescript
 (no args)                    Analyze all TypeScript files under any nested src/ tree
 --changed                    Analyze changed TypeScript files under src/
 --package-manager <tool>     Force auto, npm, pnpm, or yarn
---test-runner <runner>       Force auto, vitest, or jest
+--test-runner <runner>       Force auto, vitest, jest, or karma
+--coverage-report-path <path>
+                             Reuse or generate a custom Istanbul JSON coverage report path
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
@@ -95,6 +97,7 @@ npx crap-typescript --help
 npx crap-typescript
 npx crap-typescript --changed
 npx crap-typescript --package-manager npm --test-runner vitest
+npx crap-typescript --test-runner karma --coverage-report-path coverage/app/coverage-final.json
 npx crap-typescript src/sample.ts
 npx crap-typescript packages/api packages/web
 ```
@@ -121,6 +124,25 @@ const { withCrapTypescriptJest } = require("@barney-media/crap-typescript-jest")
 module.exports = withCrapTypescriptJest({
   testEnvironment: "node"
 });
+```
+
+Karma/Jasmine for Angular or Ionic:
+
+```bash
+npx crap-typescript --test-runner karma
+```
+
+The Karma path runs `ng test --watch=false --code-coverage`, then reads Istanbul JSON from `coverage/coverage-final.json` unless `--coverage-report-path` is provided. For older Angular/Karma projects, make sure `karma.conf.js` writes JSON coverage at that path:
+
+```js
+coverageReporter: {
+  dir: require("path").join(__dirname, "./coverage"),
+  reporters: [
+    { type: "html" },
+    { type: "text-summary" },
+    { type: "json", subdir: ".", file: "coverage-final.json" }
+  ]
+}
 ```
 
 ## Exit Codes

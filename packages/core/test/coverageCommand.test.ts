@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ensureCoverageReport, expectedCoveragePath } from "../src/coverage";
+import { buildCoverageCommand, ensureCoverageReport, expectedCoveragePath } from "../src/coverage";
 import type { CoverageCommand } from "../src/types";
 import { createTempDir, disposeTempDir, writeProjectFiles } from "./testUtils";
 
@@ -133,6 +133,48 @@ describe("ensureCoverageReport", () => {
       })
     ).rejects.toThrow("Coverage command failed with exit 3");
   });
+
+  it("auto-detects Angular Karma projects and executes ng test with coverage", async () => {
+    const projectRoot = await createTempDir("crap-coverage-command-");
+    tempDirs.push(projectRoot);
+    const moduleRoot = path.join(projectRoot, "packages", "mobile");
+
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"root","private":true}',
+      "package-lock.json": "{}",
+      "packages/mobile/package.json": JSON.stringify({
+        name: "mobile",
+        private: true,
+        devDependencies: {
+          "@angular/cli": "^18.0.0",
+          karma: "^6.4.0",
+          "karma-jasmine": "^5.1.0",
+          "jasmine-core": "^5.0.0"
+        }
+      })
+    });
+
+    const expectedCommand = buildCoverageCommand("npm", "karma", moduleRoot);
+    const executor = {
+      execute: vi.fn(async (command: CoverageCommand) => {
+        expect(command).toEqual(expectedCommand);
+
+        await writeProjectFiles(projectRoot, {
+          "packages/mobile/coverage/coverage-final.json": "{}"
+        });
+        return 0;
+      })
+    };
+
+    await expect(
+      ensureCoverageReport(projectRoot, moduleRoot, "auto", "auto", "auto", undefined, executor)
+    ).resolves.toEqual({
+      coverageSourcePath: path.join(moduleRoot, "coverage", "coverage-final.json"),
+      coverageSourceRoot: moduleRoot,
+      command: expectedCommand
+    });
+    expect(executor.execute).toHaveBeenCalledOnce();
+  });
 });
 
 describe("expectedCoveragePath", () => {
@@ -144,5 +186,38 @@ describe("expectedCoveragePath", () => {
     expect(expectedCoveragePath("C:/repo/packages/demo", "D:/coverage/coverage-final.json")).toBe(
       "D:/coverage/coverage-final.json"
     );
+  });
+});
+
+describe("buildCoverageCommand", () => {
+  it("builds Angular CLI Karma coverage commands", () => {
+    expect(buildCoverageCommand("npm", "karma", "C:/repo")).toEqual({
+      command: "npm",
+      args: [
+        "exec",
+        "--no",
+        "--",
+        "ng",
+        "test",
+        "--watch=false",
+        "--code-coverage"
+      ],
+      cwd: "C:/repo",
+      packageManager: "npm",
+      testRunner: "karma"
+    });
+    expect(buildCoverageCommand("pnpm", "karma", "C:/repo").args).toEqual([
+      "exec",
+      "ng",
+      "test",
+      "--watch=false",
+      "--code-coverage"
+    ]);
+    expect(buildCoverageCommand("yarn", "karma", "C:/repo").args).toEqual([
+      "ng",
+      "test",
+      "--watch=false",
+      "--code-coverage"
+    ]);
   });
 });

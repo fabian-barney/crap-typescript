@@ -215,4 +215,39 @@ describe("resolveTestRunner", () => {
       resolveTestRunner("auto", missingModulePackageDir, `${missingModulePackageDir}/packages/demo`)
     ).resolves.toBe("vitest");
   });
+
+  it("detects Karma/Jasmine projects without treating Jasmine alone as Jest", async () => {
+    const tempDir = await createTempDir("crap-runner-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        devDependencies: {
+          "@angular/cli": "^18.0.0",
+          karma: "^6.4.0",
+          "karma-jasmine": "^5.1.0",
+          "jasmine-core": "^5.0.0"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", tempDir, tempDir)).resolves.toBe("karma");
+
+    const jasmineOnlyDir = await createTempDir("crap-runner-");
+    tempDirs.push(jasmineOnlyDir);
+    await writeProjectFiles(jasmineOnlyDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        devDependencies: {
+          "jasmine-core": "^5.0.0"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", jasmineOnlyDir, jasmineOnlyDir)).rejects.toThrow(
+      "Unable to detect a test runner"
+    );
+  });
 });

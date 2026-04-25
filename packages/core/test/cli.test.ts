@@ -11,11 +11,20 @@ afterEach(async () => {
 
 describe("cli", () => {
   it("parses supported options", () => {
-    expect(parseCliArguments(["--changed", "--package-manager", "npm", "--test-runner", "vitest"])).toEqual({
+    expect(parseCliArguments([
+      "--changed",
+      "--package-manager",
+      "npm",
+      "--test-runner",
+      "karma",
+      "--coverage-report-path",
+      "coverage/app/coverage-final.json"
+    ])).toEqual({
       mode: "changed",
       fileArgs: [],
       packageManager: "npm",
-      testRunner: "vitest"
+      testRunner: "karma",
+      coverageReportPath: "coverage/app/coverage-final.json"
     });
   });
 
@@ -46,12 +55,13 @@ describe("cli", () => {
       "--test-runner can only be provided once"
     );
     expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn");
-    expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest");
+    expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest, karma");
+    expect(() => parseCliArguments(["--coverage-report-path"])).toThrow("--coverage-report-path requires a path");
     expect(() => parseCliArguments(["--package-manager", "bun"])).toThrow(
       "--package-manager requires one of: auto, npm, pnpm, yarn"
     );
     expect(() => parseCliArguments(["--test-runner", "mocha"])).toThrow(
-      "--test-runner requires one of: auto, vitest, jest"
+      "--test-runner requires one of: auto, vitest, jest, karma"
     );
     expect(() => parseCliArguments(["--unknown"])).toThrow("Unknown option: --unknown");
   });
@@ -228,6 +238,44 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const stdout = new StringWriter();
     const stderr = new StringWriter();
     const exitCode = await runCli([], projectRoot, stdout, stderr);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toContain("safe");
+    expect(stderr.toString()).toBe("");
+  });
+
+  it("uses a custom coverage report path", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+`,
+      "coverage/app/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli(["--coverage-report-path", "coverage/app/coverage-final.json"], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("safe");

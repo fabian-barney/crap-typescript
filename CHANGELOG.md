@@ -6,7 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
-- No unreleased changes.
+### Added
+
+- Added CLI support for Angular CLI Karma/Jasmine coverage runs through `--test-runner karma`.
+- Added `--coverage-report-path` so projects with custom or nested Istanbul JSON output can point the CLI at the generated report.
 
 ## [0.2.2] - 2026-04-10
 

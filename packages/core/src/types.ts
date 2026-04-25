@@ -1,7 +1,7 @@
 export type CliMode = "all" | "changed" | "explicit" | "help";
 export type PackageManager = "npm" | "pnpm" | "yarn";
 export type PackageManagerSelection = PackageManager | "auto";
-export type TestRunner = "vitest" | "jest";
+export type TestRunner = "vitest" | "jest" | "karma";
 export type TestRunnerSelection = TestRunner | "auto";
 export type CoverageMode = "auto" | "existing-only";
 export type CoverageStatus = "measured" | "structural_na" | "unknown";
@@ -35,6 +35,7 @@ export interface CliArguments {
   fileArgs: string[];
   packageManager: PackageManagerSelection;
   testRunner: TestRunnerSelection;
+  coverageReportPath?: string;
 }
 
 export interface MethodDescriptor {

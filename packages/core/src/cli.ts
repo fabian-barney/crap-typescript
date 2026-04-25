@@ -10,14 +10,16 @@ const HELP_TEXT = `crap-typescript
 
 Usage:
   crap-typescript [--help]
-  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>]
-  crap-typescript [--package-manager <tool>] [--test-runner <runner>] <path ...>
+  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--coverage-report-path <path>]
+  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--coverage-report-path <path>] <path ...>
 
 Options:
   --help                     Print usage to stdout
   --changed                  Analyze changed TypeScript files under src/
   --package-manager <tool>   Force auto, npm, pnpm, or yarn
-  --test-runner <runner>     Force auto, vitest, or jest
+  --test-runner <runner>     Force auto, vitest, jest, or karma
+  --coverage-report-path <path>
+                             Reuse or generate a custom Istanbul JSON coverage report path
 
 Behavior:
   (no args)                  Analyze all TypeScript files under any nested src/ tree
@@ -58,8 +60,10 @@ interface ParseState {
   changed: boolean;
   packageManager: PackageManagerSelection;
   testRunner: TestRunnerSelection;
+  coverageReportPath?: string;
   packageManagerSeen: boolean;
   testRunnerSeen: boolean;
+  coverageReportPathSeen: boolean;
   fileArgs: string[];
 }
 
@@ -85,6 +89,12 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     state.testRunner = parseTestRunnerSelection(args[index + 1]);
     state.testRunnerSeen = true;
     return index + 1;
+  },
+  "--coverage-report-path": (state, args, index) => {
+    ensureOptionIsUnique(state.coverageReportPathSeen, "--coverage-report-path");
+    state.coverageReportPath = parseCoverageReportPath(args[index + 1]);
+    state.coverageReportPathSeen = true;
+    return index + 1;
   }
 };
 
@@ -94,8 +104,10 @@ function createParseState(): ParseState {
     changed: false,
     packageManager: "auto",
     testRunner: "auto",
+    coverageReportPath: undefined,
     packageManagerSeen: false,
     testRunnerSeen: false,
+    coverageReportPathSeen: false,
     fileArgs: []
   };
 }
@@ -120,7 +132,8 @@ function finalizeCliArguments(state: ParseState): CliArguments {
       mode: "help",
       fileArgs: [],
       packageManager: state.packageManager,
-      testRunner: state.testRunner
+      testRunner: state.testRunner,
+      ...coverageReportPathArgument(state)
     };
   }
   if (state.changed && state.fileArgs.length > 0) {
@@ -130,8 +143,13 @@ function finalizeCliArguments(state: ParseState): CliArguments {
     mode: state.changed ? "changed" : state.fileArgs.length > 0 ? "explicit" : "all",
     fileArgs: state.fileArgs,
     packageManager: state.packageManager,
-    testRunner: state.testRunner
+    testRunner: state.testRunner,
+    ...coverageReportPathArgument(state)
   };
+}
+
+function coverageReportPathArgument(state: ParseState): Pick<CliArguments, "coverageReportPath"> {
+  return state.coverageReportPath === undefined ? {} : { coverageReportPath: state.coverageReportPath };
 }
 
 function parsePackageManagerSelection(value: string | undefined): PackageManagerSelection {
@@ -146,12 +164,19 @@ function parsePackageManagerSelection(value: string | undefined): PackageManager
 
 function parseTestRunnerSelection(value: string | undefined): TestRunnerSelection {
   if (!value) {
-    throw new Error("--test-runner requires one of: auto, vitest, jest");
+    throw new Error("--test-runner requires one of: auto, vitest, jest, karma");
   }
-  if (value === "auto" || value === "vitest" || value === "jest") {
+  if (value === "auto" || value === "vitest" || value === "jest" || value === "karma") {
     return value;
   }
-  throw new Error("--test-runner requires one of: auto, vitest, jest");
+  throw new Error("--test-runner requires one of: auto, vitest, jest, karma");
+}
+
+function parseCoverageReportPath(value: string | undefined): string {
+  if (!value) {
+    throw new Error("--coverage-report-path requires a path");
+  }
+  return value;
 }
 
 export async function runCli(
@@ -195,6 +220,7 @@ async function analyzeCliProject(
       changedOnly: parsed.mode === "changed",
       packageManager: parsed.packageManager,
       testRunner: parsed.testRunner,
+      coverageReportPath: parsed.coverageReportPath,
       stdout,
       stderr
     });

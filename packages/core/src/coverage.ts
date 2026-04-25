@@ -43,13 +43,26 @@ export function buildCoverageCommand(
 ): CoverageCommand {
   return {
     command: packageManager,
-    args: testRunner === "vitest"
-      ? vitestArguments(packageManager, coverageReportPath)
-      : jestArguments(packageManager, coverageReportPath),
+    args: coverageArguments(packageManager, testRunner, coverageReportPath),
     cwd,
     packageManager,
     testRunner
   };
+}
+
+function coverageArguments(
+  packageManager: PackageManager,
+  testRunner: TestRunner,
+  coverageReportPath: string
+): string[] {
+  switch (testRunner) {
+    case "vitest":
+      return vitestArguments(packageManager, coverageReportPath);
+    case "jest":
+      return jestArguments(packageManager, coverageReportPath);
+    case "karma":
+      return karmaArguments(packageManager);
+  }
 }
 
 async function resolveExistingCoverage(
@@ -157,6 +170,36 @@ function jestArguments(packageManager: PackageManager, coverageReportPath: strin
         "--coverageReporters=json",
         "--coverageReporters=text",
         `--coverageDirectory=${coverageDirectory}`
+      ];
+  }
+}
+
+function karmaArguments(packageManager: PackageManager): string[] {
+  switch (packageManager) {
+    case "npm":
+      return [
+        "exec",
+        "--no",
+        "--",
+        "ng",
+        "test",
+        "--watch=false",
+        "--code-coverage"
+      ];
+    case "pnpm":
+      return [
+        "exec",
+        "ng",
+        "test",
+        "--watch=false",
+        "--code-coverage"
+      ];
+    case "yarn":
+      return [
+        "ng",
+        "test",
+        "--watch=false",
+        "--code-coverage"
       ];
   }
 }

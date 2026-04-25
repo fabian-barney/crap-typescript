@@ -13,6 +13,7 @@ npm install --save-dev @barney-media/crap-typescript
 ```bash
 npx crap-typescript
 npx crap-typescript --changed
+npx crap-typescript --test-runner karma --coverage-report-path coverage/app/coverage-final.json
 npx crap-typescript src/sample.ts
 npx crap-typescript packages/api packages/web
 ```
@@ -24,7 +25,8 @@ npx crap-typescript packages/api packages/web
 (no args)                    Analyze all TypeScript files under any nested src/ tree
 --changed                    Analyze changed TypeScript files under src/
 --package-manager <tool>     Force auto, npm, pnpm, or yarn
---test-runner <runner>       Force auto, vitest, or jest
+--test-runner <runner>       Force auto, vitest, jest, or karma
+--coverage-report-path <path> Reuse or generate a custom Istanbul JSON coverage report path
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
