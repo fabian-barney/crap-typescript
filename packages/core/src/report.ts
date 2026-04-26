@@ -284,23 +284,25 @@ function createXmlBuilder(): XMLBuilder {
 
 function toJunitXml(report: AnalysisReport): XmlNode {
   const counts = countJunitMethodStatuses(report.methods);
-
-  return {
-    testsuite: {
-      "@_name": "crap-typescript",
-      "@_status": report.status,
-      "@_tests": report.methods.length,
-      "@_failures": counts.failures,
-      "@_skipped": counts.skipped,
-      "@_errors": 0,
-      properties: {
-        property: [
-          toXmlProperty("threshold", formatNumber(report.threshold))
-        ]
-      },
-      testcase: report.methods.map((method) => toJunitTestcaseXml(method, report.threshold))
+  const testsuite: XmlNode = {
+    "@_name": "crap-typescript",
+    "@_status": report.status,
+    "@_tests": report.methods.length,
+    "@_failures": counts.failures,
+    "@_skipped": counts.skipped,
+    "@_errors": 0,
+    properties: {
+      property: [
+        toXmlProperty("threshold", formatNumber(report.threshold))
+      ]
     }
   };
+
+  if (report.methods.length > 0) {
+    testsuite.testcase = report.methods.map((method) => toJunitTestcaseXml(method, report.threshold));
+  }
+
+  return { testsuite };
 }
 
 function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCounts {

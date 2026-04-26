@@ -255,4 +255,14 @@ describe("report formatting", () => {
     expect(output).toContain('<property name="cov" value=""/>');
     expect(output).toContain("<skipped");
   });
+
+  it("formats empty JUnit reports without testcase elements", () => {
+    const output = formatJunitReport(buildAnalysisReport([]));
+
+    expect(output).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0">');
+    expect(output).toContain('<property name="threshold" value="8.0"/>');
+    expect(output).not.toContain("<testcase");
+    expect(output.endsWith("\n")).toBe(true);
+    expect(output.endsWith("\n\n")).toBe(false);
+  });
 });
