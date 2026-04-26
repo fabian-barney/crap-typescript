@@ -11,14 +11,16 @@ npm install @barney-media/crap-typescript-core
 ## API
 
 ```ts
-import { analyzeProject, formatReport } from "@barney-media/crap-typescript-core";
+import { analyzeProject, formatAnalysisReport } from "@barney-media/crap-typescript-core";
 
 const result = await analyzeProject({ projectRoot: "." });
-const report = formatReport(result.metrics);
+const report = formatAnalysisReport(result.metrics, { format: "toon" });
 console.log(report);
 ```
 
-Key exports: `analyzeProject`, `calculateCrapScore`, `formatReport`, `parseCoverageReport`, `parseFileMethods`.
+Key exports: `analyzeProject`, `calculateCrapScore`, `formatAnalysisReport`, `formatReport`, `parseCoverageReport`, `parseFileMethods`.
+
+`formatAnalysisReport` supports `toon`, `json`, `text`, and `junit`. The root report has only overall `status`; method-level entries contain CRAP score, threshold, complexity, coverage percent, coverage kind, source path, and line range. Pass `agent: true` with `toon`, `json`, or `text` to include failed methods only.
 
 ## Formula
 

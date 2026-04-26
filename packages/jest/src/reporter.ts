@@ -1,14 +1,13 @@
-import { access } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
   analyzeProject,
   COVERAGE_REPORT_RELATIVE_PATH,
   CRAP_THRESHOLD,
-  formatReport,
-  NO_FILES_MESSAGE
+  formatAnalysisReport
 } from "@barney-media/crap-typescript-core";
-import type { PackageManagerSelection, Writer } from "@barney-media/crap-typescript-core";
+import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
 
 export interface CrapTypescriptJestOptions {
   projectRoot?: string;
@@ -16,6 +15,10 @@ export interface CrapTypescriptJestOptions {
   paths?: string[];
   packageManager?: PackageManagerSelection;
   coverageReportPath?: string;
+  format?: ReportFormat;
+  agent?: boolean;
+  outputPath?: string;
+  junitReportPath?: string | false;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -26,6 +29,10 @@ interface ResolvedReporterOptions {
   changedOnly: boolean;
   packageManager: PackageManagerSelection;
   coverageReportPath: string;
+  format: ReportFormat;
+  agent: boolean;
+  outputPath: string | undefined;
+  junitReportPath: string | false;
   stdout: Writer;
   stderr: Writer;
 }
@@ -65,12 +72,7 @@ export default class CrapTypescriptJestReporter {
         stderr: options.stderr
       });
 
-      if (result.selectedFiles.length === 0) {
-        options.stdout.write(`${NO_FILES_MESSAGE}\n`);
-        return;
-      }
-
-      options.stdout.write(`${formatReport(result.metrics)}\n`);
+      await writeReporterReports(result.metrics, options);
       if (result.thresholdExceeded) {
         this.error = createThresholdExceededError(result.maxCrap);
         options.stderr.write(`${this.error.message}\n`);
@@ -126,13 +128,52 @@ function toError(error: unknown): Error {
 function resolveAnalysisOptions(
   options: CrapTypescriptJestOptions
 ): Omit<ResolvedReporterOptions, "stdout" | "stderr"> {
+  const coverageReportPath = resolveCoverageReportPathOption(options);
   return {
-    projectRoot: options.projectRoot ?? process.cwd(),
-    paths: options.paths ?? [],
-    changedOnly: options.changedOnly ?? false,
-    packageManager: options.packageManager ?? "auto",
-    coverageReportPath: options.coverageReportPath ?? COVERAGE_REPORT_RELATIVE_PATH
+    projectRoot: resolveProjectRoot(options),
+    paths: resolvePaths(options),
+    changedOnly: resolveChangedOnly(options),
+    packageManager: resolvePackageManager(options),
+    coverageReportPath,
+    format: resolveFormat(options),
+    agent: resolveAgent(options),
+    outputPath: options.outputPath,
+    junitReportPath: resolveJunitReportPath(options, coverageReportPath)
   };
+}
+
+function resolveProjectRoot(options: CrapTypescriptJestOptions): string {
+  return options.projectRoot ?? process.cwd();
+}
+
+function resolvePaths(options: CrapTypescriptJestOptions): string[] {
+  return options.paths ?? [];
+}
+
+function resolveChangedOnly(options: CrapTypescriptJestOptions): boolean {
+  return options.changedOnly ?? false;
+}
+
+function resolvePackageManager(options: CrapTypescriptJestOptions): PackageManagerSelection {
+  return options.packageManager ?? "auto";
+}
+
+function resolveCoverageReportPathOption(options: CrapTypescriptJestOptions): string {
+  return options.coverageReportPath ?? COVERAGE_REPORT_RELATIVE_PATH;
+}
+
+function resolveFormat(options: CrapTypescriptJestOptions): ReportFormat {
+  return options.format ?? "toon";
+}
+
+function resolveAgent(options: CrapTypescriptJestOptions): boolean {
+  return options.agent ?? false;
+}
+
+function resolveJunitReportPath(options: CrapTypescriptJestOptions, coverageReportPath: string): string | false {
+  return options.junitReportPath === undefined
+    ? buildJunitReportPathFromCoveragePath(coverageReportPath)
+    : options.junitReportPath;
 }
 
 function resolveOutputWriters(
@@ -142,4 +183,33 @@ function resolveOutputWriters(
     stdout: options.stdout ?? process.stdout,
     stderr: options.stderr ?? process.stderr
   };
+}
+
+async function writeReporterReports(
+  metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"],
+  options: ResolvedReporterOptions
+): Promise<void> {
+  const primaryReport = formatAnalysisReport(metrics, {
+    format: options.format,
+    agent: options.agent
+  });
+  if (options.outputPath) {
+    await writeReportFile(options.projectRoot, options.outputPath, primaryReport);
+  } else {
+    options.stdout.write(primaryReport);
+  }
+
+  if (options.junitReportPath !== false) {
+    await writeReportFile(options.projectRoot, options.junitReportPath, formatAnalysisReport(metrics, { format: "junit" }));
+  }
+}
+
+async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {
+  const absolutePath = path.resolve(projectRoot, reportPath);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, content);
+}
+
+function buildJunitReportPathFromCoveragePath(coverageReportPath: string): string {
+  return path.join(path.dirname(coverageReportPath), "crap-typescript-junit.xml");
 }

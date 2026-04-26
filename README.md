@@ -84,6 +84,10 @@ npx crap-typescript
 --changed                    Analyze changed TypeScript files under src/
 --package-manager <tool>     Force auto, npm, pnpm, or yarn
 --test-runner <runner>       Force auto, vitest, or jest
+--format <format>            Emit toon, json, text, or junit (default: toon)
+--agent                      Emit only overall status and failed methods for toon, json, or text
+--output <path>              Write the primary report to a file instead of stdout
+--junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
@@ -95,9 +99,21 @@ npx crap-typescript --help
 npx crap-typescript
 npx crap-typescript --changed
 npx crap-typescript --package-manager npm --test-runner vitest
+npx crap-typescript --format json --output reports/crap.json
+npx crap-typescript --agent --junit-report reports/crap-junit.xml
 npx crap-typescript src/sample.ts
 npx crap-typescript packages/api packages/web
 ```
+
+## Report Formats
+
+The CLI defaults to TOON output for compact, agent-readable reports. `--format` can select `toon`, `json`, `text`, or `junit`.
+
+All report formats expose only one overall result value: `status`, either `passed` or `failed`. Per-function entries carry the details: method status, CRAP score, threshold, complexity, coverage percent, coverage kind, source path, and line range.
+
+`--agent` is a filtering mode, not a report format. It is available with `toon`, `json`, and `text`; it keeps the overall `status`, includes failed methods only, and omits method-level `status` because included method entries are implicitly failed.
+
+Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit output keeps the aggregate XML attributes required by CI parsers and puts CRAP-specific details on each testcase.
 
 ## Adapter Usage
 
@@ -113,6 +129,8 @@ module.exports = withCrapTypescriptVitest({
 });
 ```
 
+The Vitest adapter prints TOON output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `junitReportPath: false` to disable the JUnit artifact.
+
 Jest:
 
 ```js
@@ -122,6 +140,8 @@ module.exports = withCrapTypescriptJest({
   testEnvironment: "node"
 });
 ```
+
+The Jest adapter prints TOON output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `junitReportPath: false` to disable the JUnit artifact.
 
 ## Exit Codes
 

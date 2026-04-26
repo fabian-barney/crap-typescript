@@ -13,6 +13,8 @@ npm install --save-dev @barney-media/crap-typescript
 ```bash
 npx crap-typescript
 npx crap-typescript --changed
+npx crap-typescript --format json --output reports/crap.json
+npx crap-typescript --agent --junit-report reports/crap-junit.xml
 npx crap-typescript src/sample.ts
 npx crap-typescript packages/api packages/web
 ```
@@ -25,9 +27,15 @@ npx crap-typescript packages/api packages/web
 --changed                    Analyze changed TypeScript files under src/
 --package-manager <tool>     Force auto, npm, pnpm, or yarn
 --test-runner <runner>       Force auto, vitest, or jest
+--format <format>            Emit toon, json, text, or junit (default: toon)
+--agent                      Emit only overall status and failed methods for toon, json, or text
+--output <path>              Write the primary report to a file instead of stdout
+--junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
+
+The default `toon` format is compact and agent-readable. `--agent` is a filtering mode, not a format: it keeps the overall `status`, includes failed method entries only, and omits method-level `status`.
 
 ## Exit Codes
 

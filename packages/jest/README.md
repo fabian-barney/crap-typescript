@@ -20,6 +20,8 @@ module.exports = withCrapTypescriptJest({
 
 `withCrapTypescriptJest` wraps your Jest config to enable coverage collection and register the CRAP reporter. The test run fails when any function exceeds the CRAP threshold.
 
+The reporter prints TOON output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, or `junitReportPath` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
+
 The reporter is also available as a standalone export at `@barney-media/crap-typescript-jest/reporter` for direct configuration.
 
 See the [main documentation](https://github.com/fabian-barney/crap-typescript) for full details.
