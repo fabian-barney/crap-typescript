@@ -35,7 +35,7 @@ npx crap-typescript packages/api packages/web
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
 
-The default `toon` format is compact and agent-readable. `--agent` is a filtering mode, not a format: it keeps the overall `status`, includes failed method entries only, and omits method-level `status`.
+The default `toon` format is compact and agent-readable. Primary reports include run-level `status` and `threshold`; method rows use `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. `--agent` is a filtering mode, not a format: it keeps the overall `status` and `threshold`, includes failed method entries only, and omits method-level `status`.
 
 ## Exit Codes
 

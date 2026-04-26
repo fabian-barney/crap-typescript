@@ -109,11 +109,11 @@ npx crap-typescript packages/api packages/web
 
 The CLI defaults to TOON output for compact, agent-readable reports. `--format` can select `toon`, `json`, `text`, or `junit`.
 
-All report formats expose only one overall result value: `status`, either `passed` or `failed`. Per-function entries carry the details: method status, CRAP score, threshold, complexity, coverage percent, coverage kind, source path, and line range.
+Primary reports expose overall `status` and the run-level `threshold`. Per-function entries use the shared fields `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. Method-level entries never repeat `threshold`.
 
-`--agent` is a filtering mode, not a report format. It is available with `toon`, `json`, and `text`; it keeps the overall `status`, includes failed methods only, and omits method-level `status` because included method entries are implicitly failed.
+`--agent` is a filtering mode, not a report format. It is available with `toon`, `json`, and `text`; it keeps the overall `status` and `threshold`, includes failed methods only, and omits method-level `status` because included method entries are implicitly failed.
 
-Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit output keeps the aggregate XML attributes required by CI parsers and puts CRAP-specific details on each testcase.
+Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
 
 ## Adapter Usage
 
@@ -129,7 +129,7 @@ module.exports = withCrapTypescriptVitest({
 });
 ```
 
-The Vitest adapter prints TOON output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `junitReportPath: false` to disable the JUnit artifact.
+The Vitest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, or `junitReportPath` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
 
 Jest:
 
@@ -141,7 +141,7 @@ module.exports = withCrapTypescriptJest({
 });
 ```
 
-The Jest adapter prints TOON output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `junitReportPath: false` to disable the JUnit artifact.
+The Jest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, or `junitReportPath` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
 
 ## Exit Codes
 

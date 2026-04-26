@@ -9,31 +9,33 @@ import type {
   ReportStatus
 } from "./types";
 
-const TEXT_HEADERS = ["Status", "Function", "CC", "Coverage Kind", "Coverage", "CRAP", "Threshold", "Location"];
-const AGENT_TEXT_HEADERS = ["Function", "CC", "Coverage Kind", "Coverage", "CRAP", "Threshold", "Location"];
+const METHOD_COLUMNS = ["status", "crap", "cc", "cov", "covKind", "func", "src", "lineStart", "lineEnd"] as const;
+const AGENT_METHOD_COLUMNS = ["crap", "cc", "cov", "covKind", "func", "src", "lineStart", "lineEnd"] as const;
+const RIGHT_ALIGNED_TEXT_COLUMNS = new Set<MethodColumn>(["crap", "cc", "cov", "lineStart", "lineEnd"]);
 
 export interface MethodReportEntry {
   status: MethodReportStatus;
-  name: string;
-  sourcePath: string;
-  startLine: number;
-  endLine: number;
-  complexity: number;
-  coverageKind: CoverageKind;
-  coveragePercent: number | null;
-  crapScore: number | null;
-  threshold: number;
+  crap: number | null;
+  cc: number;
+  cov: number | null;
+  covKind: CoverageKind;
+  func: string;
+  src: string;
+  lineStart: number;
+  lineEnd: number;
 }
 
 export type AgentMethodReportEntry = Omit<MethodReportEntry, "status">;
 
 export interface AnalysisReport {
   status: ReportStatus;
+  threshold: number;
   methods: MethodReportEntry[];
 }
 
 export interface AgentAnalysisReport {
   status: ReportStatus;
+  threshold: number;
   methods: AgentMethodReportEntry[];
 }
 
@@ -45,6 +47,8 @@ export interface FormatAnalysisReportOptions {
 type SerializableReport = AnalysisReport | AgentAnalysisReport;
 type ReportValue = string | number | null;
 type ReportFormatter = (report: SerializableReport, agent: boolean) => string;
+type MethodColumn = typeof METHOD_COLUMNS[number];
+type AgentMethodColumn = typeof AGENT_METHOD_COLUMNS[number];
 
 const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
   toon: formatToonReport,
@@ -75,6 +79,7 @@ export function buildAnalysisReport(metrics: MethodMetrics[]): AnalysisReport {
   const methods = sortMetrics(metrics).map(toMethodReportEntry);
   return {
     status: methods.some((method) => method.status === "failed") ? "failed" : "passed",
+    threshold: CRAP_THRESHOLD,
     methods
   };
 }
@@ -83,6 +88,7 @@ export function buildAgentAnalysisReport(metrics: MethodMetrics[]): AgentAnalysi
   const report = buildAnalysisReport(metrics);
   return {
     status: report.status,
+    threshold: report.threshold,
     methods: report.methods
       .filter((method) => method.status === "failed")
       .map(({ status: _status, ...method }) => method)
@@ -106,11 +112,9 @@ export function formatReport(metrics: MethodMetrics[]): string {
 }
 
 export function formatToonReport(report: SerializableReport, agent = false): string {
-  const lines = [`status: ${report.status}`];
+  const lines = [`status: ${report.status}`, `threshold: ${formatNumber(report.threshold)}`];
   const includeStatus = !agent && reportHasMethodStatus(report);
-  const columns = includeStatus
-    ? ["status", "name", "sourcePath", "startLine", "endLine", "complexity", "coverageKind", "coveragePercent", "crapScore", "threshold"]
-    : ["name", "sourcePath", "startLine", "endLine", "complexity", "coverageKind", "coveragePercent", "crapScore", "threshold"];
+  const columns = includeStatus ? METHOD_COLUMNS : AGENT_METHOD_COLUMNS;
 
   if (report.methods.length === 0) {
     return agent ? `${lines.join("\n")}\n` : `${[...lines, "methods[0]:"].join("\n")}\n`;
@@ -124,32 +128,26 @@ export function formatToonReport(report: SerializableReport, agent = false): str
 }
 
 export function formatTextReport(report: SerializableReport, agent = false): string {
+  const summary = [`status: ${report.status}`, `threshold: ${formatNumber(report.threshold)}`];
   if (report.methods.length === 0) {
-    return `Status: ${report.status}\n`;
+    return `${summary.join("\n")}\n`;
   }
 
   const includeStatus = !agent && reportHasMethodStatus(report);
-  const headers = includeStatus ? TEXT_HEADERS : AGENT_TEXT_HEADERS;
-  const rows = report.methods.map((method) => {
-    const values = [
-      method.name,
-      String(method.complexity),
-      method.coverageKind,
-      formatNullablePercent(method.coveragePercent),
-      formatNullableNumber(method.crapScore),
-      formatNumber(method.threshold),
-      `${method.sourcePath}:${method.startLine}-${method.endLine}`
-    ];
-    return includeStatus && "status" in method ? [method.status, ...values] : values;
-  });
-  const widths = headers.map((header, index) =>
-    rows.reduce((max, row) => Math.max(max, row[index].length), header.length)
+  const columns = includeStatus ? METHOD_COLUMNS : AGENT_METHOD_COLUMNS;
+  const rows = includeStatus
+    ? report.methods.map((method) => METHOD_COLUMNS.map((column) => formatTextValue(column, method[column])))
+    : (report as AgentAnalysisReport).methods.map((method) =>
+      AGENT_METHOD_COLUMNS.map((column) => formatTextValue(column, method[column]))
+    );
+  const widths = columns.map((column, index) =>
+    rows.reduce((max, row) => Math.max(max, row[index].length), column.length)
   );
-  const headerLine = headers.map((header, index) => header.padEnd(widths[index])).join("  ");
-  const separator = widths.map((width) => "-".repeat(width)).join("  ");
-  const body = rows.map((row) => row.map((value, index) => value.padEnd(widths[index])).join("  "));
+  const headerLine = formatTextRow([...columns], widths, columns);
+  const separator = formatTextSeparator(widths);
+  const body = rows.map((row) => formatTextRow(row, widths, columns));
 
-  return [`Status: ${report.status}`, "", headerLine, separator, ...body].join("\n") + "\n";
+  return [...summary, "", headerLine, separator, ...body].join("\n") + "\n";
 }
 
 export function formatJunitReport(report: AnalysisReport): string {
@@ -159,10 +157,13 @@ export function formatJunitReport(report: AnalysisReport): string {
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<testsuite name="crap-typescript" status="${report.status}" tests="${report.methods.length}" failures="${failures}" skipped="${skipped}" errors="0">`
   ];
+  lines.push("  <properties>");
+  lines.push(`    <property name="threshold" value="${formatNumber(report.threshold)}" />`);
+  lines.push("  </properties>");
 
   for (const method of report.methods) {
     lines.push(
-      `  <testcase classname="${escapeXmlAttribute(method.sourcePath)}" name="${escapeXmlAttribute(method.name)}" file="${escapeXmlAttribute(method.sourcePath)}" line="${method.startLine}">`
+      `  <testcase classname="${escapeXmlAttribute(method.src)}" name="${escapeXmlAttribute(method.func)}" file="${escapeXmlAttribute(method.src)}" line="${method.lineStart}">`
     );
     lines.push("    <properties>");
     for (const [name, value] of methodProperties(method)) {
@@ -170,7 +171,7 @@ export function formatJunitReport(report: AnalysisReport): string {
     }
     lines.push("    </properties>");
     if (method.status === "failed") {
-      const message = `CRAP score ${formatNullableNumber(method.crapScore)} exceeds threshold ${formatNumber(method.threshold)}`;
+      const message = `CRAP score ${formatNullableNumber(method.crap)} exceeds threshold ${formatNumber(report.threshold)}`;
       lines.push(`    <failure type="crap-threshold" message="${escapeXmlAttribute(message)}">${escapeXmlText(message)}</failure>`);
     }
     if (method.status === "skipped") {
@@ -186,15 +187,14 @@ export function formatJunitReport(report: AnalysisReport): string {
 function toMethodReportEntry(metric: MethodMetrics): MethodReportEntry {
   return {
     status: methodStatus(metric),
-    name: metric.displayName,
-    sourcePath: metric.relativePath,
-    startLine: metric.startLine,
-    endLine: metric.endLine,
-    complexity: metric.complexity,
-    coverageKind: coverageKind(metric),
-    coveragePercent: metric.coveragePercent,
-    crapScore: metric.crapScore,
-    threshold: CRAP_THRESHOLD
+    crap: metric.crapScore,
+    cc: metric.complexity,
+    cov: metric.coveragePercent,
+    covKind: coverageKind(metric),
+    func: metric.displayName,
+    src: metric.relativePath,
+    lineStart: metric.startLine,
+    lineEnd: metric.endLine
   };
 }
 
@@ -230,13 +230,17 @@ function formatToonValue(value: ReportValue): string {
     return "null";
   }
   if (typeof value === "number") {
-    return Number.isInteger(value) ? String(value) : formatNumber(value);
+    return formatToonNumber(value);
   }
-  return /^[A-Za-z0-9_.:/#@$-]+$/.test(value) ? value : JSON.stringify(value);
+  return formatToonString(value);
 }
 
-function formatNullablePercent(value: number | null): string {
-  return value === null ? "N/A" : `${formatNumber(value)}%`;
+function formatToonNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : formatNumber(value);
+}
+
+function formatToonString(value: string): string {
+  return /^[A-Za-z0-9_.:/#@$-]+$/.test(value) ? value : JSON.stringify(value);
 }
 
 function formatNullableNumber(value: number | null): string {
@@ -247,18 +251,43 @@ function formatJunitNullableNumber(value: number | null): string {
   return value === null ? "" : formatNumber(value);
 }
 
+function formatTextValue(column: MethodColumn | AgentMethodColumn, value: ReportValue): string {
+  if (column === "cov") {
+    return value === null ? "N/A" : `${formatNumber(value as number)}%`;
+  }
+  if (column === "crap") {
+    return formatNullableNumber(value as number | null);
+  }
+  return value === null ? "N/A" : String(value);
+}
+
+function formatTextRow(
+  values: string[],
+  widths: number[],
+  columns: readonly (MethodColumn | AgentMethodColumn)[] = METHOD_COLUMNS
+): string {
+  return `| ${values.map((value, index) => formatTextCell(value, widths[index], columns[index])).join(" | ")} |`;
+}
+
+function formatTextCell(value: string, width: number, column: MethodColumn | AgentMethodColumn): string {
+  return RIGHT_ALIGNED_TEXT_COLUMNS.has(column as MethodColumn) ? value.padStart(width) : value.padEnd(width);
+}
+
+function formatTextSeparator(widths: number[]): string {
+  return `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`;
+}
+
 function methodProperties(method: MethodReportEntry): Array<[string, string]> {
   return [
     ["status", method.status],
-    ["score", formatJunitNullableNumber(method.crapScore)],
-    ["threshold", formatNumber(method.threshold)],
-    ["complexity", String(method.complexity)],
-    ["coveragePercent", formatJunitNullableNumber(method.coveragePercent)],
-    ["coverageKind", method.coverageKind],
-    ["sourcePath", method.sourcePath],
-    ["startLine", String(method.startLine)],
-    ["endLine", String(method.endLine)],
-    ["lineRange", `${method.startLine}-${method.endLine}`]
+    ["crap", formatJunitNullableNumber(method.crap)],
+    ["cc", String(method.cc)],
+    ["cov", formatJunitNullableNumber(method.cov)],
+    ["covKind", method.covKind],
+    ["func", method.func],
+    ["src", method.src],
+    ["lineStart", String(method.lineStart)],
+    ["lineEnd", String(method.lineEnd)]
   ];
 }
 
