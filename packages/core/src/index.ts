@@ -1,10 +1,10 @@
-export { analyzeProject } from "./analyzeProject";
-export { runCli, parseCliArguments, usage } from "./cli";
-export { calculateCrapScore, maxCrap } from "./crapScore";
-export { buildCoverageCommand } from "./coverage";
-export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots, isAnalyzableFile } from "./fileSelection";
-export { coverageForMethods, parseCoverageReport } from "./istanbul";
-export { parseFileMethods } from "./parser";
+export { analyzeProject } from "./analyzeProject.js";
+export { runCli, parseCliArguments, usage } from "./cli.js";
+export { calculateCrapScore, maxCrap } from "./crapScore.js";
+export { buildCoverageCommand } from "./coverage.js";
+export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots, isAnalyzableFile } from "./fileSelection.js";
+export { coverageForMethods, parseCoverageReport } from "./istanbul.js";
+export { parseFileMethods } from "./parser.js";
 export {
   buildAgentAnalysisReport,
   buildAnalysisReport,
@@ -14,8 +14,8 @@ export {
   formatTextReport,
   formatToonReport,
   sortMetrics
-} from "./report";
-export { CRAP_THRESHOLD, COVERAGE_REPORT_RELATIVE_PATH, NO_FILES_MESSAGE, NO_ANALYZABLE_FUNCTIONS_MESSAGE } from "./constants";
+} from "./report.js";
+export { CRAP_THRESHOLD, COVERAGE_REPORT_RELATIVE_PATH, NO_FILES_MESSAGE, NO_ANALYZABLE_FUNCTIONS_MESSAGE } from "./constants.js";
 export type {
   AnalysisResult,
   AnalyzeProjectOptions,
@@ -37,4 +37,4 @@ export type {
   TestRunner,
   TestRunnerSelection,
   Writer
-} from "./types";
+} from "./types.js";

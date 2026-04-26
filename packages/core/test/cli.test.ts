@@ -211,7 +211,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     expect(exitCode).toBe(2);
     expect(stdout.toString()).toContain("status: failed");
-    expect(stdout.toString()).toContain("threshold: 8.0");
+    expect(stdout.toString()).toContain("threshold: 8");
     expect(stdout.toString()).toContain("methods[2]{status,crap,cc,cov,covKind,func,src,lineStart,lineEnd}:");
     expect(stdout.toString()).toContain("risky");
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
@@ -256,7 +256,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("status: passed");
-    expect(stdout.toString()).toContain("threshold: 8.0");
+    expect(stdout.toString()).toContain("threshold: 8");
     expect(tableLines[0]).toBe("| status | crap | cc |    cov | covKind | func | src           | lineStart | lineEnd |");
     expect(new Set(pipePositions.map((positions) => positions.join(","))).size).toBe(1);
     expect(stderr.toString()).toBe("");
@@ -439,7 +439,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("status: passed");
-    expect(stdout.toString()).toContain("threshold: 8.0");
+    expect(stdout.toString()).toContain("threshold: 8");
     expect(stdout.toString()).toContain("safe");
     expect(stderr.toString()).toBe("");
   });
@@ -456,7 +456,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const exitCode = await runCli([], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8.0\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
 
@@ -474,7 +474,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const exitCode = await runCli([], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8.0\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
 

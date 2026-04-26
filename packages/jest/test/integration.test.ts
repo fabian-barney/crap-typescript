@@ -1,5 +1,6 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -15,13 +16,16 @@ describe("crap-typescript-jest", () => {
   it("writes Istanbul JSON coverage and fails the run when the CRAP threshold is exceeded", async () => {
     const projectRoot = await copyFixture("jest-project");
     tempDirs.push(projectRoot);
-    const adapterPath = repoPath("packages", "jest", "dist", "index.js").replace(/\\/g, "/");
+    const adapterUrl = pathToFileURL(repoPath("packages", "jest", "dist", "index.js")).href;
     const repoRootPath = process.cwd().replace(/\\/g, "/");
     await writeProjectFiles(projectRoot, {
-      "jest.config.cjs": `const { withCrapTypescriptJest } = require(${JSON.stringify(adapterPath)});
+      "jest.config.mjs": `import { createRequire } from "node:module";
+import { withCrapTypescriptJest } from ${JSON.stringify(adapterUrl)};
+
+const require = createRequire(import.meta.url);
 const tsJestPath = require.resolve("ts-jest", { paths: [${JSON.stringify(repoRootPath)}] });
 
-module.exports = withCrapTypescriptJest(
+export default withCrapTypescriptJest(
   {
     testEnvironment: "node",
     testMatch: ["<rootDir>/test/**/*.test.js"],
@@ -39,7 +43,7 @@ module.exports = withCrapTypescriptJest(
 
     const result = await runProcess(
       process.execPath,
-      [repoPath("node_modules", "jest", "bin", "jest.js"), "--config", "jest.config.cjs", "--runInBand"],
+      [repoPath("node_modules", "jest", "bin", "jest.js"), "--config", "jest.config.mjs", "--runInBand"],
       projectRoot
     );
 
@@ -51,13 +55,16 @@ module.exports = withCrapTypescriptJest(
   it("honors custom coverage output directories when enforcing the CRAP threshold", async () => {
     const projectRoot = await copyFixture("jest-project");
     tempDirs.push(projectRoot);
-    const adapterPath = repoPath("packages", "jest", "dist", "index.js").replace(/\\/g, "/");
+    const adapterUrl = pathToFileURL(repoPath("packages", "jest", "dist", "index.js")).href;
     const repoRootPath = process.cwd().replace(/\\/g, "/");
     await writeProjectFiles(projectRoot, {
-      "jest.config.cjs": `const { withCrapTypescriptJest } = require(${JSON.stringify(adapterPath)});
+      "jest.config.mjs": `import { createRequire } from "node:module";
+import { withCrapTypescriptJest } from ${JSON.stringify(adapterUrl)};
+
+const require = createRequire(import.meta.url);
 const tsJestPath = require.resolve("ts-jest", { paths: [${JSON.stringify(repoRootPath)}] });
 
-module.exports = withCrapTypescriptJest(
+export default withCrapTypescriptJest(
   {
     testEnvironment: "node",
     testMatch: ["<rootDir>/test/**/*.test.js"],
@@ -76,7 +83,7 @@ module.exports = withCrapTypescriptJest(
 
     const result = await runProcess(
       process.execPath,
-      [repoPath("node_modules", "jest", "bin", "jest.js"), "--config", "jest.config.cjs", "--runInBand"],
+      [repoPath("node_modules", "jest", "bin", "jest.js"), "--config", "jest.config.mjs", "--runInBand"],
       projectRoot
     );
 

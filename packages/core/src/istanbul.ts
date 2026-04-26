@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { isAbsolutePath, normalizePathForMatch } from "./utils";
-import type { SourceSpan } from "./types";
+import { isAbsolutePath, normalizePathForMatch } from "./utils.js";
+import type { SourceSpan } from "./types.js";
 import type {
   BranchCoverageUnit,
   CoveragePosition,
@@ -10,13 +10,13 @@ import type {
   FunctionCoverageUnit,
   FunctionSpanSource,
   StatementCoverageUnit
-} from "./coverageUnits";
+} from "./coverageUnits.js";
 
 const MAX_COLUMN = Number.MAX_SAFE_INTEGER;
 
-export { coverageForMethods } from "./coverageAttribution";
-export type { MethodCoverage } from "./coverageNormalization";
-export type { FileCoverage } from "./coverageUnits";
+export { coverageForMethods } from "./coverageAttribution.js";
+export type { MethodCoverage } from "./coverageNormalization.js";
+export type { FileCoverage } from "./coverageUnits.js";
 
 type JsonRecord = Record<string, unknown>;
 

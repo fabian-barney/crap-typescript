@@ -1,9 +1,9 @@
 import path from "node:path";
 
-import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants";
-import { locateCoverageReport, resolvePackageManager, resolveTestRunner } from "./moduleResolution";
-import { isAbsolutePath } from "./utils";
-import type { CommandExecutor, CoverageMode, CoverageCommand, PackageManager, TestRunner } from "./types";
+import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants.js";
+import { locateCoverageReport, resolvePackageManager, resolveTestRunner } from "./moduleResolution.js";
+import { isAbsolutePath } from "./utils.js";
+import type { CommandExecutor, CoverageMode, CoverageCommand, PackageManager, TestRunner } from "./types.js";
 
 export async function ensureCoverageReport(
   projectRoot: string,

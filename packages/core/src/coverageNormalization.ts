@@ -1,5 +1,5 @@
-import type { CoverageMetric, CoverageUnknownReason, MethodDescriptor } from "./types";
-import type { BranchCoverageUnit, StatementCoverageUnit } from "./coverageUnits";
+import type { CoverageMetric, CoverageUnknownReason, MethodDescriptor } from "./types.js";
+import type { BranchCoverageUnit, StatementCoverageUnit } from "./coverageUnits.js";
 
 export interface MethodCoverage {
   coverage: CoverageMetric;

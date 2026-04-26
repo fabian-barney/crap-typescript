@@ -1,9 +1,9 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants";
-import { isAbsolutePath } from "./utils";
-import type { PackageManager, PackageManagerSelection, TestRunner, TestRunnerSelection } from "./types";
+import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants.js";
+import { isAbsolutePath } from "./utils.js";
+import type { PackageManager, PackageManagerSelection, TestRunner, TestRunnerSelection } from "./types.js";
 
 export interface CoverageSource {
   reportPath: string;

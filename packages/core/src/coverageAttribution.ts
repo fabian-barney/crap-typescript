@@ -1,7 +1,7 @@
-import type { CoverageUnknownReason, MethodDescriptor, SourceSpan } from "./types";
-import { computeMethodCoverage, unavailableMethodCoverage } from "./coverageNormalization";
-import type { FileCoverage, FunctionCoverageUnit } from "./coverageUnits";
-import type { MethodCoverage } from "./coverageNormalization";
+import type { CoverageUnknownReason, MethodDescriptor, SourceSpan } from "./types.js";
+import { computeMethodCoverage, unavailableMethodCoverage } from "./coverageNormalization.js";
+import type { FileCoverage, FunctionCoverageUnit } from "./coverageUnits.js";
+import type { MethodCoverage } from "./coverageNormalization.js";
 
 const MAX_COLUMN = Number.MAX_SAFE_INTEGER;
 
