@@ -169,7 +169,7 @@ function toMethodReportEntry(metric: MethodMetrics): MethodReportEntry {
 }
 
 function reportHasMethodStatus(report: SerializableReport): report is AnalysisReport {
-  return report.methods.every((method) => "status" in method);
+  return report.methods.length > 0 && report.methods.every((method) => "status" in method);
 }
 
 function omitMethodStatuses(report: AnalysisReport): AgentAnalysisReport {
