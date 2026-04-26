@@ -2,9 +2,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { NO_FILES_MESSAGE } from "@barney-media/crap-typescript-core";
-
-import { StringWriter, createTempDir, disposeTempDir, writeProjectFiles } from "../../core/test/testUtils";
+import { StringWriter, createTempDir, disposeTempDir, readText, writeProjectFiles } from "../../core/test/testUtils";
 import CrapTypescriptJestReporter from "../src/reporter";
 
 const tempDirs: string[] = [];
@@ -48,7 +46,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(finalize).toHaveBeenCalledTimes(1);
   });
 
-  it("prints the no-files message when no analyzable source files are selected", async () => {
+  it("prints a passed TOON report when no analyzable source files are selected", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -66,7 +64,8 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
-    expect(stdout.toString()).toContain(NO_FILES_MESSAGE);
+    expect(stdout.toString()).toBe("status: passed\nmethods[0]:\n");
+    expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain('status="passed"');
     expect(stderr.toString()).toBe("");
     expect(reporter.getLastError()).toBeUndefined();
     expect(process.exitCode).toBe(originalExitCode);
@@ -161,10 +160,66 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
+    const junit = await readText(`${projectRoot}/custom-coverage/crap-typescript-junit.xml`);
+
+    expect(stdout.toString()).toContain("status: failed");
     expect(stdout.toString()).toContain("risky");
+    expect(junit).toContain('tests="1"');
+    expect(junit).toContain("<failure");
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
     expect(reporter.getLastError()).toBeInstanceOf(Error);
     expect(reporter.getLastError()?.message).toContain("CRAP threshold exceeded");
     expect(process.exitCode).toBe(1);
+  });
+
+  it("supports agent filtering and disabled JUnit output", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptJestReporter(undefined, {
+      projectRoot,
+      format: "json",
+      agent: true,
+      junitReportPath: false,
+      stdout,
+      stderr
+    });
+
+    await callFinalize(reporter);
+
+    expect(JSON.parse(stdout.toString())).toEqual({
+      status: "passed",
+      methods: []
+    });
+    await expect(readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).rejects.toThrow();
+    expect(stderr.toString()).toBe("");
+    expect(reporter.getLastError()).toBeUndefined();
   });
 });

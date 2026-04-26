@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import type { PackageManagerSelection, Writer } from "@barney-media/crap-typescript-core";
+import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
 
 import CrapTypescriptJestReporter from "./reporter";
 
@@ -11,6 +11,10 @@ export interface CrapTypescriptJestOptions {
   paths?: string[];
   packageManager?: PackageManagerSelection;
   coverageReportPath?: string;
+  format?: ReportFormat;
+  agent?: boolean;
+  outputPath?: string;
+  junitReportPath?: string | false;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -33,7 +37,10 @@ export function withCrapTypescriptJest(
     resolveReporterPath(),
     {
       ...options,
-      coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(config.coverageDirectory as string | undefined)
+      coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(config.coverageDirectory as string | undefined),
+      junitReportPath: options.junitReportPath === undefined
+        ? buildJunitReportPath(config.coverageDirectory as string | undefined)
+        : options.junitReportPath
     }
   ]);
 
@@ -78,6 +85,10 @@ export default CrapTypescriptJestReporter;
 
 function buildCoverageReportPath(coverageDirectory: string | undefined): string {
   return `${coverageDirectory ?? "coverage"}/coverage-final.json`;
+}
+
+function buildJunitReportPath(coverageDirectory: string | undefined): string {
+  return `${coverageDirectory ?? "coverage"}/crap-typescript-junit.xml`;
 }
 
 function resolveReporterPath(): string {

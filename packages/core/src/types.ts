@@ -4,6 +4,10 @@ export type PackageManagerSelection = PackageManager | "auto";
 export type TestRunner = "vitest" | "jest";
 export type TestRunnerSelection = TestRunner | "auto";
 export type CoverageMode = "auto" | "existing-only";
+export type ReportFormat = "toon" | "json" | "text" | "junit";
+export type ReportStatus = "passed" | "failed";
+export type MethodReportStatus = ReportStatus | "skipped";
+export type CoverageKind = "stmt" | "branch";
 export type CoverageStatus = "measured" | "structural_na" | "unknown";
 export type CoverageUnknownReason =
   | "missing_report"
@@ -35,6 +39,10 @@ export interface CliArguments {
   fileArgs: string[];
   packageManager: PackageManagerSelection;
   testRunner: TestRunnerSelection;
+  format: ReportFormat;
+  agent: boolean;
+  outputPath?: string;
+  junitReportPath?: string;
 }
 
 export interface MethodDescriptor {

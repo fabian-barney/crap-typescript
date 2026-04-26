@@ -1,23 +1,28 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CRAP_THRESHOLD, NO_ANALYZABLE_FUNCTIONS_MESSAGE, NO_FILES_MESSAGE } from "./constants";
+import { CRAP_THRESHOLD } from "./constants";
 import { analyzeProject } from "./analyzeProject";
-import { formatReport } from "./report";
+import { formatAnalysisReport } from "./report";
 import { formatNumber, writeLine } from "./utils";
-import type { CliArguments, PackageManagerSelection, TestRunnerSelection, Writer } from "./types";
+import type { CliArguments, PackageManagerSelection, ReportFormat, TestRunnerSelection, Writer } from "./types";
 
 const HELP_TEXT = `crap-typescript
 
 Usage:
   crap-typescript [--help]
-  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>]
-  crap-typescript [--package-manager <tool>] [--test-runner <runner>] <path ...>
+  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>]
+  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>] <path ...>
 
 Options:
   --help                     Print usage to stdout
   --changed                  Analyze changed TypeScript files under src/
   --package-manager <tool>   Force auto, npm, pnpm, or yarn
   --test-runner <runner>     Force auto, vitest, or jest
+  --format <format>          Emit toon, json, text, or junit (default: toon)
+  --agent                    Emit only overall status and failed methods for toon, json, or text
+  --output <path>            Write the primary report to a file instead of stdout
+  --junit-report <path>      Also write a full JUnit XML report for CI test-report UIs
 
 Behavior:
   (no args)                  Analyze all TypeScript files under any nested src/ tree
@@ -30,15 +35,6 @@ export function usage(): string {
 }
 
 export function parseCliArguments(args: string[]): CliArguments {
-  if (args.length === 0) {
-    return {
-      mode: "all",
-      fileArgs: [],
-      packageManager: "auto",
-      testRunner: "auto"
-    };
-  }
-
   const state = createParseState();
 
   for (let index = 0; index < args.length; index += 1) {
@@ -58,8 +54,16 @@ interface ParseState {
   changed: boolean;
   packageManager: PackageManagerSelection;
   testRunner: TestRunnerSelection;
+  format: ReportFormat;
+  agent: boolean;
+  outputPath?: string;
+  junitReportPath?: string;
   packageManagerSeen: boolean;
   testRunnerSeen: boolean;
+  formatSeen: boolean;
+  agentSeen: boolean;
+  outputPathSeen: boolean;
+  junitReportPathSeen: boolean;
   fileArgs: string[];
 }
 
@@ -74,6 +78,12 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     state.changed = true;
     return index;
   },
+  "--agent": (state, _args, index) => {
+    ensureOptionIsUnique(state.agentSeen, "--agent");
+    state.agent = true;
+    state.agentSeen = true;
+    return index;
+  },
   "--package-manager": (state, args, index) => {
     ensureOptionIsUnique(state.packageManagerSeen, "--package-manager");
     state.packageManager = parsePackageManagerSelection(args[index + 1]);
@@ -85,6 +95,24 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     state.testRunner = parseTestRunnerSelection(args[index + 1]);
     state.testRunnerSeen = true;
     return index + 1;
+  },
+  "--format": (state, args, index) => {
+    ensureOptionIsUnique(state.formatSeen, "--format");
+    state.format = parseReportFormat(args[index + 1]);
+    state.formatSeen = true;
+    return index + 1;
+  },
+  "--output": (state, args, index) => {
+    ensureOptionIsUnique(state.outputPathSeen, "--output");
+    state.outputPath = parsePathOption(args[index + 1], "--output");
+    state.outputPathSeen = true;
+    return index + 1;
+  },
+  "--junit-report": (state, args, index) => {
+    ensureOptionIsUnique(state.junitReportPathSeen, "--junit-report");
+    state.junitReportPath = parsePathOption(args[index + 1], "--junit-report");
+    state.junitReportPathSeen = true;
+    return index + 1;
   }
 };
 
@@ -94,8 +122,16 @@ function createParseState(): ParseState {
     changed: false,
     packageManager: "auto",
     testRunner: "auto",
+    format: "toon",
+    agent: false,
+    outputPath: undefined,
+    junitReportPath: undefined,
     packageManagerSeen: false,
     testRunnerSeen: false,
+    formatSeen: false,
+    agentSeen: false,
+    outputPathSeen: false,
+    junitReportPathSeen: false,
     fileArgs: []
   };
 }
@@ -115,23 +151,41 @@ function ensureOptionIsUnique(seen: boolean, option: string): void {
 }
 
 function finalizeCliArguments(state: ParseState): CliArguments {
-  if (state.help) {
-    return {
-      mode: "help",
-      fileArgs: [],
-      packageManager: state.packageManager,
-      testRunner: state.testRunner
-    };
-  }
+  validateCliState(state);
+
+  return {
+    mode: cliMode(state),
+    fileArgs: state.help ? [] : state.fileArgs,
+    packageManager: state.packageManager,
+    testRunner: state.testRunner,
+    format: state.format,
+    agent: state.agent,
+    ...optionalPath("outputPath", state.outputPath),
+    ...optionalPath("junitReportPath", state.junitReportPath)
+  };
+}
+
+function validateCliState(state: ParseState): void {
   if (state.changed && state.fileArgs.length > 0) {
     throw new Error("--changed cannot be combined with file arguments");
   }
-  return {
-    mode: state.changed ? "changed" : state.fileArgs.length > 0 ? "explicit" : "all",
-    fileArgs: state.fileArgs,
-    packageManager: state.packageManager,
-    testRunner: state.testRunner
-  };
+  if (!state.help && state.agent && state.format === "junit") {
+    throw new Error("--agent cannot be combined with --format junit");
+  }
+}
+
+function cliMode(state: ParseState): CliArguments["mode"] {
+  if (state.help) {
+    return "help";
+  }
+  if (state.changed) {
+    return "changed";
+  }
+  return state.fileArgs.length > 0 ? "explicit" : "all";
+}
+
+function optionalPath<K extends "outputPath" | "junitReportPath">(key: K, value: string | undefined): Pick<CliArguments, K> | {} {
+  return value === undefined ? {} : { [key]: value } as Pick<CliArguments, K>;
 }
 
 function parsePackageManagerSelection(value: string | undefined): PackageManagerSelection {
@@ -154,6 +208,23 @@ function parseTestRunnerSelection(value: string | undefined): TestRunnerSelectio
   throw new Error("--test-runner requires one of: auto, vitest, jest");
 }
 
+function parseReportFormat(value: string | undefined): ReportFormat {
+  if (!value) {
+    throw new Error("--format requires one of: toon, json, text, junit");
+  }
+  if (value === "toon" || value === "json" || value === "text" || value === "junit") {
+    return value;
+  }
+  throw new Error("--format requires one of: toon, json, text, junit");
+}
+
+function parsePathOption(value: string | undefined, option: string): string {
+  if (!value) {
+    throw new Error(`${option} requires a path`);
+  }
+  return value;
+}
+
 export async function runCli(
   args: string[],
   projectRoot = process.cwd(),
@@ -169,7 +240,7 @@ export async function runCli(
     return 0;
   }
 
-  return handleCliResult(await analyzeCliProject(parsed, projectRoot, stdout, stderr), stdout, stderr);
+  return handleCliResult(await analyzeCliProject(parsed, projectRoot, stdout, stderr), parsed, projectRoot, stdout, stderr);
 }
 
 function parseCliInputs(args: string[], stdout: Writer, stderr: Writer): CliArguments | number {
@@ -204,37 +275,52 @@ async function analyzeCliProject(
   }
 }
 
-function handleCliResult(
+async function handleCliResult(
   result: Awaited<ReturnType<typeof analyzeProject>> | null,
+  parsed: CliArguments,
+  projectRoot: string,
   stdout: Writer,
   stderr: Writer
-): number {
+): Promise<number> {
   if (!result) {
     return 1;
   }
 
-  const earlyExit = writeCliEarlyExit(result, stdout);
-  if (earlyExit !== null) {
-    return earlyExit;
+  try {
+    await writeCliReports(result.metrics, parsed, projectRoot, stdout);
+  } catch (error) {
+    writeLine(stderr, (error as Error).message);
+    return 1;
   }
 
-  writeLine(stdout, formatReport(result.metrics));
   return writeCliThresholdStatus(result, stderr);
 }
 
-function writeCliEarlyExit(
-  result: Awaited<ReturnType<typeof analyzeProject>>,
+async function writeCliReports(
+  metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"],
+  parsed: CliArguments,
+  projectRoot: string,
   stdout: Writer
-): number | null {
-  if (result.selectedFiles.length === 0) {
-    writeLine(stdout, NO_FILES_MESSAGE);
-    return 0;
+): Promise<void> {
+  const primaryReport = formatAnalysisReport(metrics, {
+    format: parsed.format,
+    agent: parsed.agent
+  });
+  if (parsed.outputPath) {
+    await writeReportFile(projectRoot, parsed.outputPath, primaryReport);
+  } else {
+    stdout.write(primaryReport);
   }
-  if (result.metrics.length === 0) {
-    writeLine(stdout, NO_ANALYZABLE_FUNCTIONS_MESSAGE);
-    return 0;
+
+  if (parsed.junitReportPath) {
+    await writeReportFile(projectRoot, parsed.junitReportPath, formatAnalysisReport(metrics, { format: "junit" }));
   }
-  return null;
+}
+
+async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {
+  const absolutePath = path.resolve(projectRoot, reportPath);
+  await mkdir(path.dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, content);
 }
 
 function writeCliThresholdStatus(

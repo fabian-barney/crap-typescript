@@ -12,9 +12,15 @@ describe("withCrapTypescriptVitest", () => {
 
     const reporters = config.test?.reporters;
     const coverageReporters = config.test?.coverage?.reporter;
+    const crapReporter = reporters?.[1] as CrapTypescriptVitestReporter;
     expect(Array.isArray(reporters)).toBe(true);
     expect(reporters?.[0]).toBe("default");
-    expect(reporters?.[1]).toBeInstanceOf(CrapTypescriptVitestReporter);
+    expect(crapReporter).toBeInstanceOf(CrapTypescriptVitestReporter);
+    expect(crapReporter).toMatchObject({
+      options: expect.objectContaining({
+        junitReportPath: "coverage/crap-typescript-junit.xml"
+      })
+    });
     expect(coverageReporters).toEqual(["json", "text"]);
   });
 
@@ -35,5 +41,10 @@ describe("withCrapTypescriptVitest", () => {
     ]);
     expect(config.test?.coverage?.reporter).toEqual(["json", "text"]);
     expect(config.test?.coverage?.reportsDirectory).toBe("custom-coverage");
+    expect(config.test?.reporters?.[1]).toMatchObject({
+      options: expect.objectContaining({
+        junitReportPath: "custom-coverage/crap-typescript-junit.xml"
+      })
+    });
   });
 });

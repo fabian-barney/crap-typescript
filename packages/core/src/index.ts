@@ -5,13 +5,23 @@ export { buildCoverageCommand } from "./coverage";
 export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots, isAnalyzableFile } from "./fileSelection";
 export { coverageForMethods, parseCoverageReport } from "./istanbul";
 export { parseFileMethods } from "./parser";
-export { formatReport, sortMetrics } from "./report";
+export {
+  buildAgentAnalysisReport,
+  buildAnalysisReport,
+  formatAnalysisReport,
+  formatJunitReport,
+  formatReport,
+  formatTextReport,
+  formatToonReport,
+  sortMetrics
+} from "./report";
 export { CRAP_THRESHOLD, COVERAGE_REPORT_RELATIVE_PATH, NO_FILES_MESSAGE, NO_ANALYZABLE_FUNCTIONS_MESSAGE } from "./constants";
 export type {
   AnalysisResult,
   AnalyzeProjectOptions,
   CliArguments,
   CommandExecutor,
+  CoverageKind,
   CoverageCommand,
   CoverageMetric,
   CoverageMode,
@@ -19,8 +29,11 @@ export type {
   CoverageUnknownReason,
   MethodDescriptor,
   MethodMetrics,
+  MethodReportStatus,
   PackageManager,
   PackageManagerSelection,
+  ReportFormat,
+  ReportStatus,
   TestRunner,
   TestRunnerSelection,
   Writer
