@@ -46,7 +46,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(finalize).toHaveBeenCalledTimes(1);
   });
 
-  it("prints a passed TOON report when no analyzable source files are selected", async () => {
+  it("prints a passed text report when no analyzable source files are selected", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -64,11 +64,35 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
-    expect(stdout.toString()).toBe("status: passed\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8.0\n");
     expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain('status="passed"');
     expect(stderr.toString()).toBe("");
     expect(reporter.getLastError()).toBeUndefined();
     expect(process.exitCode).toBe(originalExitCode);
+  });
+
+  it("supports explicit TOON output", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": "{}"
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptJestReporter(undefined, {
+      projectRoot,
+      format: "toon",
+      junitReportPath: false,
+      stdout,
+      stderr
+    });
+
+    await callFinalize(reporter);
+
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8.0\nmethods[0]:\n");
+    expect(stderr.toString()).toBe("");
   });
 
   it("prints the CRAP report and stores the threshold error for an absolute coverage path", async () => {
@@ -163,6 +187,8 @@ describe("CrapTypescriptJestReporter", () => {
     const junit = await readText(`${projectRoot}/custom-coverage/crap-typescript-junit.xml`);
 
     expect(stdout.toString()).toContain("status: failed");
+    expect(stdout.toString()).toContain("threshold: 8.0");
+    expect(stdout.toString()).toContain("| status |");
     expect(stdout.toString()).toContain("risky");
     expect(junit).toContain('tests="1"');
     expect(junit).toContain("<failure");
@@ -216,6 +242,7 @@ describe("CrapTypescriptJestReporter", () => {
 
     expect(JSON.parse(stdout.toString())).toEqual({
       status: "passed",
+      threshold: 8,
       methods: []
     });
     await expect(readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).rejects.toThrow();

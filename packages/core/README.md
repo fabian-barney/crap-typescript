@@ -20,7 +20,7 @@ console.log(report);
 
 Key exports: `analyzeProject`, `calculateCrapScore`, `formatAnalysisReport`, `formatReport`, `parseCoverageReport`, `parseFileMethods`.
 
-`formatAnalysisReport` supports `toon`, `json`, `text`, and `junit`. The root report has only overall `status`; method-level entries contain CRAP score, threshold, complexity, coverage percent, coverage kind, source path, and line range. Pass `agent: true` with `toon`, `json`, or `text` to include failed methods only.
+`formatAnalysisReport` supports `toon`, `json`, `text`, and `junit`. Primary reports expose run-level `status` and `threshold`; method-level entries use `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. JUnit writes `threshold` as a testsuite property. Pass `agent: true` with `toon`, `json`, or `text` to include failed methods only and omit method-level `status`.
 
 ## Formula
 

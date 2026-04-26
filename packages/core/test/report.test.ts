@@ -85,21 +85,22 @@ describe("report formatting", () => {
     ]);
 
     expect(report.status).toBe("failed");
+    expect(report.threshold).toBe(8);
     expect(report.methods).toMatchObject([
       {
         status: "failed",
-        name: "risky",
-        coverageKind: "branch"
+        func: "risky",
+        covKind: "branch"
       },
       {
         status: "passed",
-        name: "safe",
-        coverageKind: "stmt"
+        func: "safe",
+        covKind: "stmt"
       },
       {
         status: "skipped",
-        name: "unknownCoverage",
-        coverageKind: "stmt"
+        func: "unknownCoverage",
+        covKind: "stmt"
       }
     ]);
   });
@@ -117,21 +118,28 @@ describe("report formatting", () => {
 
     expect(report.methods[0]).toMatchObject({
       status: "skipped",
-      coverageKind: "branch"
+      covKind: "branch"
     });
   });
 
   it("formats JSON without global aggregate fields", () => {
     const parsed = JSON.parse(formatAnalysisReport([metric()], { format: "json" })) as Record<string, unknown>;
 
-    expect(Object.keys(parsed)).toEqual(["status", "methods"]);
+    expect(Object.keys(parsed)).toEqual(["status", "threshold", "methods"]);
     expect(parsed.status).toBe("passed");
+    expect(parsed.threshold).toBe(8);
     expect(parsed.methods).toEqual([
-      expect.objectContaining({
+      {
         status: "passed",
-        name: "safe",
-        threshold: 8
-      })
+        crap: 1,
+        cc: 1,
+        cov: 100,
+        covKind: "stmt",
+        func: "safe",
+        src: "src/sample.ts",
+        lineStart: 1,
+        lineEnd: 3
+      }
     ]);
   });
 
@@ -139,7 +147,7 @@ describe("report formatting", () => {
     const output = formatAnalysisReport([
       metric(),
       metric({
-        displayName: "risky",
+        displayName: "risky value",
         complexity: 4,
         coverage: measured(0),
         statementCoverage: measured(0),
@@ -150,23 +158,58 @@ describe("report formatting", () => {
     ], { format: "toon", agent: true });
 
     expect(output).toContain("status: failed");
-    expect(output).toContain("methods[1]{name,sourcePath,startLine,endLine,complexity,coverageKind,coveragePercent,crapScore,threshold}:");
-    expect(output).toContain("risky");
+    expect(output).toContain("threshold: 8.0");
+    expect(output).toContain("methods[1]{crap,cc,cov,covKind,func,src,lineStart,lineEnd}:");
+    expect(output).toContain("\"risky value\"");
     expect(output).not.toContain("safe");
-    expect(output).not.toContain("failed,risky");
+    expect(output).not.toContain("failed,\"risky value\"");
   });
 
-  it("formats text reports with only method-level details", () => {
-    const output = formatTextReport(buildAnalysisReport([metric()]));
+  it("formats unavailable TOON values as null", () => {
+    const output = formatToonReport(buildAnalysisReport([
+      metric({
+        displayName: "missingCoverage",
+        coverage: unknown("missing_report"),
+        statementCoverage: unknown("missing_report"),
+        branchCoverage: unknown("missing_report"),
+        coveragePercent: null,
+        crapScore: null
+      })
+    ]));
 
-    expect(output).toContain("Status: passed");
-    expect(output).toContain("Function");
+    expect(output).toContain("skipped,null,1,null,stmt,missingCoverage");
+  });
+
+  it("formats text reports with aligned method columns", () => {
+    const output = formatTextReport(buildAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        startLine: 15,
+        endLine: 120,
+        complexity: 12,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 120
+      })
+    ]));
+    const tableLines = output.split("\n").filter((line) => line.startsWith("|"));
+    const pipePositions = tableLines.map((line) =>
+      [...line].flatMap((char, index) => char === "|" ? [index] : [])
+    );
+
+    expect(output).toContain("status: failed");
+    expect(output).toContain("threshold: 8.0");
+    expect(tableLines[0]).toBe("| status |  crap | cc |    cov | covKind | func  | src           | lineStart | lineEnd |");
+    expect(new Set(pipePositions.map((positions) => positions.join(","))).size).toBe(1);
     expect(output).toContain("safe");
     expect(output).not.toContain("Summary");
   });
 
   it("formats empty agent reports as status only", () => {
-    expect(formatToonReport(buildAgentAnalysisReport([]), true)).toBe("status: passed\n");
+    expect(formatToonReport(buildAgentAnalysisReport([]), true)).toBe("status: passed\nthreshold: 8.0\n");
   });
 
   it("formats JUnit XML with testcase properties and escaped values", () => {
@@ -184,11 +227,13 @@ describe("report formatting", () => {
     ]));
 
     expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0">');
+    expect(output).toContain('<property name="threshold" value="8.0" />');
     expect(output).toContain('name="risky &lt;value&gt;"');
     expect(output).toContain('file="src/special&amp;file.ts"');
-    expect(output).toContain('<property name="score" value="20.0" />');
-    expect(output).toContain('<property name="coveragePercent" value="0.0" />');
-    expect(output).toContain('<property name="coverageKind" value="stmt" />');
+    expect(output).toContain('<property name="crap" value="20.0" />');
+    expect(output).toContain('<property name="cov" value="0.0" />');
+    expect(output).toContain('<property name="covKind" value="stmt" />');
+    expect(output.match(/property name="threshold"/g)).toHaveLength(1);
     expect(output).toContain("<failure");
   });
 
@@ -204,8 +249,8 @@ describe("report formatting", () => {
       })
     ]));
 
-    expect(output).toContain('<property name="score" value="" />');
-    expect(output).toContain('<property name="coveragePercent" value="" />');
+    expect(output).toContain('<property name="crap" value="" />');
+    expect(output).toContain('<property name="cov" value="" />');
     expect(output).toContain("<skipped");
   });
 });

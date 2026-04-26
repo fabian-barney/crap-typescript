@@ -163,7 +163,7 @@ function resolveCoverageReportPathOption(options: CrapTypescriptJestOptions): st
 }
 
 function resolveFormat(options: CrapTypescriptJestOptions): ReportFormat {
-  return options.format ?? "toon";
+  return options.format ?? "text";
 }
 
 function resolveAgent(options: CrapTypescriptJestOptions): boolean {
