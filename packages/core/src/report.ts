@@ -1,7 +1,8 @@
+import { encode } from "@toon-format/toon";
 import { XMLBuilder } from "fast-xml-parser";
 
-import { CRAP_THRESHOLD } from "./constants";
-import { formatNumber } from "./utils";
+import { CRAP_THRESHOLD } from "./constants.js";
+import { formatNumber } from "./utils.js";
 import type {
   CoverageKind,
   CoverageMetric,
@@ -9,7 +10,7 @@ import type {
   MethodReportStatus,
   ReportFormat,
   ReportStatus
-} from "./types";
+} from "./types.js";
 
 const METHOD_COLUMNS = ["status", "crap", "cc", "cov", "covKind", "func", "src", "lineStart", "lineEnd"] as const;
 const AGENT_METHOD_COLUMNS = ["crap", "cc", "cov", "covKind", "func", "src", "lineStart", "lineEnd"] as const;
@@ -120,19 +121,10 @@ export function formatReport(metrics: MethodMetrics[]): string {
 }
 
 export function formatToonReport(report: SerializableReport, agent = false): string {
-  const lines = [`status: ${report.status}`, `threshold: ${formatNumber(report.threshold)}`];
-  const includeStatus = !agent && reportHasMethodStatus(report);
-  const columns = includeStatus ? METHOD_COLUMNS : AGENT_METHOD_COLUMNS;
-
-  if (report.methods.length === 0) {
-    return agent ? `${lines.join("\n")}\n` : `${[...lines, "methods[0]:"].join("\n")}\n`;
-  }
-
-  lines.push(`methods[${report.methods.length}]{${columns.join(",")}}:`);
-  for (const method of report.methods) {
-    lines.push(`  ${columns.map((column) => formatToonValue(method[column as keyof typeof method] as ReportValue)).join(",")}`);
-  }
-  return `${lines.join("\n")}\n`;
+  const toonReport = agent && reportHasMethodStatus(report)
+    ? omitMethodStatuses(report)
+    : report;
+  return `${encode(toonReport)}\n`;
 }
 
 export function formatTextReport(report: SerializableReport, agent = false): string {
@@ -180,6 +172,14 @@ function reportHasMethodStatus(report: SerializableReport): report is AnalysisRe
   return report.methods.every((method) => "status" in method);
 }
 
+function omitMethodStatuses(report: AnalysisReport): AgentAnalysisReport {
+  return {
+    status: report.status,
+    threshold: report.threshold,
+    methods: report.methods.map(({ status: _status, ...method }) => method)
+  };
+}
+
 function methodStatus(metric: MethodMetrics): MethodReportStatus {
   if (metric.crapScore === null) {
     return "skipped";
@@ -201,24 +201,6 @@ function coverageKind(metric: MethodMetrics): CoverageKind {
 
 function effectivePercent(metric: CoverageMetric): number {
   return metric.percent ?? 100;
-}
-
-function formatToonValue(value: ReportValue): string {
-  if (value === null) {
-    return "null";
-  }
-  if (typeof value === "number") {
-    return formatToonNumber(value);
-  }
-  return formatToonString(value);
-}
-
-function formatToonNumber(value: number): string {
-  return Number.isInteger(value) ? String(value) : formatNumber(value);
-}
-
-function formatToonString(value: string): string {
-  return /^[A-Za-z0-9_.:/#@$-]+$/.test(value) ? value : JSON.stringify(value);
 }
 
 function formatNullableNumber(value: number | null): string {

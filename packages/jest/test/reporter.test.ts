@@ -91,7 +91,7 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8.0\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
 

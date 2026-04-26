@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { encode } from "@toon-format/toon";
 
 import {
   buildAgentAnalysisReport,
@@ -144,7 +145,7 @@ describe("report formatting", () => {
   });
 
   it("formats TOON reports and omits status from agent method entries", () => {
-    const output = formatAnalysisReport([
+    const report = buildAgentAnalysisReport([
       metric(),
       metric({
         displayName: "risky value",
@@ -155,18 +156,30 @@ describe("report formatting", () => {
         coveragePercent: 0,
         crapScore: 20
       })
-    ], { format: "toon", agent: true });
+    ]);
+    const output = formatToonReport(report, true);
 
+    expect(output).toBe(`${encode(report)}\n`);
     expect(output).toContain("status: failed");
-    expect(output).toContain("threshold: 8.0");
+    expect(output).toContain("threshold: 8");
     expect(output).toContain("methods[1]{crap,cc,cov,covKind,func,src,lineStart,lineEnd}:");
-    expect(output).toContain("\"risky value\"");
+    expect(output).toContain("risky value");
     expect(output).not.toContain("safe");
-    expect(output).not.toContain("failed,\"risky value\"");
+    expect(output).not.toContain("status,crap");
   });
 
-  it("formats unavailable TOON values as null", () => {
-    const output = formatToonReport(buildAnalysisReport([
+  it("formats full TOON reports with quoted strings and null values through the official encoder", () => {
+    const report = buildAnalysisReport([
+      metric({
+        displayName: "risky \"quoted\", value",
+        relativePath: "src/a,b.ts",
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      }),
       metric({
         displayName: "missingCoverage",
         coverage: unknown("missing_report"),
@@ -175,8 +188,11 @@ describe("report formatting", () => {
         coveragePercent: null,
         crapScore: null
       })
-    ]));
+    ]);
+    const output = formatToonReport(report);
 
+    expect(output).toBe(`${encode(report)}\n`);
+    expect(output).toContain('failed,20,4,0,stmt,"risky \\"quoted\\", value","src/a,b.ts",1,3');
     expect(output).toContain("skipped,null,1,null,stmt,missingCoverage");
   });
 
@@ -208,8 +224,13 @@ describe("report formatting", () => {
     expect(output).not.toContain("Summary");
   });
 
-  it("formats empty agent reports as status only", () => {
-    expect(formatToonReport(buildAgentAnalysisReport([]), true)).toBe("status: passed\nthreshold: 8.0\n");
+  it("formats empty TOON method lists through the official encoder", () => {
+    const report = buildAnalysisReport([]);
+    const agentReport = buildAgentAnalysisReport([]);
+
+    expect(formatToonReport(report)).toBe(`${encode(report)}\n`);
+    expect(formatToonReport(agentReport, true)).toBe(`${encode(agentReport)}\n`);
+    expect(formatToonReport(report)).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
   });
 
   it("formats JUnit XML with testcase properties and escaped values", () => {

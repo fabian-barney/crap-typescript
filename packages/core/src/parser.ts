@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
-import { resolveScriptKind } from "./utils";
-import type { MethodDescriptor, SourceSpan } from "./types";
+import { resolveScriptKind } from "./utils.js";
+import type { MethodDescriptor, SourceSpan } from "./types.js";
 
 const COMPLEXITY_INCREMENT_KINDS = new Set([
   ts.SyntaxKind.IfStatement,

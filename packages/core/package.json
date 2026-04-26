@@ -21,6 +21,7 @@
   "bugs": {
     "url": "https://github.com/fabian-barney/crap-typescript/issues"
   },
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -40,6 +41,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@toon-format/toon": "^2.1.0",
     "fast-xml-parser": "^5.7.2",
     "typescript": "^6.0.2"
   }

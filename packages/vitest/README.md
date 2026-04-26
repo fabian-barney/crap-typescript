@@ -11,9 +11,9 @@ npm install --save-dev @barney-media/crap-typescript-vitest
 ## Setup
 
 ```js
-const { withCrapTypescriptVitest } = require("@barney-media/crap-typescript-vitest");
+import { withCrapTypescriptVitest } from "@barney-media/crap-typescript-vitest";
 
-module.exports = withCrapTypescriptVitest({
+export default withCrapTypescriptVitest({
   test: {
     include: ["test/**/*.test.ts"]
   }

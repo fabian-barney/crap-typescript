@@ -11,9 +11,9 @@ npm install --save-dev @barney-media/crap-typescript-jest
 ## Setup
 
 ```js
-const { withCrapTypescriptJest } = require("@barney-media/crap-typescript-jest");
+import { withCrapTypescriptJest } from "@barney-media/crap-typescript-jest";
 
-module.exports = withCrapTypescriptJest({
+export default withCrapTypescriptJest({
   testEnvironment: "node"
 });
 ```

@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
 
-import CrapTypescriptJestReporter from "./reporter";
+import CrapTypescriptJestReporter from "./reporter.js";
 
 export interface CrapTypescriptJestOptions {
   projectRoot?: string;
@@ -92,17 +93,14 @@ function buildJunitReportPath(coverageDirectory: string | undefined): string {
 }
 
 function resolveReporterPath(): string {
-  try {
-    return require.resolve("./reporter");
-  } catch {
-    const candidates = [
-      path.join(__dirname, "reporter.js"),
-      path.join(__dirname, "reporter.ts")
-    ];
-    const resolved = candidates.find((candidate) => existsSync(candidate));
-    if (resolved) {
-      return resolved;
-    }
-    throw new Error("Unable to resolve the crap-typescript Jest reporter module.");
+  const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(moduleDirectory, "reporter.js"),
+    path.join(moduleDirectory, "reporter.ts")
+  ];
+  const resolved = candidates.find((candidate) => existsSync(candidate));
+  if (resolved) {
+    return resolved;
   }
+  throw new Error("Unable to resolve the crap-typescript Jest reporter module.");
 }

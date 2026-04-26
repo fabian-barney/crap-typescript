@@ -1,7 +1,7 @@
 import path from "node:path";
 import { spawn } from "node:child_process";
 
-import type { CoverageCommand, Writer } from "./types";
+import type { CoverageCommand, Writer } from "./types.js";
 
 export function writeLine(writer: Writer | undefined, message: string): void {
   writer?.write(`${message}\n`);

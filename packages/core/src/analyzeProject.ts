@@ -1,15 +1,15 @@
 import path from "node:path";
 
-import { CRAP_THRESHOLD } from "./constants";
-import { coverageForMethods } from "./coverageAttribution";
-import { ensureCoverageReport, expectedCoveragePath } from "./coverage";
-import type { FileCoverage } from "./coverageUnits";
-import { calculateCrapScore, maxCrap } from "./crapScore";
-import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection";
-import { parseCoverageReport } from "./istanbul";
-import { resolveModuleRoot } from "./moduleResolution";
-import { parseFileMethods } from "./parser";
-import { DefaultCommandExecutor, normalizePathForMatch, toRelativePath, writeLine } from "./utils";
+import { CRAP_THRESHOLD } from "./constants.js";
+import { coverageForMethods } from "./coverageAttribution.js";
+import { ensureCoverageReport, expectedCoveragePath } from "./coverage.js";
+import type { FileCoverage } from "./coverageUnits.js";
+import { calculateCrapScore, maxCrap } from "./crapScore.js";
+import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection.js";
+import { parseCoverageReport } from "./istanbul.js";
+import { resolveModuleRoot } from "./moduleResolution.js";
+import { parseFileMethods } from "./parser.js";
+import { DefaultCommandExecutor, normalizePathForMatch, toRelativePath, writeLine } from "./utils.js";
 import type {
   AnalysisResult,
   AnalyzeProjectOptions,
@@ -17,7 +17,7 @@ import type {
   CoverageUnknownReason,
   MethodDescriptor,
   MethodMetrics
-} from "./types";
+} from "./types.js";
 
 export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promise<AnalysisResult> {
   const context = createAnalyzeContext(options);

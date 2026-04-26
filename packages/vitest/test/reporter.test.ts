@@ -58,7 +58,7 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await reporter.onFinishedReportCoverage();
 
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8.0\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
 

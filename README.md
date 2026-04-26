@@ -120,9 +120,9 @@ Use `--junit-report <path>` to write a full JUnit XML artifact alongside the pri
 Vitest:
 
 ```js
-const { withCrapTypescriptVitest } = require("@barney-media/crap-typescript-vitest");
+import { withCrapTypescriptVitest } from "@barney-media/crap-typescript-vitest";
 
-module.exports = withCrapTypescriptVitest({
+export default withCrapTypescriptVitest({
   test: {
     include: ["test/**/*.test.ts"]
   }
@@ -134,9 +134,9 @@ The Vitest adapter prints text output by default and writes `coverage/crap-types
 Jest:
 
 ```js
-const { withCrapTypescriptJest } = require("@barney-media/crap-typescript-jest");
+import { withCrapTypescriptJest } from "@barney-media/crap-typescript-jest";
 
-module.exports = withCrapTypescriptJest({
+export default withCrapTypescriptJest({
   testEnvironment: "node"
 });
 ```

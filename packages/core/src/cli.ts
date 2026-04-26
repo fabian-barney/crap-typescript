@@ -1,11 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CRAP_THRESHOLD } from "./constants";
-import { analyzeProject } from "./analyzeProject";
-import { formatAnalysisReport } from "./report";
-import { formatNumber, writeLine } from "./utils";
-import type { CliArguments, PackageManagerSelection, ReportFormat, TestRunnerSelection, Writer } from "./types";
+import { CRAP_THRESHOLD } from "./constants.js";
+import { analyzeProject } from "./analyzeProject.js";
+import { formatAnalysisReport } from "./report.js";
+import { formatNumber, writeLine } from "./utils.js";
+import type { CliArguments, PackageManagerSelection, ReportFormat, TestRunnerSelection, Writer } from "./types.js";
 
 const HELP_TEXT = `crap-typescript
 

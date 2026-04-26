@@ -1,4 +1,4 @@
-import type { SourceSpan } from "./types";
+import type { SourceSpan } from "./types.js";
 
 export interface StatementCoverageUnit {
   span: SourceSpan;

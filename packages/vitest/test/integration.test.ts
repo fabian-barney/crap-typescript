@@ -1,5 +1,6 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -15,11 +16,11 @@ describe("crap-typescript-vitest", () => {
   it("writes Istanbul JSON coverage and fails the run when the CRAP threshold is exceeded", async () => {
     const projectRoot = await copyFixture("vitest-project");
     tempDirs.push(projectRoot);
-    const adapterPath = repoPath("packages", "vitest", "dist", "index.js").replace(/\\/g, "/");
+    const adapterUrl = pathToFileURL(repoPath("packages", "vitest", "dist", "index.js")).href;
     await writeProjectFiles(projectRoot, {
-      "vitest.config.cjs": `const { withCrapTypescriptVitest } = require(${JSON.stringify(adapterPath)});
+      "vitest.config.mjs": `import { withCrapTypescriptVitest } from ${JSON.stringify(adapterUrl)};
 
-module.exports = withCrapTypescriptVitest(
+export default withCrapTypescriptVitest(
   {
     test: {
       include: ["test/**/*.test.ts"]
@@ -34,7 +35,7 @@ module.exports = withCrapTypescriptVitest(
 
     const result = await runProcess(
       process.execPath,
-      [repoPath("node_modules", "vitest", "vitest.mjs"), "run", "--config", "vitest.config.cjs"],
+      [repoPath("node_modules", "vitest", "vitest.mjs"), "run", "--config", "vitest.config.mjs"],
       projectRoot
     );
 
@@ -46,11 +47,11 @@ module.exports = withCrapTypescriptVitest(
   it("honors custom coverage output directories when enforcing the CRAP threshold", async () => {
     const projectRoot = await copyFixture("vitest-project");
     tempDirs.push(projectRoot);
-    const adapterPath = repoPath("packages", "vitest", "dist", "index.js").replace(/\\/g, "/");
+    const adapterUrl = pathToFileURL(repoPath("packages", "vitest", "dist", "index.js")).href;
     await writeProjectFiles(projectRoot, {
-      "vitest.config.cjs": `const { withCrapTypescriptVitest } = require(${JSON.stringify(adapterPath)});
+      "vitest.config.mjs": `import { withCrapTypescriptVitest } from ${JSON.stringify(adapterUrl)};
 
-module.exports = withCrapTypescriptVitest(
+export default withCrapTypescriptVitest(
   {
     test: {
       include: ["test/**/*.test.ts"],
@@ -68,7 +69,7 @@ module.exports = withCrapTypescriptVitest(
 
     const result = await runProcess(
       process.execPath,
-      [repoPath("node_modules", "vitest", "vitest.mjs"), "run", "--config", "vitest.config.cjs"],
+      [repoPath("node_modules", "vitest", "vitest.mjs"), "run", "--config", "vitest.config.mjs"],
       projectRoot
     );
 

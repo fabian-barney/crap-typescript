@@ -1,8 +1,8 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { IGNORED_DIRECTORIES } from "./constants";
-import { runCommand, toRelativePath } from "./utils";
+import { IGNORED_DIRECTORIES } from "./constants.js";
+import { runCommand, toRelativePath } from "./utils.js";
 
 const ANALYZABLE_EXTENSIONS = [".ts", ".tsx"];
 const TEST_FILE_MARKERS = [".test.", ".spec."];
