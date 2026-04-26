@@ -166,10 +166,13 @@ function finalizeCliArguments(state: ParseState): CliArguments {
 }
 
 function validateCliState(state: ParseState): void {
+  if (state.help) {
+    return;
+  }
   if (state.changed && state.fileArgs.length > 0) {
     throw new Error("--changed cannot be combined with file arguments");
   }
-  if (!state.help && state.agent && state.format === "junit") {
+  if (state.agent && state.format === "junit") {
     throw new Error("--agent cannot be combined with --format junit");
   }
 }

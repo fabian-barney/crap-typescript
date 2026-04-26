@@ -58,6 +58,14 @@ describe("cli", () => {
       format: "toon",
       agent: false
     });
+    expect(parseCliArguments(["--help", "--changed", "src/app.ts", "--agent", "--format", "junit"])).toEqual({
+      mode: "help",
+      fileArgs: [],
+      packageManager: "auto",
+      testRunner: "auto",
+      format: "junit",
+      agent: true
+    });
   });
 
   it("rejects duplicate, missing, invalid, and unknown options", () => {
