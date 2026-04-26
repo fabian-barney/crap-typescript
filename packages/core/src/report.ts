@@ -53,6 +53,11 @@ type MethodColumn = typeof METHOD_COLUMNS[number];
 type AgentMethodColumn = typeof AGENT_METHOD_COLUMNS[number];
 type XmlNode = Record<string, unknown>;
 
+interface JunitMethodCounts {
+  failures: number;
+  skipped: number;
+}
+
 const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
   toon: formatToonReport,
   json: (report) => `${JSON.stringify(report, null, 2)}\n`,
@@ -278,13 +283,15 @@ function createXmlBuilder(): XMLBuilder {
 }
 
 function toJunitXml(report: AnalysisReport): XmlNode {
+  const counts = countJunitMethodStatuses(report.methods);
+
   return {
     testsuite: {
       "@_name": "crap-typescript",
       "@_status": report.status,
       "@_tests": report.methods.length,
-      "@_failures": report.methods.filter((method) => method.status === "failed").length,
-      "@_skipped": report.methods.filter((method) => method.status === "skipped").length,
+      "@_failures": counts.failures,
+      "@_skipped": counts.skipped,
       "@_errors": 0,
       properties: {
         property: [
@@ -294,6 +301,18 @@ function toJunitXml(report: AnalysisReport): XmlNode {
       testcase: report.methods.map((method) => toJunitTestcaseXml(method, report.threshold))
     }
   };
+}
+
+function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCounts {
+  const counts = { failures: 0, skipped: 0 };
+  for (const method of methods) {
+    if (method.status === "failed") {
+      counts.failures += 1;
+    } else if (method.status === "skipped") {
+      counts.skipped += 1;
+    }
+  }
+  return counts;
 }
 
 function toJunitTestcaseXml(method: MethodReportEntry, threshold: number): XmlNode {
