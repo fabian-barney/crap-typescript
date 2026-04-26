@@ -215,8 +215,8 @@ describe("report formatting", () => {
   it("formats JUnit XML with testcase properties and escaped values", () => {
     const output = formatJunitReport(buildAnalysisReport([
       metric({
-        displayName: "risky <value>",
-        relativePath: "src/special&file.ts",
+        displayName: "risky \"quoted\" <value>",
+        relativePath: "src/\"special\"&file.ts",
         complexity: 4,
         coverage: measured(0),
         statementCoverage: measured(0),
@@ -227,14 +227,16 @@ describe("report formatting", () => {
     ]));
 
     expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0">');
-    expect(output).toContain('<property name="threshold" value="8.0" />');
-    expect(output).toContain('name="risky &lt;value&gt;"');
-    expect(output).toContain('file="src/special&amp;file.ts"');
-    expect(output).toContain('<property name="crap" value="20.0" />');
-    expect(output).toContain('<property name="cov" value="0.0" />');
-    expect(output).toContain('<property name="covKind" value="stmt" />');
+    expect(output).toContain('<property name="threshold" value="8.0"/>');
+    expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;"');
+    expect(output).toContain('file="src/&quot;special&quot;&amp;file.ts"');
+    expect(output).toContain('<property name="crap" value="20.0"/>');
+    expect(output).toContain('<property name="cov" value="0.0"/>');
+    expect(output).toContain('<property name="covKind" value="stmt"/>');
     expect(output.match(/property name="threshold"/g)).toHaveLength(1);
     expect(output).toContain("<failure");
+    expect(output.endsWith("\n")).toBe(true);
+    expect(output.endsWith("\n\n")).toBe(false);
   });
 
   it("formats unavailable JUnit numeric properties as empty values", () => {
@@ -249,8 +251,18 @@ describe("report formatting", () => {
       })
     ]));
 
-    expect(output).toContain('<property name="crap" value="" />');
-    expect(output).toContain('<property name="cov" value="" />');
+    expect(output).toContain('<property name="crap" value=""/>');
+    expect(output).toContain('<property name="cov" value=""/>');
     expect(output).toContain("<skipped");
+  });
+
+  it("formats empty JUnit reports without testcase elements", () => {
+    const output = formatJunitReport(buildAnalysisReport([]));
+
+    expect(output).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0">');
+    expect(output).toContain('<property name="threshold" value="8.0"/>');
+    expect(output).not.toContain("<testcase");
+    expect(output.endsWith("\n")).toBe(true);
+    expect(output.endsWith("\n\n")).toBe(false);
   });
 });

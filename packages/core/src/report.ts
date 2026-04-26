@@ -1,3 +1,5 @@
+import { XMLBuilder } from "fast-xml-parser";
+
 import { CRAP_THRESHOLD } from "./constants";
 import { formatNumber } from "./utils";
 import type {
@@ -49,6 +51,12 @@ type ReportValue = string | number | null;
 type ReportFormatter = (report: SerializableReport, agent: boolean) => string;
 type MethodColumn = typeof METHOD_COLUMNS[number];
 type AgentMethodColumn = typeof AGENT_METHOD_COLUMNS[number];
+type XmlNode = Record<string, unknown>;
+
+interface JunitMethodCounts {
+  failures: number;
+  skipped: number;
+}
 
 const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
   toon: formatToonReport,
@@ -151,37 +159,7 @@ export function formatTextReport(report: SerializableReport, agent = false): str
 }
 
 export function formatJunitReport(report: AnalysisReport): string {
-  const failures = report.methods.filter((method) => method.status === "failed").length;
-  const skipped = report.methods.filter((method) => method.status === "skipped").length;
-  const lines = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    `<testsuite name="crap-typescript" status="${report.status}" tests="${report.methods.length}" failures="${failures}" skipped="${skipped}" errors="0">`
-  ];
-  lines.push("  <properties>");
-  lines.push(`    <property name="threshold" value="${formatNumber(report.threshold)}" />`);
-  lines.push("  </properties>");
-
-  for (const method of report.methods) {
-    lines.push(
-      `  <testcase classname="${escapeXmlAttribute(method.src)}" name="${escapeXmlAttribute(method.func)}" file="${escapeXmlAttribute(method.src)}" line="${method.lineStart}">`
-    );
-    lines.push("    <properties>");
-    for (const [name, value] of methodProperties(method)) {
-      lines.push(`      <property name="${name}" value="${escapeXmlAttribute(value)}" />`);
-    }
-    lines.push("    </properties>");
-    if (method.status === "failed") {
-      const message = `CRAP score ${formatNullableNumber(method.crap)} exceeds threshold ${formatNumber(report.threshold)}`;
-      lines.push(`    <failure type="crap-threshold" message="${escapeXmlAttribute(message)}">${escapeXmlText(message)}</failure>`);
-    }
-    if (method.status === "skipped") {
-      lines.push('    <skipped message="CRAP score unavailable" />');
-    }
-    lines.push("  </testcase>");
-  }
-
-  lines.push("</testsuite>");
-  return `${lines.join("\n")}\n`;
+  return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report)).trimEnd()}\n`;
 }
 
 function toMethodReportEntry(metric: MethodMetrics): MethodReportEntry {
@@ -291,13 +269,91 @@ function methodProperties(method: MethodReportEntry): Array<[string, string]> {
   ];
 }
 
-function escapeXmlAttribute(value: string): string {
-  return escapeXmlText(value).replace(/"/g, "&quot;");
+function formatXmlDeclaration(): string {
+  return '<?xml version="1.0" encoding="UTF-8"?>';
 }
 
-function escapeXmlText(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+function createXmlBuilder(): XMLBuilder {
+  return new XMLBuilder({
+    attributeNamePrefix: "@_",
+    format: true,
+    ignoreAttributes: false,
+    suppressEmptyNode: true
+  });
+}
+
+function toJunitXml(report: AnalysisReport): XmlNode {
+  const counts = countJunitMethodStatuses(report.methods);
+  const testsuite: XmlNode = {
+    "@_name": "crap-typescript",
+    "@_status": report.status,
+    "@_tests": report.methods.length,
+    "@_failures": counts.failures,
+    "@_skipped": counts.skipped,
+    "@_errors": 0,
+    properties: {
+      property: [
+        toXmlProperty("threshold", formatNumber(report.threshold))
+      ]
+    }
+  };
+
+  if (report.methods.length > 0) {
+    testsuite.testcase = report.methods.map((method) => toJunitTestcaseXml(method, report.threshold));
+  }
+
+  return { testsuite };
+}
+
+function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCounts {
+  const counts = { failures: 0, skipped: 0 };
+  for (const method of methods) {
+    if (method.status === "failed") {
+      counts.failures += 1;
+    } else if (method.status === "skipped") {
+      counts.skipped += 1;
+    }
+  }
+  return counts;
+}
+
+function toJunitTestcaseXml(method: MethodReportEntry, threshold: number): XmlNode {
+  return {
+    "@_classname": method.src,
+    "@_name": method.func,
+    "@_file": method.src,
+    "@_line": method.lineStart,
+    properties: {
+      property: methodProperties(method).map(([name, value]) => toXmlProperty(name, value))
+    },
+    ...junitStatusXml(method, threshold)
+  };
+}
+
+function toXmlProperty(name: string, value: string): XmlNode {
+  return {
+    "@_name": name,
+    "@_value": value
+  };
+}
+
+function junitStatusXml(method: MethodReportEntry, threshold: number): XmlNode {
+  if (method.status === "failed") {
+    const message = `CRAP score ${formatNullableNumber(method.crap)} exceeds threshold ${formatNumber(threshold)}`;
+    return {
+      failure: {
+        "@_type": "crap-threshold",
+        "@_message": message,
+        "#text": message
+      }
+    };
+  }
+  if (method.status === "skipped") {
+    return {
+      skipped: {
+        "@_message": "CRAP score unavailable"
+      }
+    };
+  }
+  return {};
 }
