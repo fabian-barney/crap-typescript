@@ -39,22 +39,27 @@ export class CrapTypescriptVitestReporter {
 
   async onFinishedReportCoverage(): Promise<void> {
     const options = resolveReporterOptions(this.options);
-    const result = await analyzeProject({
-      projectRoot: options.projectRoot,
-      explicitPaths: options.paths,
-      changedOnly: options.changedOnly,
-      packageManager: options.packageManager,
-      testRunner: "vitest",
-      coverageMode: "existing-only",
-      coverageReportPath: options.coverageReportPath,
-      stdout: options.stdout,
-      stderr: options.stderr
-    });
+    try {
+      const result = await analyzeProject({
+        projectRoot: options.projectRoot,
+        explicitPaths: options.paths,
+        changedOnly: options.changedOnly,
+        packageManager: options.packageManager,
+        testRunner: "vitest",
+        coverageMode: "existing-only",
+        coverageReportPath: options.coverageReportPath,
+        stdout: options.stdout,
+        stderr: options.stderr
+      });
 
-    await writeReporterReports(result.metrics, options);
-    if (result.thresholdExceeded) {
-      const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${CRAP_THRESHOLD.toFixed(1)}`;
-      options.stderr.write(`${error}\n`);
+      await writeReporterReports(result.metrics, options);
+      if (result.thresholdExceeded) {
+        const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${CRAP_THRESHOLD.toFixed(1)}`;
+        options.stderr.write(`${error}\n`);
+        process.exitCode = 1;
+      }
+    } catch (error) {
+      options.stderr.write(`${toError(error).message}\n`);
       process.exitCode = 1;
     }
   }
@@ -128,6 +133,10 @@ function buildCoverageReportPath(reportsDirectory: string | undefined): string {
 
 function buildJunitReportPath(reportsDirectory: string | undefined): string {
   return `${reportsDirectory ?? "coverage"}/crap-typescript-junit.xml`;
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 interface ResolvedReporterOptions {

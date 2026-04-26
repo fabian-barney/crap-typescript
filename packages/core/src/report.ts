@@ -243,13 +243,17 @@ function formatNullableNumber(value: number | null): string {
   return value === null ? "N/A" : formatNumber(value);
 }
 
+function formatJunitNullableNumber(value: number | null): string {
+  return value === null ? "" : formatNumber(value);
+}
+
 function methodProperties(method: MethodReportEntry): Array<[string, string]> {
   return [
     ["status", method.status],
-    ["score", formatNullableNumber(method.crapScore)],
+    ["score", formatJunitNullableNumber(method.crapScore)],
     ["threshold", formatNumber(method.threshold)],
     ["complexity", String(method.complexity)],
-    ["coveragePercent", formatNullablePercent(method.coveragePercent)],
+    ["coveragePercent", formatJunitNullableNumber(method.coveragePercent)],
     ["coverageKind", method.coverageKind],
     ["sourcePath", method.sourcePath],
     ["startLine", String(method.startLine)],

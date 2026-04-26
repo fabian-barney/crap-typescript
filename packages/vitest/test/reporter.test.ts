@@ -186,4 +186,29 @@ describe("CrapTypescriptVitestReporter", () => {
     await expect(readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).rejects.toThrow();
     expect(stderr.toString()).toBe("");
   });
+
+  it("reports configuration errors without throwing", async () => {
+    const projectRoot = await createTempDir("crap-vitest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptVitestReporter({
+      projectRoot,
+      format: "junit",
+      agent: true,
+      junitReportPath: false,
+      stdout,
+      stderr
+    });
+
+    await expect(reporter.onFinishedReportCoverage()).resolves.toBeUndefined();
+
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toContain("--agent cannot be combined with --format junit");
+    expect(process.exitCode).toBe(1);
+  });
 });

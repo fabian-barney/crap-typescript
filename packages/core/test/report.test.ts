@@ -186,7 +186,26 @@ describe("report formatting", () => {
     expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0">');
     expect(output).toContain('name="risky &lt;value&gt;"');
     expect(output).toContain('file="src/special&amp;file.ts"');
+    expect(output).toContain('<property name="score" value="20.0" />');
+    expect(output).toContain('<property name="coveragePercent" value="0.0" />');
     expect(output).toContain('<property name="coverageKind" value="stmt" />');
     expect(output).toContain("<failure");
+  });
+
+  it("formats unavailable JUnit numeric properties as empty values", () => {
+    const output = formatJunitReport(buildAnalysisReport([
+      metric({
+        displayName: "missingCoverage",
+        coverage: unknown("missing_report"),
+        statementCoverage: unknown("missing_report"),
+        branchCoverage: unknown("missing_report"),
+        coveragePercent: null,
+        crapScore: null
+      })
+    ]));
+
+    expect(output).toContain('<property name="score" value="" />');
+    expect(output).toContain('<property name="coveragePercent" value="" />');
+    expect(output).toContain("<skipped");
   });
 });
