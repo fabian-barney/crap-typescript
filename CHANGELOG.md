@@ -8,6 +8,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.2.3] - 2026-04-27
+
+### Fixed
+
+- Updated `postcss` from 8.5.8 to 8.5.12.
+
 ## [0.2.2] - 2026-04-10
 
 ### Fixed

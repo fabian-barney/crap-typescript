@@ -1,7 +1,7 @@
 {
   "name": "crap-typescript-parent",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "CRAP metrics for TypeScript",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
