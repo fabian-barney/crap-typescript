@@ -225,5 +225,5 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
 }
 
 function buildJunitReportFromCoverage(coverageReportPath: string): string {
-  return path.join(path.dirname(coverageReportPath), "crap-typescript-junit.xml");
+  return `${path.dirname(coverageReportPath).replace(/\\/g, "/")}/crap-typescript-junit.xml`;
 }

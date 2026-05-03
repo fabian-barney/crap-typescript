@@ -76,11 +76,12 @@ export function withCrapTypescriptVitest(
   const coverage = testConfig.coverage ?? {};
   const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "json", "text");
   const reporters = ensureDefaultReporter(asArray(testConfig.reporters));
+  const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory);
   reporters.push(new CrapTypescriptVitestReporter({
     ...options,
-    coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory),
+    coverageReportPath,
     junitReport: options.junitReport === undefined
-      ? buildDefaultJunitReport(coverage.reportsDirectory)
+      ? buildJunitReportFromCoverage(coverageReportPath)
       : options.junitReport
   }));
 
@@ -132,10 +133,6 @@ function ensureDefaultReporter(existing: VitestReporterEntry[]): VitestReporterE
 
 function buildCoverageReportPath(reportsDirectory: string | undefined): string {
   return `${reportsDirectory ?? "coverage"}/coverage-final.json`;
-}
-
-function buildDefaultJunitReport(reportsDirectory: string | undefined): string {
-  return `${reportsDirectory ?? "coverage"}/crap-typescript-junit.xml`;
 }
 
 function toError(error: unknown): Error {
@@ -240,5 +237,5 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
 }
 
 function buildJunitReportFromCoverage(coverageReportPath: string | undefined): string {
-  return path.join(path.dirname(coverageReportPath ?? "coverage/coverage-final.json"), "crap-typescript-junit.xml");
+  return `${path.dirname(coverageReportPath ?? "coverage/coverage-final.json").replace(/\\/g, "/")}/crap-typescript-junit.xml`;
 }

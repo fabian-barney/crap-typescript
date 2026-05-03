@@ -66,4 +66,20 @@ describe("withCrapTypescriptVitest", () => {
       })
     ]);
   });
+
+  it("derives the default JUnit report from an overridden coverage report", () => {
+    const config = withCrapTypescriptVitest({}, {
+      coverageReportPath: "custom-coverage/results/coverage-final.json"
+    });
+
+    expect(config.test?.reporters).toEqual([
+      "default",
+      expect.objectContaining({
+        options: expect.objectContaining({
+          coverageReportPath: "custom-coverage/results/coverage-final.json",
+          junitReport: "custom-coverage/results/crap-typescript-junit.xml"
+        })
+      })
+    ]);
+  });
 });

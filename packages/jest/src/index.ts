@@ -36,13 +36,14 @@ export function withCrapTypescriptJest(
   const reporters = ensureDefaultReporter(
     asArray<JestReporterEntry>(config.reporters as JestReporterEntry[] | undefined)
   );
+  const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(config.coverageDirectory as string | undefined);
   reporters.push([
     resolveReporterPath(),
     {
       ...options,
-      coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(config.coverageDirectory as string | undefined),
+      coverageReportPath,
       junitReport: options.junitReport === undefined
-        ? buildDefaultJunitReport(config.coverageDirectory as string | undefined)
+        ? buildJunitReportFromCoverage(coverageReportPath)
         : options.junitReport
     }
   ]);
@@ -90,8 +91,8 @@ function buildCoverageReportPath(coverageDirectory: string | undefined): string 
   return `${coverageDirectory ?? "coverage"}/coverage-final.json`;
 }
 
-function buildDefaultJunitReport(coverageDirectory: string | undefined): string {
-  return `${coverageDirectory ?? "coverage"}/crap-typescript-junit.xml`;
+function buildJunitReportFromCoverage(coverageReportPath: string): string {
+  return `${path.dirname(coverageReportPath).replace(/\\/g, "/")}/crap-typescript-junit.xml`;
 }
 
 function resolveReporterPath(): string {
