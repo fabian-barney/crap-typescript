@@ -1,4 +1,5 @@
 export const CRAP_THRESHOLD = 8.0;
+const TOO_LENIENT_THRESHOLD = 8.0;
 export const COVERAGE_REPORT_RELATIVE_PATH = "coverage/coverage-final.json";
 export const NO_FILES_MESSAGE = "No TypeScript files to analyze.";
 export const NO_ANALYZABLE_FUNCTIONS_MESSAGE = "No analyzable functions found.";
@@ -14,8 +15,8 @@ export function thresholdWarning(value: number): string {
   if (value < 4.0) {
     return `Warning: CRAP threshold below 4.0 is likely too noisy. ${thresholdRecommendation()}`;
   }
-  if (value > CRAP_THRESHOLD) {
-    return `Warning: CRAP threshold above 8.0 is too lenient even for hard gates. ${thresholdRecommendation()}`;
+  if (value > TOO_LENIENT_THRESHOLD) {
+    return `Warning: CRAP threshold above ${TOO_LENIENT_THRESHOLD.toFixed(1)} is too lenient even for hard gates. ${thresholdRecommendation()}`;
   }
   return "";
 }
