@@ -17,6 +17,8 @@ describe("withCrapTypescriptJest", () => {
     expect(reporterEntry[0].replace(/\\/g, "/")).toContain("/packages/jest/src/reporter");
     expect(reporterEntry[1]).toMatchObject({
       coverageReportPath: "coverage/coverage-final.json",
+      format: "none",
+      junit: true,
       junitReport: "coverage/crap-typescript-junit.xml"
     });
   });
@@ -36,6 +38,8 @@ describe("withCrapTypescriptJest", () => {
         expect.any(String),
         expect.objectContaining({
           coverageReportPath: "custom-coverage/coverage-final.json",
+          format: "none",
+          junit: true,
           junitReport: "custom-coverage/crap-typescript-junit.xml"
         })
       ]
@@ -60,6 +64,8 @@ describe("withCrapTypescriptJest", () => {
         expect.any(String),
         expect.objectContaining({
           coverageReportPath: "custom-coverage/coverage-final.json",
+          format: "none",
+          junit: true,
           junitReport: "custom-coverage/crap-typescript-junit.xml"
         })
       ]
@@ -68,6 +74,10 @@ describe("withCrapTypescriptJest", () => {
 
   it("passes renamed reporting options to the reporter", () => {
     const config = withCrapTypescriptJest({}, {
+      format: "json",
+      agent: true,
+      failuresOnly: true,
+      omitRedundancy: true,
       output: "reports/crap.txt",
       junit: false,
       junitReport: "reports/custom-junit.xml"
@@ -78,6 +88,10 @@ describe("withCrapTypescriptJest", () => {
       [
         expect.any(String),
         expect.objectContaining({
+          format: "json",
+          agent: true,
+          failuresOnly: true,
+          omitRedundancy: true,
           output: "reports/crap.txt",
           junit: false,
           junitReport: "reports/custom-junit.xml"
@@ -97,6 +111,8 @@ describe("withCrapTypescriptJest", () => {
         expect.any(String),
         expect.objectContaining({
           coverageReportPath: "custom-coverage/results/coverage-final.json",
+          format: "none",
+          junit: true,
           junitReport: "custom-coverage/results/crap-typescript-junit.xml"
         })
       ]
