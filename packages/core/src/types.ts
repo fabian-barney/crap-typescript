@@ -42,8 +42,9 @@ export interface CliArguments {
   format: ReportFormat;
   threshold: number;
   agent: boolean;
-  outputPath?: string;
-  junitReportPath?: string;
+  output?: string;
+  junit: boolean;
+  junitReport?: string;
 }
 
 export interface MethodDescriptor {

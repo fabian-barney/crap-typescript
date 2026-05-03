@@ -58,15 +58,16 @@ interface ParseState {
   format: ReportFormat;
   threshold: number;
   agent: boolean;
-  outputPath?: string;
-  junitReportPath?: string;
+  output?: string;
+  junit: boolean;
+  junitReport?: string;
   packageManagerSeen: boolean;
   testRunnerSeen: boolean;
   formatSeen: boolean;
   thresholdSeen: boolean;
   agentSeen: boolean;
-  outputPathSeen: boolean;
-  junitReportPathSeen: boolean;
+  outputSeen: boolean;
+  junitReportSeen: boolean;
   fileArgs: string[];
 }
 
@@ -112,15 +113,16 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     return index + 1;
   },
   "--output": (state, args, index) => {
-    ensureOptionIsUnique(state.outputPathSeen, "--output");
-    state.outputPath = parsePathOption(args[index + 1], "--output");
-    state.outputPathSeen = true;
+    ensureOptionIsUnique(state.outputSeen, "--output");
+    state.output = parsePathOption(args[index + 1], "--output");
+    state.outputSeen = true;
     return index + 1;
   },
   "--junit-report": (state, args, index) => {
-    ensureOptionIsUnique(state.junitReportPathSeen, "--junit-report");
-    state.junitReportPath = parsePathOption(args[index + 1], "--junit-report");
-    state.junitReportPathSeen = true;
+    ensureOptionIsUnique(state.junitReportSeen, "--junit-report");
+    state.junit = true;
+    state.junitReport = parsePathOption(args[index + 1], "--junit-report");
+    state.junitReportSeen = true;
     return index + 1;
   }
 };
@@ -134,15 +136,16 @@ function createParseState(): ParseState {
     format: "toon",
     threshold: CRAP_THRESHOLD,
     agent: false,
-    outputPath: undefined,
-    junitReportPath: undefined,
+    output: undefined,
+    junit: false,
+    junitReport: undefined,
     packageManagerSeen: false,
     testRunnerSeen: false,
     formatSeen: false,
     thresholdSeen: false,
     agentSeen: false,
-    outputPathSeen: false,
-    junitReportPathSeen: false,
+    outputSeen: false,
+    junitReportSeen: false,
     fileArgs: []
   };
 }
@@ -172,8 +175,9 @@ function finalizeCliArguments(state: ParseState): CliArguments {
     format: state.format,
     threshold: state.threshold,
     agent: state.agent,
-    ...optionalPath("outputPath", state.outputPath),
-    ...optionalPath("junitReportPath", state.junitReportPath)
+    ...optionalPath("output", state.output),
+    junit: state.junit,
+    ...optionalPath("junitReport", state.junitReport)
   };
 }
 
@@ -199,7 +203,7 @@ function cliMode(state: ParseState): CliArguments["mode"] {
   return state.fileArgs.length > 0 ? "explicit" : "all";
 }
 
-function optionalPath<K extends "outputPath" | "junitReportPath">(key: K, value: string | undefined): Pick<CliArguments, K> | {} {
+function optionalPath<K extends "output" | "junitReport">(key: K, value: string | undefined): Pick<CliArguments, K> | {} {
   return value === undefined ? {} : { [key]: value } as Pick<CliArguments, K>;
 }
 
@@ -334,14 +338,14 @@ async function writeCliReports(
     agent: parsed.agent,
     threshold: result.threshold
   });
-  if (parsed.outputPath) {
-    await writeReportFile(projectRoot, parsed.outputPath, primaryReport);
+  if (parsed.output) {
+    await writeReportFile(projectRoot, parsed.output, primaryReport);
   } else {
     stdout.write(primaryReport);
   }
 
-  if (parsed.junitReportPath) {
-    await writeReportFile(projectRoot, parsed.junitReportPath, formatAnalysisReport(result.metrics, {
+  if (parsed.junit && parsed.junitReport) {
+    await writeReportFile(projectRoot, parsed.junitReport, formatAnalysisReport(result.metrics, {
       format: "junit",
       threshold: result.threshold
     }));

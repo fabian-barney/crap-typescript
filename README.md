@@ -133,7 +133,7 @@ export default withCrapTypescriptVitest({
 });
 ```
 
-The Vitest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, `junitReportPath`, or `threshold` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
+The Vitest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact.
 
 Jest:
 
@@ -145,7 +145,7 @@ export default withCrapTypescriptJest({
 });
 ```
 
-The Jest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, `junitReportPath`, or `threshold` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
+The Jest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact.
 
 ## Exit Codes
 

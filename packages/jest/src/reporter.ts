@@ -17,8 +17,9 @@ export interface CrapTypescriptJestOptions {
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
-  outputPath?: string;
-  junitReportPath?: string | false;
+  output?: string;
+  junit?: boolean;
+  junitReport?: string;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -32,8 +33,9 @@ interface ResolvedReporterOptions {
   threshold: number | undefined;
   format: ReportFormat;
   agent: boolean;
-  outputPath: string | undefined;
-  junitReportPath: string | false;
+  output: string | undefined;
+  junit: boolean;
+  junitReport: string;
   stdout: Writer;
   stderr: Writer;
 }
@@ -140,8 +142,9 @@ function resolveAnalysisOptions(
     threshold: options.threshold,
     format: resolveFormat(options),
     agent: resolveAgent(options),
-    outputPath: options.outputPath,
-    junitReportPath: resolveJunitReportPath(options, coverageReportPath)
+    output: options.output,
+    junit: resolveJunit(options),
+    junitReport: resolveJunitReport(options, coverageReportPath)
   };
 }
 
@@ -173,10 +176,14 @@ function resolveAgent(options: CrapTypescriptJestOptions): boolean {
   return options.agent ?? false;
 }
 
-function resolveJunitReportPath(options: CrapTypescriptJestOptions, coverageReportPath: string): string | false {
-  return options.junitReportPath === undefined
-    ? buildJunitReportPathFromCoveragePath(coverageReportPath)
-    : options.junitReportPath;
+function resolveJunit(options: CrapTypescriptJestOptions): boolean {
+  return options.junit ?? true;
+}
+
+function resolveJunitReport(options: CrapTypescriptJestOptions, coverageReportPath: string): string {
+  return options.junitReport === undefined
+    ? buildJunitReportFromCoverage(coverageReportPath)
+    : options.junitReport;
 }
 
 function resolveOutputWriters(
@@ -197,14 +204,14 @@ async function writeReporterReports(
     agent: options.agent,
     threshold: options.threshold
   });
-  if (options.outputPath) {
-    await writeReportFile(options.projectRoot, options.outputPath, primaryReport);
+  if (options.output) {
+    await writeReportFile(options.projectRoot, options.output, primaryReport);
   } else {
     options.stdout.write(primaryReport);
   }
 
-  if (options.junitReportPath !== false) {
-    await writeReportFile(options.projectRoot, options.junitReportPath, formatAnalysisReport(metrics, {
+  if (options.junit) {
+    await writeReportFile(options.projectRoot, options.junitReport, formatAnalysisReport(metrics, {
       format: "junit",
       threshold: options.threshold
     }));
@@ -217,6 +224,6 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
   await writeFile(absolutePath, content);
 }
 
-function buildJunitReportPathFromCoveragePath(coverageReportPath: string): string {
+function buildJunitReportFromCoverage(coverageReportPath: string): string {
   return path.join(path.dirname(coverageReportPath), "crap-typescript-junit.xml");
 }

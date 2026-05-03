@@ -15,8 +15,9 @@ export interface CrapTypescriptJestOptions {
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
-  outputPath?: string;
-  junitReportPath?: string | false;
+  output?: string;
+  junit?: boolean;
+  junitReport?: string;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -40,9 +41,9 @@ export function withCrapTypescriptJest(
     {
       ...options,
       coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(config.coverageDirectory as string | undefined),
-      junitReportPath: options.junitReportPath === undefined
-        ? buildJunitReportPath(config.coverageDirectory as string | undefined)
-        : options.junitReportPath
+      junitReport: options.junitReport === undefined
+        ? buildDefaultJunitReport(config.coverageDirectory as string | undefined)
+        : options.junitReport
     }
   ]);
 
@@ -89,7 +90,7 @@ function buildCoverageReportPath(coverageDirectory: string | undefined): string 
   return `${coverageDirectory ?? "coverage"}/coverage-final.json`;
 }
 
-function buildJunitReportPath(coverageDirectory: string | undefined): string {
+function buildDefaultJunitReport(coverageDirectory: string | undefined): string {
   return `${coverageDirectory ?? "coverage"}/crap-typescript-junit.xml`;
 }
 

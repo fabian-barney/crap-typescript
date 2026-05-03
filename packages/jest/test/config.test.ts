@@ -11,13 +11,13 @@ describe("withCrapTypescriptJest", () => {
     expect(config.coverageReporters).toEqual(["json", "text"]);
 
     const reporters = config.reporters as unknown[];
-    const reporterEntry = reporters[1] as [string, { coverageReportPath: string; junitReportPath: string }];
+    const reporterEntry = reporters[1] as [string, { coverageReportPath: string; junitReport: string }];
     expect(reporters[0]).toBe("default");
     expect(Array.isArray(reporterEntry)).toBe(true);
     expect(reporterEntry[0].replace(/\\/g, "/")).toContain("/packages/jest/src/reporter");
     expect(reporterEntry[1]).toMatchObject({
       coverageReportPath: "coverage/coverage-final.json",
-      junitReportPath: "coverage/crap-typescript-junit.xml"
+      junitReport: "coverage/crap-typescript-junit.xml"
     });
   });
 
@@ -36,7 +36,7 @@ describe("withCrapTypescriptJest", () => {
         expect.any(String),
         expect.objectContaining({
           coverageReportPath: "custom-coverage/coverage-final.json",
-          junitReportPath: "custom-coverage/crap-typescript-junit.xml"
+          junitReport: "custom-coverage/crap-typescript-junit.xml"
         })
       ]
     ]);
@@ -60,7 +60,27 @@ describe("withCrapTypescriptJest", () => {
         expect.any(String),
         expect.objectContaining({
           coverageReportPath: "custom-coverage/coverage-final.json",
-          junitReportPath: "custom-coverage/crap-typescript-junit.xml"
+          junitReport: "custom-coverage/crap-typescript-junit.xml"
+        })
+      ]
+    ]);
+  });
+
+  it("passes renamed reporting options to the reporter", () => {
+    const config = withCrapTypescriptJest({}, {
+      output: "reports/crap.txt",
+      junit: false,
+      junitReport: "reports/custom-junit.xml"
+    });
+
+    expect(config.reporters).toEqual([
+      "default",
+      [
+        expect.any(String),
+        expect.objectContaining({
+          output: "reports/crap.txt",
+          junit: false,
+          junitReport: "reports/custom-junit.xml"
         })
       ]
     ]);

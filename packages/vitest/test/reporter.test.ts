@@ -51,7 +51,7 @@ describe("CrapTypescriptVitestReporter", () => {
     const reporter = new CrapTypescriptVitestReporter({
       projectRoot,
       format: "toon",
-      junitReportPath: false,
+      junit: false,
       stdout,
       stderr
     });
@@ -61,6 +61,32 @@ describe("CrapTypescriptVitestReporter", () => {
     expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
+
+  it("writes renamed output and JUnit report options", async () => {
+    const projectRoot = await createTempDir("crap-vitest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptVitestReporter({
+      projectRoot,
+      output: "reports/crap.txt",
+      junitReport: "reports/custom-junit.xml",
+      stdout,
+      stderr
+    });
+
+    await reporter.onFinishedReportCoverage();
+
+    expect(stdout.toString()).toBe("");
+    expect(await readText(`${projectRoot}/reports/crap.txt`)).toBe("status: passed\nthreshold: 8.0\n");
+    expect(await readText(`${projectRoot}/reports/custom-junit.xml`)).toContain('status="passed"');
+    expect(stderr.toString()).toBe("");
+  });
+
 
   it("honors custom thresholds and emits threshold warnings", async () => {
     const projectRoot = await createTempDir("crap-vitest-reporter-");
@@ -220,7 +246,7 @@ describe("CrapTypescriptVitestReporter", () => {
       projectRoot,
       format: "json",
       agent: true,
-      junitReportPath: false,
+      junit: false,
       stdout,
       stderr
     });
@@ -249,7 +275,7 @@ describe("CrapTypescriptVitestReporter", () => {
       projectRoot,
       format: "junit",
       agent: true,
-      junitReportPath: false,
+      junit: false,
       stdout,
       stderr
     });

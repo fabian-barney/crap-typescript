@@ -84,7 +84,7 @@ describe("CrapTypescriptJestReporter", () => {
     const reporter = new CrapTypescriptJestReporter(undefined, {
       projectRoot,
       format: "toon",
-      junitReportPath: false,
+      junit: false,
       stdout,
       stderr
     });
@@ -92,6 +92,32 @@ describe("CrapTypescriptJestReporter", () => {
     await callFinalize(reporter);
 
     expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
+    expect(stderr.toString()).toBe("");
+  });
+
+  it("writes renamed output and JUnit report options", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": "{}"
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptJestReporter(undefined, {
+      projectRoot,
+      output: "reports/crap.txt",
+      junitReport: "reports/custom-junit.xml",
+      stdout,
+      stderr
+    });
+
+    await callFinalize(reporter);
+
+    expect(stdout.toString()).toBe("");
+    expect(await readText(`${projectRoot}/reports/crap.txt`)).toBe("status: passed\nthreshold: 8.0\n");
+    expect(await readText(`${projectRoot}/reports/custom-junit.xml`)).toContain('status="passed"');
     expect(stderr.toString()).toBe("");
   });
 
@@ -257,7 +283,7 @@ describe("CrapTypescriptJestReporter", () => {
       projectRoot,
       format: "json",
       agent: true,
-      junitReportPath: false,
+      junit: false,
       stdout,
       stderr
     });

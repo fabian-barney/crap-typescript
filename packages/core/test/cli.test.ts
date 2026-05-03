@@ -32,8 +32,9 @@ describe("cli", () => {
       format: "json",
       threshold: 8,
       agent: true,
-      outputPath: "reports/crap.json",
-      junitReportPath: "reports/crap.xml"
+      output: "reports/crap.json",
+      junit: true,
+      junitReport: "reports/crap.xml"
     });
   });
 
@@ -50,7 +51,8 @@ describe("cli", () => {
       testRunner: "jest",
       format: "toon",
       threshold: 8,
-      agent: false
+      agent: false,
+      junit: false
     });
     expect(parseCliArguments(["--help", "--package-manager", "yarn"])).toEqual({
       mode: "help",
@@ -59,7 +61,8 @@ describe("cli", () => {
       testRunner: "auto",
       format: "toon",
       threshold: 8,
-      agent: false
+      agent: false,
+      junit: false
     });
     expect(parseCliArguments(["--help", "--changed", "src/app.ts", "--agent", "--format", "junit"])).toEqual({
       mode: "help",
@@ -68,7 +71,8 @@ describe("cli", () => {
       testRunner: "auto",
       format: "junit",
       threshold: 8,
-      agent: true
+      agent: true,
+      junit: false
     });
   });
 
