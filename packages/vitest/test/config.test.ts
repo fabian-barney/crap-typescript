@@ -18,7 +18,7 @@ describe("withCrapTypescriptVitest", () => {
     expect(crapReporter).toBeInstanceOf(CrapTypescriptVitestReporter);
     expect(crapReporter).toMatchObject({
       options: expect.objectContaining({
-        junitReportPath: "coverage/crap-typescript-junit.xml"
+        junitReport: "coverage/crap-typescript-junit.xml"
       })
     });
     expect(coverageReporters).toEqual(["json", "text"]);
@@ -43,8 +43,43 @@ describe("withCrapTypescriptVitest", () => {
     expect(config.test?.coverage?.reportsDirectory).toBe("custom-coverage");
     expect(config.test?.reporters?.[1]).toMatchObject({
       options: expect.objectContaining({
-        junitReportPath: "custom-coverage/crap-typescript-junit.xml"
+        junitReport: "custom-coverage/crap-typescript-junit.xml"
       })
     });
+  });
+
+  it("passes renamed reporting options to the reporter", () => {
+    const config = withCrapTypescriptVitest({}, {
+      output: "reports/crap.txt",
+      junit: false,
+      junitReport: "reports/custom-junit.xml"
+    });
+
+    expect(config.test?.reporters).toEqual([
+      "default",
+      expect.objectContaining({
+        options: expect.objectContaining({
+          output: "reports/crap.txt",
+          junit: false,
+          junitReport: "reports/custom-junit.xml"
+        })
+      })
+    ]);
+  });
+
+  it("derives the default JUnit report from an overridden coverage report", () => {
+    const config = withCrapTypescriptVitest({}, {
+      coverageReportPath: "custom-coverage/results/coverage-final.json"
+    });
+
+    expect(config.test?.reporters).toEqual([
+      "default",
+      expect.objectContaining({
+        options: expect.objectContaining({
+          coverageReportPath: "custom-coverage/results/coverage-final.json",
+          junitReport: "custom-coverage/results/crap-typescript-junit.xml"
+        })
+      })
+    ]);
   });
 });

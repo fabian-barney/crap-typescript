@@ -29,8 +29,9 @@ export interface CrapTypescriptVitestOptions {
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
-  outputPath?: string;
-  junitReportPath?: string | false;
+  output?: string;
+  junit?: boolean;
+  junitReport?: string;
   stdout?: Writer;
   stderr?: Writer;
 }
@@ -75,12 +76,13 @@ export function withCrapTypescriptVitest(
   const coverage = testConfig.coverage ?? {};
   const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "json", "text");
   const reporters = ensureDefaultReporter(asArray(testConfig.reporters));
+  const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory);
   reporters.push(new CrapTypescriptVitestReporter({
     ...options,
-    coverageReportPath: options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory),
-    junitReportPath: options.junitReportPath === undefined
-      ? buildJunitReportPath(coverage.reportsDirectory)
-      : options.junitReportPath
+    coverageReportPath,
+    junitReport: options.junitReport === undefined
+      ? buildJunitReportFromCoverage(coverageReportPath)
+      : options.junitReport
   }));
 
   return {
@@ -133,10 +135,6 @@ function buildCoverageReportPath(reportsDirectory: string | undefined): string {
   return `${reportsDirectory ?? "coverage"}/coverage-final.json`;
 }
 
-function buildJunitReportPath(reportsDirectory: string | undefined): string {
-  return `${reportsDirectory ?? "coverage"}/crap-typescript-junit.xml`;
-}
-
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -150,8 +148,9 @@ interface ResolvedReporterOptions {
   threshold: number | undefined;
   format: ReportFormat;
   agent: boolean;
-  outputPath: string | undefined;
-  junitReportPath: string | false;
+  output: string | undefined;
+  junit: boolean;
+  junitReport: string;
   stdout: Writer;
   stderr: Writer;
 }
@@ -166,8 +165,9 @@ function resolveReporterOptions(options: CrapTypescriptVitestOptions): ResolvedR
     threshold: options.threshold,
     format: resolveFormat(options),
     agent: resolveAgent(options),
-    outputPath: options.outputPath,
-    junitReportPath: resolveJunitReportPath(options),
+    output: options.output,
+    junit: resolveJunit(options),
+    junitReport: resolveJunitReport(options),
     stdout: options.stdout ?? process.stdout,
     stderr: options.stderr ?? process.stderr
   };
@@ -197,10 +197,14 @@ function resolveAgent(options: CrapTypescriptVitestOptions): boolean {
   return options.agent ?? false;
 }
 
-function resolveJunitReportPath(options: CrapTypescriptVitestOptions): string | false {
-  return options.junitReportPath === undefined
-    ? buildJunitReportPathFromCoveragePath(options.coverageReportPath)
-    : options.junitReportPath;
+function resolveJunit(options: CrapTypescriptVitestOptions): boolean {
+  return options.junit ?? true;
+}
+
+function resolveJunitReport(options: CrapTypescriptVitestOptions): string {
+  return options.junitReport === undefined
+    ? buildJunitReportFromCoverage(options.coverageReportPath)
+    : options.junitReport;
 }
 
 async function writeReporterReports(
@@ -212,14 +216,14 @@ async function writeReporterReports(
     agent: options.agent,
     threshold: options.threshold
   });
-  if (options.outputPath) {
-    await writeReportFile(options.projectRoot, options.outputPath, primaryReport);
+  if (options.output) {
+    await writeReportFile(options.projectRoot, options.output, primaryReport);
   } else {
     options.stdout.write(primaryReport);
   }
 
-  if (options.junitReportPath !== false) {
-    await writeReportFile(options.projectRoot, options.junitReportPath, formatAnalysisReport(metrics, {
+  if (options.junit) {
+    await writeReportFile(options.projectRoot, options.junitReport, formatAnalysisReport(metrics, {
       format: "junit",
       threshold: options.threshold
     }));
@@ -232,6 +236,6 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
   await writeFile(absolutePath, content);
 }
 
-function buildJunitReportPathFromCoveragePath(coverageReportPath: string | undefined): string {
-  return path.join(path.dirname(coverageReportPath ?? "coverage/coverage-final.json"), "crap-typescript-junit.xml");
+function buildJunitReportFromCoverage(coverageReportPath: string | undefined): string {
+  return `${path.dirname(coverageReportPath ?? "coverage/coverage-final.json").replace(/\\/g, "/")}/crap-typescript-junit.xml`;
 }
