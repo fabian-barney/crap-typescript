@@ -40,6 +40,7 @@ export interface CliArguments {
   packageManager: PackageManagerSelection;
   testRunner: TestRunnerSelection;
   format: ReportFormat;
+  threshold: number;
   agent: boolean;
   outputPath?: string;
   junitReportPath?: string;
@@ -87,6 +88,7 @@ export interface AnalyzeProjectOptions {
   changedOnly?: boolean;
   packageManager?: PackageManagerSelection;
   testRunner?: TestRunnerSelection;
+  threshold?: number;
   coverageMode?: CoverageMode;
   coverageReportPath?: string;
   stdout?: Writer;
@@ -97,6 +99,7 @@ export interface AnalyzeProjectOptions {
 export interface AnalysisResult {
   metrics: MethodMetrics[];
   maxCrap: number;
+  threshold: number;
   thresholdExceeded: boolean;
   selectedFiles: string[];
   coverageCommands: CoverageCommand[];

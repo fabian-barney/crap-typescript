@@ -88,6 +88,7 @@ npx crap-typescript
 --agent                      Emit only overall status and failed methods for toon, json, or text
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
+--threshold <number>         Override the CRAP threshold (`8.0` by default)
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
@@ -101,6 +102,7 @@ npx crap-typescript --changed
 npx crap-typescript --package-manager npm --test-runner vitest
 npx crap-typescript --format json --output reports/crap.json
 npx crap-typescript --agent --junit-report reports/crap-junit.xml
+npx crap-typescript --threshold 6
 npx crap-typescript src/sample.ts
 npx crap-typescript packages/api packages/web
 ```
@@ -114,6 +116,8 @@ Primary reports expose overall `status` and the run-level `threshold`. Per-funct
 `--agent` is a filtering mode, not a report format. It is available with `toon`, `json`, and `text`; it keeps the overall `status` and `threshold`, includes failed methods only, and omits method-level `status` because included method entries are implicitly failed.
 
 Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
+
+The default threshold is `8.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates. The warning recommends `8.0` for hard gates, targeting `6.0` during implementation, and using the `8.0` default when in doubt.
 
 ## Adapter Usage
 
@@ -129,7 +133,7 @@ export default withCrapTypescriptVitest({
 });
 ```
 
-The Vitest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, or `junitReportPath` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
+The Vitest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, `junitReportPath`, or `threshold` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
 
 Jest:
 
@@ -141,13 +145,13 @@ export default withCrapTypescriptJest({
 });
 ```
 
-The Jest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, or `junitReportPath` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
+The Jest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `outputPath`, `junitReportPath`, or `threshold` in the adapter options to customize reporting. Set `junitReportPath: false` to disable the JUnit artifact.
 
 ## Exit Codes
 
 - `0` success, threshold respected
 - `1` invalid CLI usage or execution failure
-- `2` CRAP threshold exceeded (`> 8.0`)
+- `2` CRAP threshold exceeded (`> configured threshold`)
 
 ## Release
 

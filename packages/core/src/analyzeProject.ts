@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { CRAP_THRESHOLD } from "./constants.js";
+import { CRAP_THRESHOLD, thresholdWarning, validateThreshold } from "./constants.js";
 import { coverageForMethods } from "./coverageAttribution.js";
 import { ensureCoverageReport, expectedCoveragePath } from "./coverage.js";
 import type { FileCoverage } from "./coverageUnits.js";
@@ -21,22 +21,24 @@ import type {
 
 export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promise<AnalysisResult> {
   const context = createAnalyzeContext(options);
+  const runWarnings = emitThresholdWarning(context.stderr, context.threshold);
   const selectedFiles = await selectFiles(context.projectRoot, options.explicitPaths ?? [], options.changedOnly ?? false);
   if (selectedFiles.length === 0) {
-    return emptyAnalysisResult();
+    return emptyAnalysisResult(context.threshold, runWarnings);
   }
 
   const groupedByModule = await groupFilesByModule(context.projectRoot, selectedFiles);
   const moduleResults = await analyzeModules(groupedByModule, context);
   const metrics = moduleResults.flatMap((result) => result.metrics);
   const coverageCommands = moduleResults.flatMap((result) => result.coverageCommands);
-  const warnings = moduleResults.flatMap((result) => result.warnings);
+  const warnings = [...runWarnings, ...moduleResults.flatMap((result) => result.warnings)];
   const max = maxCrap(metrics);
 
   return {
     metrics,
     maxCrap: max,
-    thresholdExceeded: max > CRAP_THRESHOLD,
+    threshold: context.threshold,
+    thresholdExceeded: max > context.threshold,
     selectedFiles,
     coverageCommands,
     warnings
@@ -48,6 +50,7 @@ interface AnalyzeContext {
   coverageMode: NonNullable<AnalyzeProjectOptions["coverageMode"]>;
   packageManager: NonNullable<AnalyzeProjectOptions["packageManager"]>;
   testRunner: NonNullable<AnalyzeProjectOptions["testRunner"]>;
+  threshold: number;
   coverageReportPath: AnalyzeProjectOptions["coverageReportPath"];
   executor: NonNullable<AnalyzeProjectOptions["executor"]>;
   stderr: AnalyzeProjectOptions["stderr"];
@@ -76,20 +79,22 @@ function createAnalyzeContext(options: AnalyzeProjectOptions): AnalyzeContext {
     coverageMode: options.coverageMode ?? "auto",
     packageManager: options.packageManager ?? "auto",
     testRunner: options.testRunner ?? "auto",
+    threshold: validateThreshold(options.threshold ?? CRAP_THRESHOLD),
     coverageReportPath: options.coverageReportPath,
     executor: options.executor ?? new DefaultCommandExecutor(),
     stderr: options.stderr
   };
 }
 
-function emptyAnalysisResult(): AnalysisResult {
+function emptyAnalysisResult(threshold: number, warnings: string[]): AnalysisResult {
   return {
     metrics: [],
     maxCrap: 0,
+    threshold,
     thresholdExceeded: false,
     selectedFiles: [],
     coverageCommands: [],
-    warnings: []
+    warnings
   };
 }
 
@@ -272,4 +277,9 @@ function resolveFileCoverage(
 function emitWarning(stderr: AnalyzeProjectOptions["stderr"], warning: string): string {
   writeLine(stderr, warning);
   return warning;
+}
+
+function emitThresholdWarning(stderr: AnalyzeProjectOptions["stderr"], threshold: number): string[] {
+  const warning = thresholdWarning(threshold);
+  return warning === "" ? [] : [emitWarning(stderr, warning)];
 }

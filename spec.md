@@ -27,7 +27,6 @@ This specification defines:
 
 This specification does not define:
 
-- configurable thresholds through the CLI
 - support for non-TypeScript source files
 - machine-readable report formats
 - adapters beyond Vitest and Jest
@@ -46,6 +45,7 @@ It shall also accept optional overrides:
 
 - `--package-manager auto|npm|pnpm|yarn`
 - `--test-runner auto|vitest|jest`
+- `--threshold <finite-positive-number>`
 
 Invalid argument parsing shall exit with usage error and print the usage text.
 
@@ -217,11 +217,15 @@ Functions with `N/A` CRAP shall appear after functions with numeric CRAP.
 
 ## 11. Threshold
 
-The CRAP threshold shall be `8.0`.
+The default CRAP threshold shall be `8.0`. A finite positive threshold may be configured.
 
-If the maximum numeric CRAP value is greater than `8.0`:
+If the configured threshold is below `4.0`, the tool shall print a warning that the threshold is likely too noisy and recommend `8.0` for hard gates, targeting `6.0` during implementation, and using the `8.0` default when in doubt.
 
-- the tool shall print `CRAP threshold exceeded: <max> > 8.0` to stderr
+If the configured threshold is above `8.0`, the tool shall print a warning that the threshold is too lenient even for hard gates and the same recommendation.
+
+If the maximum numeric CRAP value is greater than the configured threshold:
+
+- the tool shall print `CRAP threshold exceeded: <max> > <threshold>` to stderr
 - the tool shall exit with threshold-failure status
 
 If no numeric CRAP values exist, the maximum shall be treated as `0.0`.

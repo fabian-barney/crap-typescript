@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { analyzeProject, CRAP_THRESHOLD, formatAnalysisReport } from "@barney-media/crap-typescript-core";
+import { analyzeProject, formatAnalysisReport } from "@barney-media/crap-typescript-core";
 import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
 
 type VitestReporterEntry = string | [string, unknown] | {
@@ -26,6 +26,7 @@ export interface CrapTypescriptVitestOptions {
   paths?: string[];
   packageManager?: PackageManagerSelection;
   coverageReportPath?: string;
+  threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
   outputPath?: string;
@@ -46,6 +47,7 @@ export class CrapTypescriptVitestReporter {
         changedOnly: options.changedOnly,
         packageManager: options.packageManager,
         testRunner: "vitest",
+        threshold: options.threshold,
         coverageMode: "existing-only",
         coverageReportPath: options.coverageReportPath,
         stdout: options.stdout,
@@ -54,7 +56,7 @@ export class CrapTypescriptVitestReporter {
 
       await writeReporterReports(result.metrics, options);
       if (result.thresholdExceeded) {
-        const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${CRAP_THRESHOLD.toFixed(1)}`;
+        const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${result.threshold.toFixed(1)}`;
         options.stderr.write(`${error}\n`);
         process.exitCode = 1;
       }
@@ -145,6 +147,7 @@ interface ResolvedReporterOptions {
   changedOnly: boolean;
   packageManager: PackageManagerSelection;
   coverageReportPath: string | undefined;
+  threshold: number | undefined;
   format: ReportFormat;
   agent: boolean;
   outputPath: string | undefined;
@@ -160,6 +163,7 @@ function resolveReporterOptions(options: CrapTypescriptVitestOptions): ResolvedR
     changedOnly: resolveChangedOnly(options),
     packageManager: resolvePackageManager(options),
     coverageReportPath: options.coverageReportPath,
+    threshold: options.threshold,
     format: resolveFormat(options),
     agent: resolveAgent(options),
     outputPath: options.outputPath,
@@ -205,7 +209,8 @@ async function writeReporterReports(
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(metrics, {
     format: options.format,
-    agent: options.agent
+    agent: options.agent,
+    threshold: options.threshold
   });
   if (options.outputPath) {
     await writeReportFile(options.projectRoot, options.outputPath, primaryReport);
@@ -214,7 +219,10 @@ async function writeReporterReports(
   }
 
   if (options.junitReportPath !== false) {
-    await writeReportFile(options.projectRoot, options.junitReportPath, formatAnalysisReport(metrics, { format: "junit" }));
+    await writeReportFile(options.projectRoot, options.junitReportPath, formatAnalysisReport(metrics, {
+      format: "junit",
+      threshold: options.threshold
+    }));
   }
 }
 

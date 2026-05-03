@@ -1,7 +1,7 @@
 import { encode } from "@toon-format/toon";
 import { XMLBuilder } from "fast-xml-parser";
 
-import { CRAP_THRESHOLD } from "./constants.js";
+import { CRAP_THRESHOLD, validateThreshold } from "./constants.js";
 import { formatNumber } from "./utils.js";
 import type {
   CoverageKind,
@@ -45,6 +45,7 @@ export interface AgentAnalysisReport {
 export interface FormatAnalysisReportOptions {
   format: ReportFormat;
   agent?: boolean;
+  threshold?: number;
 }
 
 type SerializableReport = AnalysisReport | AgentAnalysisReport;
@@ -84,17 +85,18 @@ export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
   });
 }
 
-export function buildAnalysisReport(metrics: MethodMetrics[]): AnalysisReport {
-  const methods = sortMetrics(metrics).map(toMethodReportEntry);
+export function buildAnalysisReport(metrics: MethodMetrics[], threshold = CRAP_THRESHOLD): AnalysisReport {
+  threshold = validateThreshold(threshold);
+  const methods = sortMetrics(metrics).map((metric) => toMethodReportEntry(metric, threshold));
   return {
     status: methods.some((method) => method.status === "failed") ? "failed" : "passed",
-    threshold: CRAP_THRESHOLD,
+    threshold,
     methods
   };
 }
 
-export function buildAgentAnalysisReport(metrics: MethodMetrics[]): AgentAnalysisReport {
-  const report = buildAnalysisReport(metrics);
+export function buildAgentAnalysisReport(metrics: MethodMetrics[], threshold = CRAP_THRESHOLD): AgentAnalysisReport {
+  const report = buildAnalysisReport(metrics, threshold);
   return {
     status: report.status,
     threshold: report.threshold,
@@ -106,8 +108,9 @@ export function buildAgentAnalysisReport(metrics: MethodMetrics[]): AgentAnalysi
 
 export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAnalysisReportOptions): string {
   const agent = options.agent ?? false;
+  const threshold = options.threshold ?? CRAP_THRESHOLD;
   validateReportOptions(options.format, agent);
-  return REPORT_FORMATTERS[options.format](agent ? buildAgentAnalysisReport(metrics) : buildAnalysisReport(metrics), agent);
+  return REPORT_FORMATTERS[options.format](agent ? buildAgentAnalysisReport(metrics, threshold) : buildAnalysisReport(metrics, threshold), agent);
 }
 
 function validateReportOptions(format: ReportFormat, agent: boolean): void {
@@ -154,9 +157,9 @@ export function formatJunitReport(report: AnalysisReport): string {
   return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report)).trimEnd()}\n`;
 }
 
-function toMethodReportEntry(metric: MethodMetrics): MethodReportEntry {
+function toMethodReportEntry(metric: MethodMetrics, threshold: number): MethodReportEntry {
   return {
-    status: methodStatus(metric),
+    status: methodStatus(metric, threshold),
     crap: metric.crapScore,
     cc: metric.complexity,
     cov: metric.coveragePercent,
@@ -180,11 +183,11 @@ function omitMethodStatuses(report: AnalysisReport): AgentAnalysisReport {
   };
 }
 
-function methodStatus(metric: MethodMetrics): MethodReportStatus {
+function methodStatus(metric: MethodMetrics, threshold: number): MethodReportStatus {
   if (metric.crapScore === null) {
     return "skipped";
   }
-  return metric.crapScore > CRAP_THRESHOLD ? "failed" : "passed";
+  return metric.crapScore > threshold ? "failed" : "passed";
 }
 
 function coverageKind(metric: MethodMetrics): CoverageKind {

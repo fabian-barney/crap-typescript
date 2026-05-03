@@ -4,7 +4,6 @@ import path from "node:path";
 import {
   analyzeProject,
   COVERAGE_REPORT_RELATIVE_PATH,
-  CRAP_THRESHOLD,
   formatAnalysisReport
 } from "@barney-media/crap-typescript-core";
 import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
@@ -15,6 +14,7 @@ export interface CrapTypescriptJestOptions {
   paths?: string[];
   packageManager?: PackageManagerSelection;
   coverageReportPath?: string;
+  threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
   outputPath?: string;
@@ -29,6 +29,7 @@ interface ResolvedReporterOptions {
   changedOnly: boolean;
   packageManager: PackageManagerSelection;
   coverageReportPath: string;
+  threshold: number | undefined;
   format: ReportFormat;
   agent: boolean;
   outputPath: string | undefined;
@@ -66,6 +67,7 @@ export default class CrapTypescriptJestReporter {
         changedOnly: options.changedOnly,
         packageManager: options.packageManager,
         testRunner: "jest",
+        threshold: options.threshold,
         coverageMode: "existing-only",
         coverageReportPath: options.coverageReportPath,
         stdout: options.stdout,
@@ -74,7 +76,7 @@ export default class CrapTypescriptJestReporter {
 
       await writeReporterReports(result.metrics, options);
       if (result.thresholdExceeded) {
-        this.error = createThresholdExceededError(result.maxCrap);
+        this.error = createThresholdExceededError(result.maxCrap, result.threshold);
         options.stderr.write(`${this.error.message}\n`);
         process.exitCode = 1;
       }
@@ -117,8 +119,8 @@ function resolveReporterOptions(options: CrapTypescriptJestOptions): ResolvedRep
   };
 }
 
-function createThresholdExceededError(maxCrap: number): Error {
-  return new Error(`CRAP threshold exceeded: ${maxCrap.toFixed(1)} > ${CRAP_THRESHOLD.toFixed(1)}`);
+function createThresholdExceededError(maxCrap: number, threshold: number): Error {
+  return new Error(`CRAP threshold exceeded: ${maxCrap.toFixed(1)} > ${threshold.toFixed(1)}`);
 }
 
 function toError(error: unknown): Error {
@@ -135,6 +137,7 @@ function resolveAnalysisOptions(
     changedOnly: resolveChangedOnly(options),
     packageManager: resolvePackageManager(options),
     coverageReportPath,
+    threshold: options.threshold,
     format: resolveFormat(options),
     agent: resolveAgent(options),
     outputPath: options.outputPath,
@@ -191,7 +194,8 @@ async function writeReporterReports(
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(metrics, {
     format: options.format,
-    agent: options.agent
+    agent: options.agent,
+    threshold: options.threshold
   });
   if (options.outputPath) {
     await writeReportFile(options.projectRoot, options.outputPath, primaryReport);
@@ -200,7 +204,10 @@ async function writeReporterReports(
   }
 
   if (options.junitReportPath !== false) {
-    await writeReportFile(options.projectRoot, options.junitReportPath, formatAnalysisReport(metrics, { format: "junit" }));
+    await writeReportFile(options.projectRoot, options.junitReportPath, formatAnalysisReport(metrics, {
+      format: "junit",
+      threshold: options.threshold
+    }));
   }
 }
 

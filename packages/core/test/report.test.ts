@@ -144,6 +144,28 @@ describe("report formatting", () => {
     ]);
   });
 
+  it("uses configured thresholds for method status and report metadata", () => {
+    const parsed = JSON.parse(formatAnalysisReport([
+      metric({
+        displayName: "borderline",
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "json", threshold: 21 })) as {
+      status: string;
+      threshold: number;
+      methods: Array<{ status: string }>;
+    };
+
+    expect(parsed.status).toBe("passed");
+    expect(parsed.threshold).toBe(21);
+    expect(parsed.methods[0].status).toBe("passed");
+  });
+
   it("formats TOON reports and omits status from agent method entries", () => {
     const report = buildAgentAnalysisReport([
       metric(),

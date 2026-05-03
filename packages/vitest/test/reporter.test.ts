@@ -62,6 +62,29 @@ describe("CrapTypescriptVitestReporter", () => {
     expect(stderr.toString()).toBe("");
   });
 
+  it("honors custom thresholds and emits threshold warnings", async () => {
+    const projectRoot = await createTempDir("crap-vitest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptVitestReporter({
+      projectRoot,
+      threshold: 9,
+      stdout,
+      stderr
+    });
+
+    await reporter.onFinishedReportCoverage();
+
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 9.0\n");
+    expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain('<property name="threshold" value="9.0"/>');
+    expect(stderr.toString()).toContain("CRAP threshold above 8.0 is too lenient");
+  });
+
   it("prints the CRAP report and sets a failure exit code when the threshold is exceeded", async () => {
     const projectRoot = await createTempDir("crap-vitest-reporter-");
     tempDirs.push(projectRoot);

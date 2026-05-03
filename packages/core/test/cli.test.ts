@@ -30,6 +30,7 @@ describe("cli", () => {
       packageManager: "npm",
       testRunner: "vitest",
       format: "json",
+      threshold: 8,
       agent: true,
       outputPath: "reports/crap.json",
       junitReportPath: "reports/crap.xml"
@@ -48,6 +49,7 @@ describe("cli", () => {
       packageManager: "pnpm",
       testRunner: "jest",
       format: "toon",
+      threshold: 8,
       agent: false
     });
     expect(parseCliArguments(["--help", "--package-manager", "yarn"])).toEqual({
@@ -56,6 +58,7 @@ describe("cli", () => {
       packageManager: "yarn",
       testRunner: "auto",
       format: "toon",
+      threshold: 8,
       agent: false
     });
     expect(parseCliArguments(["--help", "--changed", "src/app.ts", "--agent", "--format", "junit"])).toEqual({
@@ -64,6 +67,7 @@ describe("cli", () => {
       packageManager: "auto",
       testRunner: "auto",
       format: "junit",
+      threshold: 8,
       agent: true
     });
   });
@@ -78,6 +82,9 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--format", "toon", "--format", "json"])).toThrow(
       "--format can only be provided once"
     );
+    expect(() => parseCliArguments(["--threshold", "6", "--threshold", "8"])).toThrow(
+      "--threshold can only be provided once"
+    );
     expect(() => parseCliArguments(["--agent", "--agent"])).toThrow("--agent can only be provided once");
     expect(() => parseCliArguments(["--output", "a", "--output", "b"])).toThrow("--output can only be provided once");
     expect(() => parseCliArguments(["--junit-report", "a", "--junit-report", "b"])).toThrow(
@@ -86,6 +93,7 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn");
     expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest");
     expect(() => parseCliArguments(["--format"])).toThrow("--format requires one of: toon, json, text, junit");
+    expect(() => parseCliArguments(["--threshold"])).toThrow("--threshold requires a finite number greater than 0");
     expect(() => parseCliArguments(["--output"])).toThrow("--output requires a path");
     expect(() => parseCliArguments(["--junit-report"])).toThrow("--junit-report requires a path");
     expect(() => parseCliArguments(["--package-manager", "bun"])).toThrow(
@@ -97,7 +105,18 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--format", "agent"])).toThrow(
       "--format requires one of: toon, json, text, junit"
     );
+    expect(() => parseCliArguments(["--threshold", "0"])).toThrow("--threshold requires a finite number greater than 0");
+    expect(() => parseCliArguments(["--threshold", "-1"])).toThrow("--threshold requires a finite number greater than 0");
+    expect(() => parseCliArguments(["--threshold", "NaN"])).toThrow("--threshold requires a finite number greater than 0");
+    expect(() => parseCliArguments(["--threshold", "Infinity"])).toThrow("--threshold requires a finite number greater than 0");
     expect(() => parseCliArguments(["--unknown"])).toThrow("Unknown option: --unknown");
+  });
+
+  it("parses custom thresholds", () => {
+    expect(parseCliArguments(["--threshold", "6", "--changed"])).toMatchObject({
+      mode: "changed",
+      threshold: 6
+    });
   });
 
   it("prints help", async () => {
