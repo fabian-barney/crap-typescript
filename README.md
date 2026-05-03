@@ -119,7 +119,7 @@ Primary reports expose overall `status` and the run-level `threshold`. Per-funct
 
 Use `--failures-only` to keep run-level metadata but emit only failed function entries in the primary report. `--failures-only=true` and `--failures-only=false` are accepted for explicit boolean configuration.
 
-Use `--omit-redundancy` to keep run-level metadata but omit per-function `status` in the primary report. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
+Use `--omit-redundancy` to keep run-level metadata but omit per-function `status` in the primary report. With `--format junit`, it omits the custom testcase `status` property while preserving JUnit failure and skipped elements. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
 
 `--agent` is a filtering mode, not a report format. It is available with `toon`, `json`, and `text`; it keeps the overall `status` and `threshold`, includes failed methods only, and omits method-level `status` because included method entries are implicitly failed.
 

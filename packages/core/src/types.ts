@@ -42,7 +42,7 @@ export interface CliArguments {
   format: ReportFormat;
   threshold: number;
   agent: boolean;
-  failuresOnly?: boolean;
+  failuresOnly: boolean;
   omitRedundancy?: boolean;
   output?: string;
   junit: boolean;

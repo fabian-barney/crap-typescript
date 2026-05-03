@@ -221,7 +221,7 @@ Functions with `N/A` CRAP shall appear after functions with numeric CRAP.
 
 When `--failures-only` is enabled, primary reports shall keep run-level metadata and emit only function rows whose status is failed. JUnit sidecar reports shall not be affected by this option and shall always contain the full function set.
 
-When `--omit-redundancy` is enabled, primary reports shall keep run-level metadata and omit only function-row status. JUnit sidecar reports shall not be affected by this option and shall always contain function-row status.
+When `--omit-redundancy` is enabled, primary reports shall keep run-level metadata and omit only function-row status. If the primary report format is JUnit, the primary report shall omit custom testcase `status` properties while preserving JUnit failure and skipped elements. JUnit sidecar reports shall not be affected by this option and shall always contain function-row status.
 
 ## 11. Threshold
 
