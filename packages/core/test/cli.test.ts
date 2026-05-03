@@ -20,6 +20,7 @@ describe("cli", () => {
       "--format",
       "json",
       "--agent",
+      "--failures-only=false",
       "--output",
       "reports/crap.json",
       "--junit-report",
@@ -32,6 +33,7 @@ describe("cli", () => {
       format: "json",
       threshold: 8,
       agent: true,
+      failuresOnly: false,
       output: "reports/crap.json",
       junit: true,
       junitReport: "reports/crap.xml"
@@ -52,6 +54,7 @@ describe("cli", () => {
       format: "toon",
       threshold: 8,
       agent: false,
+      failuresOnly: false,
       junit: false
     });
     expect(parseCliArguments(["--help", "--package-manager", "yarn"])).toEqual({
@@ -62,6 +65,7 @@ describe("cli", () => {
       format: "toon",
       threshold: 8,
       agent: false,
+      failuresOnly: false,
       junit: false
     });
     expect(parseCliArguments(["--help", "--changed", "src/app.ts", "--agent", "--format", "junit"])).toEqual({
@@ -72,6 +76,7 @@ describe("cli", () => {
       format: "junit",
       threshold: 8,
       agent: true,
+      failuresOnly: false,
       junit: false
     });
   });
@@ -90,6 +95,9 @@ describe("cli", () => {
       "--threshold can only be provided once"
     );
     expect(() => parseCliArguments(["--agent", "--agent"])).toThrow("--agent can only be provided once");
+    expect(() => parseCliArguments(["--failures-only", "--failures-only=false"])).toThrow(
+      "--failures-only can only be provided once"
+    );
     expect(() => parseCliArguments(["--output", "a", "--output", "b"])).toThrow("--output can only be provided once");
     expect(() => parseCliArguments(["--junit-report", "a", "--junit-report", "b"])).toThrow(
       "--junit-report can only be provided once"
@@ -113,6 +121,9 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--threshold", "-1"])).toThrow("--threshold requires a finite number greater than 0");
     expect(() => parseCliArguments(["--threshold", "NaN"])).toThrow("--threshold requires a finite number greater than 0");
     expect(() => parseCliArguments(["--threshold", "Infinity"])).toThrow("--threshold requires a finite number greater than 0");
+    expect(() => parseCliArguments(["--failures-only=maybe"])).toThrow(
+      "--failures-only requires true or false when a value is provided"
+    );
     expect(() => parseCliArguments(["--unknown"])).toThrow("Unknown option: --unknown");
   });
 
@@ -120,6 +131,18 @@ describe("cli", () => {
     expect(parseCliArguments(["--threshold", "6", "--changed"])).toMatchObject({
       mode: "changed",
       threshold: 6
+    });
+  });
+
+  it("parses failures-only boolean syntax", () => {
+    expect(parseCliArguments(["--failures-only"])).toMatchObject({
+      failuresOnly: true
+    });
+    expect(parseCliArguments(["--failures-only=true"])).toMatchObject({
+      failuresOnly: true
+    });
+    expect(parseCliArguments(["--failures-only=false"])).toMatchObject({
+      failuresOnly: false
     });
   });
 
@@ -395,6 +418,123 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary.methods[0].func).toBe("risky");
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(primary.methods[0]).not.toHaveProperty("threshold");
+    expect(junit).toContain('tests="2"');
+    expect(junit).toContain('name="safe"');
+    expect(junit).toContain('name="risky"');
+    expect(stderr.toString()).toContain("CRAP threshold exceeded");
+  });
+
+  it("filters failures-only primary reports and writes full JUnit sidecars", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+
+export function risky(flagA: boolean, flagB: boolean): number {
+  if (flagA && flagB) {
+    return 1;
+  }
+  return 0;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            },
+            "1": {
+              start: { line: 7, column: 4 },
+              end: { line: 7, column: 13 }
+            },
+            "2": {
+              start: { line: 9, column: 2 },
+              end: { line: 9, column: 11 }
+            }
+          },
+          fnMap: {},
+          branchMap: {
+            "0": {
+              line: 6,
+              type: "if",
+              loc: {
+                start: { line: 6, column: 2 },
+                end: { line: 8, column: 3 }
+              },
+              locations: [
+                {
+                  start: { line: 6, column: 2 },
+                  end: { line: 8, column: 3 }
+                },
+                {}
+              ]
+            },
+            "1": {
+              line: 6,
+              type: "binary-expr",
+              loc: {
+                start: { line: 6, column: 6 },
+                end: { line: 6, column: 31 }
+              },
+              locations: [
+                {
+                  start: { line: 6, column: 6 },
+                  end: { line: 6, column: 20 }
+                },
+                {
+                  start: { line: 6, column: 24 },
+                  end: { line: 6, column: 29 }
+                }
+              ]
+            }
+          },
+          s: {
+            "0": 1,
+            "1": 0,
+            "2": 0
+          },
+          f: {},
+          b: {
+            "0": [0, 0],
+            "1": [0, 0]
+          }
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli([
+      "--failures-only",
+      "--format",
+      "json",
+      "--output",
+      "reports/crap.json",
+      "--junit-report",
+      "reports/crap.xml"
+    ], projectRoot, stdout, stderr);
+
+    const primary = JSON.parse(await readText(`${projectRoot}/reports/crap.json`)) as {
+      status: string;
+      threshold: number;
+      methods: Array<Record<string, unknown>>;
+    };
+    const junit = await readText(`${projectRoot}/reports/crap.xml`);
+
+    expect(exitCode).toBe(2);
+    expect(stdout.toString()).toBe("");
+    expect(primary.status).toBe("failed");
+    expect(primary.threshold).toBe(8);
+    expect(primary.methods).toHaveLength(1);
+    expect(primary.methods[0]).toMatchObject({
+      status: "failed",
+      func: "risky"
+    });
     expect(junit).toContain('tests="2"');
     expect(junit).toContain('name="safe"');
     expect(junit).toContain('name="risky"');

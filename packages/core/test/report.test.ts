@@ -166,6 +166,36 @@ describe("report formatting", () => {
     expect(parsed.methods[0].status).toBe("passed");
   });
 
+  it("filters primary reports to failed methods without changing run metadata", () => {
+    const parsed = JSON.parse(formatAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        startLine: 5,
+        endLine: 10,
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "json", failuresOnly: true })) as {
+      status: string;
+      threshold: number;
+      methods: Array<{ status: string; func: string }>;
+    };
+
+    expect(parsed.status).toBe("failed");
+    expect(parsed.threshold).toBe(8);
+    expect(parsed.methods).toEqual([
+      expect.objectContaining({
+        status: "failed",
+        func: "risky"
+      })
+    ]);
+  });
+
   it("formats TOON reports and omits status from agent method entries", () => {
     const report = buildAgentAnalysisReport([
       metric(),

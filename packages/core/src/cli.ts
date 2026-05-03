@@ -11,8 +11,8 @@ const HELP_TEXT = `crap-typescript
 
 Usage:
   crap-typescript [--help]
-  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>] [--threshold <number>]
-  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>] [--threshold <number>] <path ...>
+  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>]
+  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>] <path ...>
 
 Options:
   --help                     Print usage to stdout
@@ -21,6 +21,8 @@ Options:
   --test-runner <runner>     Force auto, vitest, or jest
   --format <format>          Emit toon, json, text, or junit (default: toon)
   --agent                    Emit only overall status and failed methods for toon, json, or text
+  --failures-only[=true|false]
+                             Emit failed methods only in the primary report
   --output <path>            Write the primary report to a file instead of stdout
   --junit-report <path>      Also write a full JUnit XML report for CI test-report UIs
   --threshold <number>       Override the CRAP threshold (default: 8.0)
@@ -58,6 +60,7 @@ interface ParseState {
   format: ReportFormat;
   threshold: number;
   agent: boolean;
+  failuresOnly: boolean;
   output?: string;
   junit: boolean;
   junitReport?: string;
@@ -66,6 +69,7 @@ interface ParseState {
   formatSeen: boolean;
   thresholdSeen: boolean;
   agentSeen: boolean;
+  failuresOnlySeen: boolean;
   outputSeen: boolean;
   junitReportSeen: boolean;
   fileArgs: string[];
@@ -136,6 +140,7 @@ function createParseState(): ParseState {
     format: "toon",
     threshold: CRAP_THRESHOLD,
     agent: false,
+    failuresOnly: false,
     output: undefined,
     junit: false,
     junitReport: undefined,
@@ -144,6 +149,7 @@ function createParseState(): ParseState {
     formatSeen: false,
     thresholdSeen: false,
     agentSeen: false,
+    failuresOnlySeen: false,
     outputSeen: false,
     junitReportSeen: false,
     fileArgs: []
@@ -151,6 +157,12 @@ function createParseState(): ParseState {
 }
 
 function consumeOption(state: ParseState, args: string[], index: number): number {
+  const [option, value] = splitInlineBooleanOption(args[index]);
+  if (option === "--failures-only") {
+    parseFailuresOnly(state, value);
+    return index;
+  }
+
   const handler = OPTION_HANDLERS[args[index]];
   if (!handler) {
     throw new Error(`Unknown option: ${args[index]}`);
@@ -175,6 +187,7 @@ function finalizeCliArguments(state: ParseState): CliArguments {
     format: state.format,
     threshold: state.threshold,
     agent: state.agent,
+    failuresOnly: state.failuresOnly,
     ...optionalPath("output", state.output),
     junit: state.junit,
     ...optionalPath("junitReport", state.junitReport)
@@ -246,6 +259,30 @@ function parseThreshold(value: string | undefined): number {
   } catch {
     throw new Error("--threshold requires a finite number greater than 0");
   }
+}
+
+function splitInlineBooleanOption(arg: string): [string, string | undefined] {
+  const [option, ...values] = arg.split("=");
+  return [option, values.length === 0 ? undefined : values.join("=")];
+}
+
+function parseFailuresOnly(state: ParseState, value: string | undefined): void {
+  ensureOptionIsUnique(state.failuresOnlySeen, "--failures-only");
+  state.failuresOnly = parseBooleanOption(value, "--failures-only");
+  state.failuresOnlySeen = true;
+}
+
+function parseBooleanOption(value: string | undefined, option: string): boolean {
+  if (value === undefined) {
+    return true;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  throw new Error(`${option} requires true or false when a value is provided`);
 }
 
 function parsePathOption(value: string | undefined, option: string): string {
@@ -336,7 +373,8 @@ async function writeCliReports(
   const primaryReport = formatAnalysisReport(result.metrics, {
     format: parsed.format,
     agent: parsed.agent,
-    threshold: result.threshold
+    threshold: result.threshold,
+    failuresOnly: parsed.failuresOnly
   });
   if (parsed.output) {
     await writeReportFile(projectRoot, parsed.output, primaryReport);
