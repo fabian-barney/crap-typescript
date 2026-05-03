@@ -34,7 +34,7 @@ describe("cli", () => {
       threshold: 8,
       agent: true,
       failuresOnly: false,
-      omitRedundancy: false,
+      omitRedundancy: true,
       output: "reports/crap.json",
       junit: true,
       junitReport: "reports/crap.xml"
@@ -43,7 +43,6 @@ describe("cli", () => {
 
   it("rejects invalid combinations", () => {
     expect(() => parseCliArguments(["--changed", "src/app.ts"])).toThrow("--changed cannot be combined");
-    expect(() => parseCliArguments(["--agent", "--format", "junit"])).toThrow("--agent cannot be combined");
   });
 
   it("parses explicit paths, help mode, and alternate package-manager and test-runner selections", () => {
@@ -79,8 +78,8 @@ describe("cli", () => {
       format: "junit",
       threshold: 8,
       agent: true,
-      failuresOnly: false,
-      omitRedundancy: false,
+      failuresOnly: true,
+      omitRedundancy: true,
       junit: false
     });
   });
@@ -164,6 +163,30 @@ describe("cli", () => {
       omitRedundancy: true
     });
     expect(parseCliArguments(["--omit-redundancy=false"])).toMatchObject({
+      omitRedundancy: false
+    });
+  });
+
+  it("applies agent composite defaults and explicit overrides", () => {
+    expect(parseCliArguments(["--agent"])).toMatchObject({
+      format: "toon",
+      agent: true,
+      failuresOnly: true,
+      omitRedundancy: true
+    });
+    expect(parseCliArguments(["--agent", "--format", "text"])).toMatchObject({
+      format: "text",
+      failuresOnly: true,
+      omitRedundancy: true
+    });
+    expect(parseCliArguments(["--format", "junit", "--agent"])).toMatchObject({
+      format: "junit",
+      failuresOnly: true,
+      omitRedundancy: true
+    });
+    expect(parseCliArguments(["--agent", "--failures-only=false", "--omit-redundancy=false"])).toMatchObject({
+      format: "toon",
+      failuresOnly: false,
       omitRedundancy: false
     });
   });
@@ -444,6 +467,34 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(junit).toContain('name="safe"');
     expect(junit).toContain('name="risky"');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
+
+    const overrideStdout = new StringWriter();
+    const overrideStderr = new StringWriter();
+    const overrideExitCode = await runCli([
+      "--agent",
+      "--format",
+      "json",
+      "--failures-only=false",
+      "--omit-redundancy=false",
+      "--output",
+      "reports/full.json"
+    ], projectRoot, overrideStdout, overrideStderr);
+    const fullPrimary = JSON.parse(await readText(`${projectRoot}/reports/full.json`)) as {
+      methods: Array<Record<string, unknown>>;
+    };
+
+    expect(overrideExitCode).toBe(2);
+    expect(overrideStdout.toString()).toBe("");
+    expect(fullPrimary.methods).toHaveLength(2);
+    expect(fullPrimary.methods[0]).toMatchObject({
+      func: "risky",
+      status: "failed"
+    });
+    expect(fullPrimary.methods[1]).toMatchObject({
+      func: "safe",
+      status: "passed"
+    });
+    expect(overrideStderr.toString()).toContain("CRAP threshold exceeded");
   });
 
   it("filters failures-only primary reports and writes full JUnit sidecars", async () => {

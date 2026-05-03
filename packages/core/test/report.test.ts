@@ -229,6 +229,70 @@ describe("report formatting", () => {
     });
   });
 
+  it("uses agent as failures-only plus omit-redundancy defaults", () => {
+    const parsed = JSON.parse(formatAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        startLine: 5,
+        endLine: 10,
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "json", agent: true })) as {
+      status: string;
+      threshold: number;
+      methods: Array<Record<string, unknown>>;
+    };
+
+    expect(parsed.status).toBe("failed");
+    expect(parsed.threshold).toBe(8);
+    expect(parsed.methods).toEqual([
+      expect.objectContaining({
+        func: "risky"
+      })
+    ]);
+    expect(parsed.methods[0]).not.toHaveProperty("status");
+  });
+
+  it("lets explicit report options override agent defaults", () => {
+    const parsed = JSON.parse(formatAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        startLine: 5,
+        endLine: 10,
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], {
+      format: "json",
+      agent: true,
+      failuresOnly: false,
+      omitRedundancy: false
+    })) as {
+      methods: Array<{ status: string; func: string }>;
+    };
+
+    expect(parsed.methods).toHaveLength(2);
+    expect(parsed.methods[0]).toMatchObject({
+      status: "failed",
+      func: "risky"
+    });
+    expect(parsed.methods[1]).toMatchObject({
+      status: "passed",
+      func: "safe"
+    });
+  });
+
   it("omits redundant method statuses from TOON reports", () => {
     const output = formatAnalysisReport([
       metric(),
@@ -289,6 +353,26 @@ describe("report formatting", () => {
 
     expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0">');
     expect(output).toContain("<failure");
+    expect(output).not.toContain('<property name="status"');
+  });
+
+  it("allows agent defaults with primary JUnit reports", () => {
+    const output = formatAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "junit", agent: true });
+
+    expect(output).toContain('tests="1"');
+    expect(output).toContain('name="risky"');
+    expect(output).not.toContain('name="safe"');
     expect(output).not.toContain('<property name="status"');
   });
 

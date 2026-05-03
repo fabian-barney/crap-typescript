@@ -85,7 +85,7 @@ npx crap-typescript
 --package-manager <tool>     Force auto, npm, pnpm, or yarn
 --test-runner <runner>       Force auto, vitest, or jest
 --format <format>            Emit toon, json, text, or junit (default: toon)
---agent                      Emit only overall status and failed methods for toon, json, or text
+--agent                      Default primary output to toon, failures-only, omit-redundancy
 --failures-only[=true|false] Emit failed methods only in the primary report
 --omit-redundancy[=true|false] Omit redundant per-function status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
@@ -121,7 +121,7 @@ Use `--failures-only` to keep run-level metadata but emit only failed function e
 
 Use `--omit-redundancy` to keep run-level metadata but omit per-function `status` in the primary report. With `--format junit`, it omits the custom testcase `status` property while preserving JUnit failure and skipped elements. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
 
-`--agent` is a filtering mode, not a report format. It is available with `toon`, `json`, and `text`; it keeps the overall `status` and `threshold`, includes failed methods only, and omits method-level `status` because included method entries are implicitly failed.
+`--agent` is a composite shortcut, not a report format. It defaults primary output to `--format toon`, `--failures-only=true`, and `--omit-redundancy=true`. Explicit `--format`, `--failures-only=false`, or `--omit-redundancy=false` options override those defaults.
 
 Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--failures-only` or `--omit-redundancy`. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
 

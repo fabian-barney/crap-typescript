@@ -248,7 +248,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it("supports agent filtering and disabled JUnit output", async () => {
+  it("supports agent defaults and disabled JUnit output", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -281,7 +281,6 @@ describe("CrapTypescriptJestReporter", () => {
     const stderr = new StringWriter();
     const reporter = new CrapTypescriptJestReporter(undefined, {
       projectRoot,
-      format: "json",
       agent: true,
       junit: false,
       stdout,
@@ -290,11 +289,7 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
-    expect(JSON.parse(stdout.toString())).toEqual({
-      status: "passed",
-      threshold: 8,
-      methods: []
-    });
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     await expect(readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).rejects.toThrow();
     expect(stderr.toString()).toBe("");
     expect(reporter.getLastError()).toBeUndefined();

@@ -211,7 +211,7 @@ describe("CrapTypescriptVitestReporter", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it("supports agent filtering and disabled JUnit output", async () => {
+  it("supports agent defaults and disabled JUnit output", async () => {
     const projectRoot = await createTempDir("crap-vitest-reporter-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -244,7 +244,6 @@ describe("CrapTypescriptVitestReporter", () => {
     const stderr = new StringWriter();
     const reporter = new CrapTypescriptVitestReporter({
       projectRoot,
-      format: "json",
       agent: true,
       junit: false,
       stdout,
@@ -253,20 +252,38 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await reporter.onFinishedReportCoverage();
 
-    expect(JSON.parse(stdout.toString())).toEqual({
-      status: "passed",
-      threshold: 8,
-      methods: []
-    });
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     await expect(readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).rejects.toThrow();
     expect(stderr.toString()).toBe("");
   });
 
-  it("reports configuration errors without throwing", async () => {
+  it("allows agent with an explicit JUnit primary format", async () => {
     const projectRoot = await createTempDir("crap-vitest-reporter-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
-      "package.json": '{"name":"fixture","private":true}'
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
     });
 
     const stdout = new StringWriter();
@@ -282,8 +299,9 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await expect(reporter.onFinishedReportCoverage()).resolves.toBeUndefined();
 
-    expect(stdout.toString()).toBe("");
-    expect(stderr.toString()).toContain("--agent cannot be combined with --format junit");
-    expect(process.exitCode).toBe(1);
+    expect(stdout.toString()).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0">');
+    expect(stdout.toString()).not.toContain('<property name="status"');
+    expect(stderr.toString()).toBe("");
+    expect(process.exitCode).toBe(originalExitCode);
   });
 });

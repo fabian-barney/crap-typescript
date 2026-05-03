@@ -20,7 +20,7 @@ Options:
   --package-manager <tool>   Force auto, npm, pnpm, or yarn
   --test-runner <runner>     Force auto, vitest, or jest
   --format <format>          Emit toon, json, text, or junit (default: toon)
-  --agent                    Emit only overall status and failed methods for toon, json, or text
+  --agent                    Default primary output to --format toon --failures-only --omit-redundancy
   --failures-only[=true|false]
                              Emit failed methods only in the primary report
   --omit-redundancy[=true|false]
@@ -187,6 +187,7 @@ function ensureOptionIsUnique(seen: boolean, option: string): void {
 }
 
 function finalizeCliArguments(state: ParseState): CliArguments {
+  applyAgentDefaults(state);
   validateCliState(state);
 
   return {
@@ -205,15 +206,21 @@ function finalizeCliArguments(state: ParseState): CliArguments {
   };
 }
 
+function applyAgentDefaults(state: ParseState): void {
+  if (!state.agent) {
+    return;
+  }
+  state.format = state.formatSeen ? state.format : "toon";
+  state.failuresOnly = state.failuresOnlySeen ? state.failuresOnly : true;
+  state.omitRedundancy = state.omitRedundancySeen ? state.omitRedundancy : true;
+}
+
 function validateCliState(state: ParseState): void {
   if (state.help) {
     return;
   }
   if (state.changed && state.fileArgs.length > 0) {
     throw new Error("--changed cannot be combined with file arguments");
-  }
-  if (state.agent && state.format === "junit") {
-    throw new Error("--agent cannot be combined with --format junit");
   }
 }
 

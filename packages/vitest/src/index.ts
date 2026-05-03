@@ -190,7 +190,7 @@ function resolvePackageManager(options: CrapTypescriptVitestOptions): PackageMan
 }
 
 function resolveFormat(options: CrapTypescriptVitestOptions): ReportFormat {
-  return options.format ?? "text";
+  return options.format ?? (options.agent ? "toon" : "text");
 }
 
 function resolveAgent(options: CrapTypescriptVitestOptions): boolean {
