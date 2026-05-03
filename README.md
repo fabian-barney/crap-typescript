@@ -141,7 +141,7 @@ export default withCrapTypescriptVitest({
 });
 ```
 
-The Vitest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes the full sidecar to `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
+The Vitest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
 Jest:
 
@@ -153,7 +153,7 @@ export default withCrapTypescriptJest({
 });
 ```
 
-The Jest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes the full sidecar to `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
+The Jest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
 ## Exit Codes
 
