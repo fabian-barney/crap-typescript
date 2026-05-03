@@ -10,7 +10,8 @@ It shall:
 - generate or reuse Istanbul JSON coverage for the owning package of each analyzed file set
 - parse TypeScript function-like bodies and estimate cyclomatic complexity
 - combine complexity and coverage into CRAP scores
-- print a tabular report sorted by worst score first
+- emit a primary report in the selected format, sorted by worst score first
+- optionally write a full JUnit XML sidecar report
 - fail when the maximum CRAP score exceeds the configured threshold
 
 ## 2. Scope
@@ -23,12 +24,11 @@ This specification defines:
 - function parsing behavior
 - coverage attribution and normalization
 - CRAP score computation
-- report ordering and exit codes
+- report formats, adapter defaults, report ordering, and exit codes
 
 This specification does not define:
 
 - support for non-TypeScript source files
-- machine-readable report formats
 - adapters beyond Vitest and Jest
 - cross-ecosystem normalization for coverage formats beyond Istanbul JSON
 
@@ -46,10 +46,14 @@ It shall also accept optional overrides:
 - `--package-manager auto|npm|pnpm|yarn`
 - `--test-runner auto|vitest|jest`
 - `--threshold <finite-positive-number>`
+- `--format toon|json|text|junit|none`
+- `--agent`
 - `--failures-only`
 - `--failures-only=true|false`
 - `--omit-redundancy`
 - `--omit-redundancy=true|false`
+- `--output <path>`
+- `--junit-report <path>`
 
 Invalid argument parsing shall exit with usage error and print the usage text.
 
@@ -207,7 +211,11 @@ Where `coverage` is the normalized function coverage fraction in the range `0.0.
 
 ## 10. Report
 
-The tool shall print a tabular report containing, at minimum:
+The tool shall support primary report formats `toon`, `json`, `text`, `junit`, and `none`.
+
+The CLI primary report format shall default to `toon`.
+
+The primary report shall contain, at minimum:
 
 - function name
 - cyclomatic complexity
@@ -242,7 +250,30 @@ If the maximum numeric CRAP value is greater than the configured threshold:
 
 If no numeric CRAP values exist, the maximum shall be treated as `0.0`.
 
-## 12. Exit Codes
+## 12. Vitest and Jest Adapters
+
+The Vitest and Jest adapters shall enable the canonical Istanbul JSON coverage output and register the CRAP reporter.
+
+Both adapters shall expose these reporting options:
+
+- `threshold`
+- `format`
+- `agent`
+- `failuresOnly`
+- `omitRedundancy`
+- `output`
+- `junit`
+- `junitReport`
+
+Both adapters shall default primary `format` to `none`, so no primary stdout report is emitted by default.
+
+Both adapters shall default `junit` to `true`.
+
+Both adapters shall derive the default `junitReport` path from the coverage report path. With the default coverage path, the sidecar path shall be `coverage/crap-typescript-junit.xml`.
+
+Adapter JUnit sidecars shall be full reports and shall not be affected by `agent`, `failuresOnly`, or `omitRedundancy`.
+
+## 13. Exit Codes
 
 - `0`: successful analysis, including empty selection or all scores at or below threshold
 - `1`: CLI usage error or execution failure
