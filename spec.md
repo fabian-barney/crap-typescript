@@ -223,6 +223,8 @@ When `--failures-only` is enabled, primary reports shall keep run-level metadata
 
 When `--omit-redundancy` is enabled, primary reports shall keep run-level metadata and omit only function-row status. If the primary report format is JUnit, the primary report shall omit custom testcase `status` properties while preserving JUnit failure and skipped elements. JUnit sidecar reports shall not be affected by this option and shall always contain the full function set, including custom testcase `status` properties.
 
+When `--agent` is enabled, primary reports shall default to `--format toon`, `--failures-only=true`, and `--omit-redundancy=true`. Explicit `--format`, `--failures-only=false`, or `--omit-redundancy=false` values shall override those defaults. JUnit sidecar reports shall not be affected by this option.
+
 ## 11. Threshold
 
 The default CRAP threshold shall be `8.0`. A finite positive threshold may be configured.

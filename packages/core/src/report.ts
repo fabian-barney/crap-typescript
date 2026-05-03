@@ -115,16 +115,12 @@ export function buildAgentAnalysisReport(metrics: MethodMetrics[], threshold = C
 export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAnalysisReportOptions): string {
   const agent = options.agent ?? false;
   const threshold = options.threshold ?? CRAP_THRESHOLD;
-  const failuresOnly = options.failuresOnly ?? false;
-  const omitRedundancy = options.omitRedundancy ?? false;
-  validateReportOptions(options.format, agent);
-  const omitMethodStatus = agent || omitRedundancy;
-  const report = agent
-    ? buildAgentAnalysisReport(metrics, threshold)
-    : buildPrimaryAnalysisReport(metrics, threshold, failuresOnly, omitRedundancy, options.format);
+  const failuresOnly = options.failuresOnly ?? agent;
+  const omitRedundancy = options.omitRedundancy ?? agent;
+  const report = buildPrimaryAnalysisReport(metrics, threshold, failuresOnly, omitRedundancy, options.format);
   return REPORT_FORMATTERS[options.format](
     report,
-    omitMethodStatus
+    omitRedundancy
   );
 }
 
@@ -137,12 +133,6 @@ function buildPrimaryAnalysisReport(
 ): SerializableReport {
   const report = buildAnalysisReport(metrics, threshold, failuresOnly);
   return omitRedundancy && format !== "junit" ? omitMethodStatuses(report) : report;
-}
-
-function validateReportOptions(format: ReportFormat, agent: boolean): void {
-  if (agent && format === "junit") {
-    throw new Error("--agent cannot be combined with --format junit");
-  }
 }
 
 export function formatReport(metrics: MethodMetrics[]): string {
