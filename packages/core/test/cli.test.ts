@@ -626,6 +626,61 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(stderr.toString()).toBe("");
   });
 
+  it("omits redundant status from primary JUnit reports and writes full JUnit sidecars", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli([
+      "--omit-redundancy",
+      "--format",
+      "junit",
+      "--output",
+      "reports/primary.xml",
+      "--junit-report",
+      "reports/sidecar.xml"
+    ], projectRoot, stdout, stderr);
+
+    const primary = await readText(`${projectRoot}/reports/primary.xml`);
+    const sidecar = await readText(`${projectRoot}/reports/sidecar.xml`);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toBe("");
+    expect(primary).toContain('tests="1"');
+    expect(primary).toContain('name="safe"');
+    expect(primary).not.toContain('<property name="status"');
+    expect(sidecar).toContain('tests="1"');
+    expect(sidecar).toContain('name="safe"');
+    expect(sidecar).toContain('<property name="status" value="passed"/>');
+    expect(stderr.toString()).toBe("");
+  });
+
   it("prints a report and exits cleanly when CRAP stays below the threshold", async () => {
     const projectRoot = await createTempDir("crap-cli-");
     tempDirs.push(projectRoot);
