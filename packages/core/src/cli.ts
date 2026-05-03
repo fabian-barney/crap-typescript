@@ -11,8 +11,8 @@ const HELP_TEXT = `crap-typescript
 
 Usage:
   crap-typescript [--help]
-  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>]
-  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>] <path ...>
+  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>]
+  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>] <path ...>
 
 Options:
   --help                     Print usage to stdout
@@ -23,6 +23,8 @@ Options:
   --agent                    Emit only overall status and failed methods for toon, json, or text
   --failures-only[=true|false]
                              Emit failed methods only in the primary report
+  --omit-redundancy[=true|false]
+                             Omit redundant per-method status in the primary report
   --output <path>            Write the primary report to a file instead of stdout
   --junit-report <path>      Also write a full JUnit XML report for CI test-report UIs
   --threshold <number>       Override the CRAP threshold (default: 8.0)
@@ -61,6 +63,7 @@ interface ParseState {
   threshold: number;
   agent: boolean;
   failuresOnly: boolean;
+  omitRedundancy: boolean;
   output?: string;
   junit: boolean;
   junitReport?: string;
@@ -70,6 +73,7 @@ interface ParseState {
   thresholdSeen: boolean;
   agentSeen: boolean;
   failuresOnlySeen: boolean;
+  omitRedundancySeen: boolean;
   outputSeen: boolean;
   junitReportSeen: boolean;
   fileArgs: string[];
@@ -141,6 +145,7 @@ function createParseState(): ParseState {
     threshold: CRAP_THRESHOLD,
     agent: false,
     failuresOnly: false,
+    omitRedundancy: false,
     output: undefined,
     junit: false,
     junitReport: undefined,
@@ -150,6 +155,7 @@ function createParseState(): ParseState {
     thresholdSeen: false,
     agentSeen: false,
     failuresOnlySeen: false,
+    omitRedundancySeen: false,
     outputSeen: false,
     junitReportSeen: false,
     fileArgs: []
@@ -160,6 +166,10 @@ function consumeOption(state: ParseState, args: string[], index: number): number
   const [option, value] = splitInlineBooleanOption(args[index]);
   if (option === "--failures-only") {
     parseFailuresOnly(state, value);
+    return index;
+  }
+  if (option === "--omit-redundancy") {
+    parseOmitRedundancy(state, value);
     return index;
   }
 
@@ -188,6 +198,7 @@ function finalizeCliArguments(state: ParseState): CliArguments {
     threshold: state.threshold,
     agent: state.agent,
     failuresOnly: state.failuresOnly,
+    omitRedundancy: state.omitRedundancy,
     ...optionalPath("output", state.output),
     junit: state.junit,
     ...optionalPath("junitReport", state.junitReport)
@@ -270,6 +281,12 @@ function parseFailuresOnly(state: ParseState, value: string | undefined): void {
   ensureOptionIsUnique(state.failuresOnlySeen, "--failures-only");
   state.failuresOnly = parseBooleanOption(value, "--failures-only");
   state.failuresOnlySeen = true;
+}
+
+function parseOmitRedundancy(state: ParseState, value: string | undefined): void {
+  ensureOptionIsUnique(state.omitRedundancySeen, "--omit-redundancy");
+  state.omitRedundancy = parseBooleanOption(value, "--omit-redundancy");
+  state.omitRedundancySeen = true;
 }
 
 function parseBooleanOption(value: string | undefined, option: string): boolean {
@@ -374,7 +391,8 @@ async function writeCliReports(
     format: parsed.format,
     agent: parsed.agent,
     threshold: result.threshold,
-    failuresOnly: parsed.failuresOnly
+    failuresOnly: parsed.failuresOnly,
+    omitRedundancy: parsed.omitRedundancy
   });
   if (parsed.output) {
     await writeReportFile(projectRoot, parsed.output, primaryReport);

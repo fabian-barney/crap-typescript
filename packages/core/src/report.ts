@@ -47,11 +47,12 @@ export interface FormatAnalysisReportOptions {
   agent?: boolean;
   threshold?: number;
   failuresOnly?: boolean;
+  omitRedundancy?: boolean;
 }
 
 type SerializableReport = AnalysisReport | AgentAnalysisReport;
 type ReportValue = string | number | null;
-type ReportFormatter = (report: SerializableReport, agent: boolean) => string;
+type ReportFormatter = (report: SerializableReport, omitMethodStatus: boolean) => string;
 type MethodColumn = typeof METHOD_COLUMNS[number];
 type AgentMethodColumn = typeof AGENT_METHOD_COLUMNS[number];
 type XmlNode = Record<string, unknown>;
@@ -65,7 +66,7 @@ const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
   toon: formatToonReport,
   json: (report) => `${JSON.stringify(report, null, 2)}\n`,
   text: formatTextReport,
-  junit: (report) => formatJunitReport(report as AnalysisReport)
+  junit: (report, omitMethodStatus) => formatJunitReport(report as AnalysisReport, omitMethodStatus)
 };
 
 export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
@@ -115,11 +116,27 @@ export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAn
   const agent = options.agent ?? false;
   const threshold = options.threshold ?? CRAP_THRESHOLD;
   const failuresOnly = options.failuresOnly ?? false;
+  const omitRedundancy = options.omitRedundancy ?? false;
   validateReportOptions(options.format, agent);
+  const omitMethodStatus = agent || omitRedundancy;
+  const report = agent
+    ? buildAgentAnalysisReport(metrics, threshold)
+    : buildPrimaryAnalysisReport(metrics, threshold, failuresOnly, omitRedundancy, options.format);
   return REPORT_FORMATTERS[options.format](
-    agent ? buildAgentAnalysisReport(metrics, threshold) : buildAnalysisReport(metrics, threshold, failuresOnly),
-    agent
+    report,
+    omitMethodStatus
   );
+}
+
+function buildPrimaryAnalysisReport(
+  metrics: MethodMetrics[],
+  threshold: number,
+  failuresOnly: boolean,
+  omitRedundancy: boolean,
+  format: ReportFormat
+): SerializableReport {
+  const report = buildAnalysisReport(metrics, threshold, failuresOnly);
+  return omitRedundancy && format !== "junit" ? omitMethodStatuses(report) : report;
 }
 
 function validateReportOptions(format: ReportFormat, agent: boolean): void {
@@ -162,8 +179,8 @@ export function formatTextReport(report: SerializableReport, agent = false): str
   return [...summary, "", headerLine, separator, ...body].join("\n") + "\n";
 }
 
-export function formatJunitReport(report: AnalysisReport): string {
-  return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report)).trimEnd()}\n`;
+export function formatJunitReport(report: AnalysisReport, omitRedundancy = false): string {
+  return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report, omitRedundancy)).trimEnd()}\n`;
 }
 
 function toMethodReportEntry(metric: MethodMetrics, threshold: number): MethodReportEntry {
@@ -249,9 +266,8 @@ function formatTextSeparator(widths: number[]): string {
   return `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`;
 }
 
-function methodProperties(method: MethodReportEntry): Array<[string, string]> {
-  return [
-    ["status", method.status],
+function methodProperties(method: MethodReportEntry, omitRedundancy: boolean): Array<[string, string]> {
+  const properties: Array<[string, string]> = [
     ["crap", formatJunitNullableNumber(method.crap)],
     ["cc", String(method.cc)],
     ["cov", formatJunitNullableNumber(method.cov)],
@@ -261,6 +277,7 @@ function methodProperties(method: MethodReportEntry): Array<[string, string]> {
     ["lineStart", String(method.lineStart)],
     ["lineEnd", String(method.lineEnd)]
   ];
+  return omitRedundancy ? properties : [["status", method.status], ...properties];
 }
 
 function formatXmlDeclaration(): string {
@@ -276,7 +293,7 @@ function createXmlBuilder(): XMLBuilder {
   });
 }
 
-function toJunitXml(report: AnalysisReport): XmlNode {
+function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
   const counts = countJunitMethodStatuses(report.methods);
   const testsuite: XmlNode = {
     "@_name": "crap-typescript",
@@ -293,7 +310,7 @@ function toJunitXml(report: AnalysisReport): XmlNode {
   };
 
   if (report.methods.length > 0) {
-    testsuite.testcase = report.methods.map((method) => toJunitTestcaseXml(method, report.threshold));
+    testsuite.testcase = report.methods.map((method) => toJunitTestcaseXml(method, report.threshold, omitRedundancy));
   }
 
   return { testsuite };
@@ -311,14 +328,14 @@ function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCoun
   return counts;
 }
 
-function toJunitTestcaseXml(method: MethodReportEntry, threshold: number): XmlNode {
+function toJunitTestcaseXml(method: MethodReportEntry, threshold: number, omitRedundancy: boolean): XmlNode {
   return {
     "@_classname": method.src,
     "@_name": method.func,
     "@_file": method.src,
     "@_line": method.lineStart,
     properties: {
-      property: methodProperties(method).map(([name, value]) => toXmlProperty(name, value))
+      property: methodProperties(method, omitRedundancy).map(([name, value]) => toXmlProperty(name, value))
     },
     ...junitStatusXml(method, threshold)
   };

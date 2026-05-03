@@ -196,6 +196,57 @@ describe("report formatting", () => {
     ]);
   });
 
+  it("omits redundant method statuses without changing run metadata", () => {
+    const parsed = JSON.parse(formatAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        startLine: 5,
+        endLine: 10,
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "json", omitRedundancy: true })) as {
+      status: string;
+      threshold: number;
+      methods: Array<Record<string, unknown>>;
+    };
+
+    expect(parsed.status).toBe("failed");
+    expect(parsed.threshold).toBe(8);
+    expect(parsed.methods).toHaveLength(2);
+    expect(parsed.methods[0]).not.toHaveProperty("status");
+    expect(parsed.methods[0]).toMatchObject({
+      func: "risky"
+    });
+    expect(parsed.methods[1]).not.toHaveProperty("status");
+    expect(parsed.methods[1]).toMatchObject({
+      func: "safe"
+    });
+  });
+
+  it("omits redundant JUnit status properties while preserving failure elements", () => {
+    const output = formatAnalysisReport([
+      metric({
+        displayName: "risky",
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "junit", omitRedundancy: true });
+
+    expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0">');
+    expect(output).toContain("<failure");
+    expect(output).not.toContain('<property name="status"');
+  });
+
   it("formats TOON reports and omits status from agent method entries", () => {
     const report = buildAgentAnalysisReport([
       metric(),
@@ -303,6 +354,7 @@ describe("report formatting", () => {
     expect(output).toContain('<property name="threshold" value="8.0"/>');
     expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;"');
     expect(output).toContain('file="src/&quot;special&quot;&amp;file.ts"');
+    expect(output).toContain('<property name="status" value="failed"/>');
     expect(output).toContain('<property name="crap" value="20.0"/>');
     expect(output).toContain('<property name="cov" value="0.0"/>');
     expect(output).toContain('<property name="covKind" value="stmt"/>');
