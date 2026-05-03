@@ -225,6 +225,8 @@ When `--omit-redundancy` is enabled, primary reports shall keep run-level metada
 
 When `--agent` is enabled, primary reports shall default to `--format toon`, `--failures-only=true`, and `--omit-redundancy=true`. Explicit `--format`, `--failures-only=false`, or `--omit-redundancy=false` values shall override those defaults. JUnit sidecar reports shall not be affected by this option.
 
+When the primary report format is `none`, the primary report shall emit no stdout output. If an output path is configured, the primary report file shall be created with empty content. JUnit sidecar reports shall not be affected by this format and shall always contain the full JUnit report.
+
 ## 11. Threshold
 
 The default CRAP threshold shall be `8.0`. A finite positive threshold may be configured.

@@ -66,7 +66,8 @@ const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
   toon: formatToonReport,
   json: (report) => `${JSON.stringify(report, null, 2)}\n`,
   text: formatTextReport,
-  junit: (report, omitMethodStatus) => formatJunitReport(report as AnalysisReport, omitMethodStatus)
+  junit: (report, omitMethodStatus) => formatJunitReport(report as AnalysisReport, omitMethodStatus),
+  none: () => ""
 };
 
 export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {

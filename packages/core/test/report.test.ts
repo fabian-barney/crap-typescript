@@ -356,6 +356,20 @@ describe("report formatting", () => {
     expect(output).not.toContain('<property name="status"');
   });
 
+  it("returns empty primary content for none reports", () => {
+    expect(formatAnalysisReport([
+      metric({
+        displayName: "risky",
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "none" })).toBe("");
+  });
+
   it("allows agent defaults with primary JUnit reports", () => {
     const output = formatAnalysisReport([
       metric(),
