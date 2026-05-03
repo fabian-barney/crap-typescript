@@ -95,6 +95,30 @@ describe("CrapTypescriptJestReporter", () => {
     expect(stderr.toString()).toBe("");
   });
 
+  it("honors custom thresholds and emits threshold warnings", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": "{}"
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptJestReporter(undefined, {
+      projectRoot,
+      threshold: 9,
+      stdout,
+      stderr
+    });
+
+    await callFinalize(reporter);
+
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 9.0\n");
+    expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain('<property name="threshold" value="9.0"/>');
+    expect(stderr.toString()).toContain("CRAP threshold above 8.0 is too lenient");
+  });
+
   it("prints the CRAP report and stores the threshold error for an absolute coverage path", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);

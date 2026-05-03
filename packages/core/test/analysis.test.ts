@@ -39,7 +39,36 @@ describe("analyzeProject", () => {
       { name: "upper", coverage: 100.0, crap: 1.0, coverageStatus: "measured", statementStatus: "measured", branchStatus: "structural_na" }
     ]);
     expect(result.maxCrap).toBeGreaterThan(CRAP_THRESHOLD);
+    expect(result.threshold).toBe(CRAP_THRESHOLD);
     expect(result.thresholdExceeded).toBe(true);
+  });
+
+  it("uses configured thresholds and emits Java-style threshold warnings", async () => {
+    const projectRoot = await copyFixture("workspace-project");
+    tempDirs.push(projectRoot);
+    const warnings: string[] = [];
+
+    const result = await analyzeProject({
+      projectRoot,
+      coverageMode: "existing-only",
+      threshold: 13,
+      stderr: {
+        write(chunk: string) {
+          warnings.push(chunk);
+        }
+      }
+    });
+
+    expect(result.threshold).toBe(13);
+    expect(result.thresholdExceeded).toBe(false);
+    expect(result.warnings).toEqual([
+      "Warning: CRAP threshold above 8.0 is too lenient even for hard gates. Use 8.0 for hard gates, target 6.0 during implementation, and use the 8.0 default when in doubt."
+    ]);
+    expect(warnings.join("")).toContain("CRAP threshold above 8.0 is too lenient");
+  });
+
+  it("rejects invalid configured thresholds", async () => {
+    await expect(analyzeProject({ threshold: 0 })).rejects.toThrow("Threshold must be a finite number greater than 0");
   });
 
   it("warns and reports N/A coverage when existing coverage is missing", async () => {

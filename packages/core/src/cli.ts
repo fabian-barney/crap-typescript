@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CRAP_THRESHOLD } from "./constants.js";
+import { CRAP_THRESHOLD, validateThreshold } from "./constants.js";
 import { analyzeProject } from "./analyzeProject.js";
 import { formatAnalysisReport } from "./report.js";
 import { formatNumber, writeLine } from "./utils.js";
@@ -11,8 +11,8 @@ const HELP_TEXT = `crap-typescript
 
 Usage:
   crap-typescript [--help]
-  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>]
-  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>] <path ...>
+  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>] [--threshold <number>]
+  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--output <path>] [--junit-report <path>] [--threshold <number>] <path ...>
 
 Options:
   --help                     Print usage to stdout
@@ -23,6 +23,7 @@ Options:
   --agent                    Emit only overall status and failed methods for toon, json, or text
   --output <path>            Write the primary report to a file instead of stdout
   --junit-report <path>      Also write a full JUnit XML report for CI test-report UIs
+  --threshold <number>       Override the CRAP threshold (default: 8.0)
 
 Behavior:
   (no args)                  Analyze all TypeScript files under any nested src/ tree
@@ -55,12 +56,14 @@ interface ParseState {
   packageManager: PackageManagerSelection;
   testRunner: TestRunnerSelection;
   format: ReportFormat;
+  threshold: number;
   agent: boolean;
   outputPath?: string;
   junitReportPath?: string;
   packageManagerSeen: boolean;
   testRunnerSeen: boolean;
   formatSeen: boolean;
+  thresholdSeen: boolean;
   agentSeen: boolean;
   outputPathSeen: boolean;
   junitReportPathSeen: boolean;
@@ -102,6 +105,12 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     state.formatSeen = true;
     return index + 1;
   },
+  "--threshold": (state, args, index) => {
+    ensureOptionIsUnique(state.thresholdSeen, "--threshold");
+    state.threshold = parseThreshold(args[index + 1]);
+    state.thresholdSeen = true;
+    return index + 1;
+  },
   "--output": (state, args, index) => {
     ensureOptionIsUnique(state.outputPathSeen, "--output");
     state.outputPath = parsePathOption(args[index + 1], "--output");
@@ -123,12 +132,14 @@ function createParseState(): ParseState {
     packageManager: "auto",
     testRunner: "auto",
     format: "toon",
+    threshold: CRAP_THRESHOLD,
     agent: false,
     outputPath: undefined,
     junitReportPath: undefined,
     packageManagerSeen: false,
     testRunnerSeen: false,
     formatSeen: false,
+    thresholdSeen: false,
     agentSeen: false,
     outputPathSeen: false,
     junitReportPathSeen: false,
@@ -159,6 +170,7 @@ function finalizeCliArguments(state: ParseState): CliArguments {
     packageManager: state.packageManager,
     testRunner: state.testRunner,
     format: state.format,
+    threshold: state.threshold,
     agent: state.agent,
     ...optionalPath("outputPath", state.outputPath),
     ...optionalPath("junitReportPath", state.junitReportPath)
@@ -221,6 +233,17 @@ function parseReportFormat(value: string | undefined): ReportFormat {
   throw new Error("--format requires one of: toon, json, text, junit");
 }
 
+function parseThreshold(value: string | undefined): number {
+  if (!value) {
+    throw new Error("--threshold requires a finite number greater than 0");
+  }
+  try {
+    return validateThreshold(Number(value));
+  } catch {
+    throw new Error("--threshold requires a finite number greater than 0");
+  }
+}
+
 function parsePathOption(value: string | undefined, option: string): string {
   if (!value) {
     throw new Error(`${option} requires a path`);
@@ -269,6 +292,7 @@ async function analyzeCliProject(
       changedOnly: parsed.mode === "changed",
       packageManager: parsed.packageManager,
       testRunner: parsed.testRunner,
+      threshold: parsed.threshold,
       stdout,
       stderr
     });
@@ -290,7 +314,7 @@ async function handleCliResult(
   }
 
   try {
-    await writeCliReports(result.metrics, parsed, projectRoot, stdout);
+    await writeCliReports(result, parsed, projectRoot, stdout);
   } catch (error) {
     writeLine(stderr, (error as Error).message);
     return 1;
@@ -300,14 +324,15 @@ async function handleCliResult(
 }
 
 async function writeCliReports(
-  metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"],
+  result: Awaited<ReturnType<typeof analyzeProject>>,
   parsed: CliArguments,
   projectRoot: string,
   stdout: Writer
 ): Promise<void> {
-  const primaryReport = formatAnalysisReport(metrics, {
+  const primaryReport = formatAnalysisReport(result.metrics, {
     format: parsed.format,
-    agent: parsed.agent
+    agent: parsed.agent,
+    threshold: result.threshold
   });
   if (parsed.outputPath) {
     await writeReportFile(projectRoot, parsed.outputPath, primaryReport);
@@ -316,7 +341,10 @@ async function writeCliReports(
   }
 
   if (parsed.junitReportPath) {
-    await writeReportFile(projectRoot, parsed.junitReportPath, formatAnalysisReport(metrics, { format: "junit" }));
+    await writeReportFile(projectRoot, parsed.junitReportPath, formatAnalysisReport(result.metrics, {
+      format: "junit",
+      threshold: result.threshold
+    }));
   }
 }
 
@@ -333,6 +361,6 @@ function writeCliThresholdStatus(
   if (!result.thresholdExceeded) {
     return 0;
   }
-  writeLine(stderr, `CRAP threshold exceeded: ${formatNumber(result.maxCrap)} > ${formatNumber(CRAP_THRESHOLD)}`);
+  writeLine(stderr, `CRAP threshold exceeded: ${formatNumber(result.maxCrap)} > ${formatNumber(result.threshold)}`);
   return 2;
 }

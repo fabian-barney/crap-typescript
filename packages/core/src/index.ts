@@ -15,7 +15,14 @@ export {
   formatToonReport,
   sortMetrics
 } from "./report.js";
-export { CRAP_THRESHOLD, COVERAGE_REPORT_RELATIVE_PATH, NO_FILES_MESSAGE, NO_ANALYZABLE_FUNCTIONS_MESSAGE } from "./constants.js";
+export {
+  CRAP_THRESHOLD,
+  COVERAGE_REPORT_RELATIVE_PATH,
+  NO_FILES_MESSAGE,
+  NO_ANALYZABLE_FUNCTIONS_MESSAGE,
+  thresholdWarning,
+  validateThreshold
+} from "./constants.js";
 export type {
   AnalysisResult,
   AnalyzeProjectOptions,
