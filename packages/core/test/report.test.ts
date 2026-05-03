@@ -370,6 +370,12 @@ describe("report formatting", () => {
     ], { format: "none" })).toBe("");
   });
 
+  it("validates thresholds before returning empty none reports", () => {
+    expect(() => formatAnalysisReport([], { format: "none", threshold: 0 })).toThrow(
+      "Threshold must be a finite number greater than 0"
+    );
+  });
+
   it("allows agent defaults with primary JUnit reports", () => {
     const output = formatAnalysisReport([
       metric(),

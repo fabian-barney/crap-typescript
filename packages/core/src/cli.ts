@@ -7,6 +7,10 @@ import { formatAnalysisReport } from "./report.js";
 import { formatNumber, writeLine } from "./utils.js";
 import type { CliArguments, PackageManagerSelection, ReportFormat, TestRunnerSelection, Writer } from "./types.js";
 
+const REPORT_FORMATS = ["toon", "json", "text", "junit", "none"] as const;
+const REPORT_FORMAT_LIST = REPORT_FORMATS.join(", ");
+const REPORT_FORMAT_ERROR = `--format requires one of: ${REPORT_FORMAT_LIST}`;
+
 const HELP_TEXT = `crap-typescript
 
 Usage:
@@ -19,7 +23,7 @@ Options:
   --changed                  Analyze changed TypeScript files under src/
   --package-manager <tool>   Force auto, npm, pnpm, or yarn
   --test-runner <runner>     Force auto, vitest, or jest
-  --format <format>          Emit toon, json, text, junit, or none (default: toon)
+  --format <format>          Emit ${REPORT_FORMAT_LIST} (default: toon)
   --agent                    Default primary output to --format toon --failures-only --omit-redundancy
   --failures-only[=true|false]
                              Emit failed methods only in the primary report
@@ -34,8 +38,6 @@ Behavior:
   <file ...>                 Analyze explicit TypeScript files
   <directory ...>            Analyze TypeScript files under each directory's nested src/ tree
 `;
-const REPORT_FORMATS = ["toon", "json", "text", "junit", "none"] as const;
-const REPORT_FORMAT_ERROR = "--format requires one of: toon, json, text, junit, none";
 
 export function usage(): string {
   return HELP_TEXT;
