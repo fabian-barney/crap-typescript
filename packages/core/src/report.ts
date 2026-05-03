@@ -46,6 +46,7 @@ export interface FormatAnalysisReportOptions {
   format: ReportFormat;
   agent?: boolean;
   threshold?: number;
+  failuresOnly?: boolean;
 }
 
 type SerializableReport = AnalysisReport | AgentAnalysisReport;
@@ -85,13 +86,17 @@ export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
   });
 }
 
-export function buildAnalysisReport(metrics: MethodMetrics[], threshold = CRAP_THRESHOLD): AnalysisReport {
+export function buildAnalysisReport(
+  metrics: MethodMetrics[],
+  threshold = CRAP_THRESHOLD,
+  failuresOnly = false
+): AnalysisReport {
   threshold = validateThreshold(threshold);
-  const methods = sortMetrics(metrics).map((metric) => toMethodReportEntry(metric, threshold));
+  const allMethods = sortMetrics(metrics).map((metric) => toMethodReportEntry(metric, threshold));
   return {
-    status: methods.some((method) => method.status === "failed") ? "failed" : "passed",
+    status: allMethods.some((method) => method.status === "failed") ? "failed" : "passed",
     threshold,
-    methods
+    methods: failuresOnly ? allMethods.filter((method) => method.status === "failed") : allMethods
   };
 }
 
@@ -109,8 +114,12 @@ export function buildAgentAnalysisReport(metrics: MethodMetrics[], threshold = C
 export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAnalysisReportOptions): string {
   const agent = options.agent ?? false;
   const threshold = options.threshold ?? CRAP_THRESHOLD;
+  const failuresOnly = options.failuresOnly ?? false;
   validateReportOptions(options.format, agent);
-  return REPORT_FORMATTERS[options.format](agent ? buildAgentAnalysisReport(metrics, threshold) : buildAnalysisReport(metrics, threshold), agent);
+  return REPORT_FORMATTERS[options.format](
+    agent ? buildAgentAnalysisReport(metrics, threshold) : buildAnalysisReport(metrics, threshold, failuresOnly),
+    agent
+  );
 }
 
 function validateReportOptions(format: ReportFormat, agent: boolean): void {

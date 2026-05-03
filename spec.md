@@ -46,6 +46,8 @@ It shall also accept optional overrides:
 - `--package-manager auto|npm|pnpm|yarn`
 - `--test-runner auto|vitest|jest`
 - `--threshold <finite-positive-number>`
+- `--failures-only`
+- `--failures-only=true|false`
 
 Invalid argument parsing shall exit with usage error and print the usage text.
 
@@ -214,6 +216,8 @@ The tool shall print a tabular report containing, at minimum:
 The report shall be sorted by CRAP descending.
 
 Functions with `N/A` CRAP shall appear after functions with numeric CRAP.
+
+When `--failures-only` is enabled, primary reports shall keep run-level metadata and emit only function rows whose status is failed. JUnit sidecar reports shall not be affected by this option and shall always contain the full function set.
 
 ## 11. Threshold
 
