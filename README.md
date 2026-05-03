@@ -123,7 +123,7 @@ Use `--omit-redundancy` to keep run-level metadata but omit per-function `status
 
 `--agent` is a composite shortcut, not a report format. It defaults primary output to `--format toon`, `--failures-only=true`, and `--omit-redundancy=true`. Explicit `--format`, `--failures-only=false`, or `--omit-redundancy=false` options override those defaults.
 
-Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--failures-only` or `--omit-redundancy`. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
+Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--agent`, `--failures-only`, or `--omit-redundancy`. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
 
 The default threshold is `8.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates. The warning recommends `8.0` for hard gates, targeting `6.0` during implementation, and using the `8.0` default when in doubt.
 
@@ -141,7 +141,7 @@ export default withCrapTypescriptVitest({
 });
 ```
 
-The Vitest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact.
+The Vitest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
 Jest:
 
@@ -153,7 +153,7 @@ export default withCrapTypescriptJest({
 });
 ```
 
-The Jest adapter prints text output by default and writes `coverage/crap-typescript-junit.xml` for CI test-report UIs. Pass `format`, `agent`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact.
+The Jest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
 ## Exit Codes
 
