@@ -110,7 +110,7 @@ describe("cli", () => {
     );
     expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn");
     expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest");
-    expect(() => parseCliArguments(["--format"])).toThrow("--format requires one of: toon, json, text, junit");
+    expect(() => parseCliArguments(["--format"])).toThrow("--format requires one of: toon, json, text, junit, none");
     expect(() => parseCliArguments(["--threshold"])).toThrow("--threshold requires a finite number greater than 0");
     expect(() => parseCliArguments(["--output"])).toThrow("--output requires a path");
     expect(() => parseCliArguments(["--junit-report"])).toThrow("--junit-report requires a path");
@@ -121,7 +121,7 @@ describe("cli", () => {
       "--test-runner requires one of: auto, vitest, jest"
     );
     expect(() => parseCliArguments(["--format", "agent"])).toThrow(
-      "--format requires one of: toon, json, text, junit"
+      "--format requires one of: toon, json, text, junit, none"
     );
     expect(() => parseCliArguments(["--threshold", "0"])).toThrow("--threshold requires a finite number greater than 0");
     expect(() => parseCliArguments(["--threshold", "-1"])).toThrow("--threshold requires a finite number greater than 0");
@@ -140,6 +140,12 @@ describe("cli", () => {
     expect(parseCliArguments(["--threshold", "6", "--changed"])).toMatchObject({
       mode: "changed",
       threshold: 6
+    });
+  });
+
+  it("parses none as a report format", () => {
+    expect(parseCliArguments(["--format", "none"])).toMatchObject({
+      format: "none"
     });
   });
 
@@ -726,6 +732,58 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary).toContain('tests="1"');
     expect(primary).toContain('name="safe"');
     expect(primary).not.toContain('<property name="status"');
+    expect(sidecar).toContain('tests="1"');
+    expect(sidecar).toContain('name="safe"');
+    expect(sidecar).toContain('<property name="status" value="passed"/>');
+    expect(stderr.toString()).toBe("");
+  });
+
+  it("writes empty primary files for none reports and keeps full JUnit sidecars", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli([
+      "--format",
+      "none",
+      "--output",
+      "reports/primary.txt",
+      "--junit-report",
+      "reports/sidecar.xml"
+    ], projectRoot, stdout, stderr);
+
+    const primary = await readText(`${projectRoot}/reports/primary.txt`);
+    const sidecar = await readText(`${projectRoot}/reports/sidecar.xml`);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toBe("");
+    expect(primary).toBe("");
     expect(sidecar).toContain('tests="1"');
     expect(sidecar).toContain('name="safe"');
     expect(sidecar).toContain('<property name="status" value="passed"/>');

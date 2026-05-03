@@ -66,7 +66,8 @@ const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
   toon: formatToonReport,
   json: (report) => `${JSON.stringify(report, null, 2)}\n`,
   text: formatTextReport,
-  junit: (report, omitMethodStatus) => formatJunitReport(report as AnalysisReport, omitMethodStatus)
+  junit: (report, omitMethodStatus) => formatJunitReport(report as AnalysisReport, omitMethodStatus),
+  none: () => ""
 };
 
 export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
@@ -113,8 +114,13 @@ export function buildAgentAnalysisReport(metrics: MethodMetrics[], threshold = C
 }
 
 export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAnalysisReportOptions): string {
-  const agent = options.agent ?? false;
   const threshold = options.threshold ?? CRAP_THRESHOLD;
+  if (options.format === "none") {
+    validateThreshold(threshold);
+    return "";
+  }
+
+  const agent = options.agent ?? false;
   const failuresOnly = options.failuresOnly ?? agent;
   const omitRedundancy = options.omitRedundancy ?? agent;
   const report = buildPrimaryAnalysisReport(metrics, threshold, failuresOnly, omitRedundancy, options.format);

@@ -84,7 +84,7 @@ npx crap-typescript
 --changed                    Analyze changed TypeScript files under src/
 --package-manager <tool>     Force auto, npm, pnpm, or yarn
 --test-runner <runner>       Force auto, vitest, or jest
---format <format>            Emit toon, json, text, or junit (default: toon)
+--format <format>            Emit toon, json, text, junit, or none (default: toon)
 --agent                      Default primary output to toon, failures-only, omit-redundancy
 --failures-only[=true|false] Emit failed methods only in the primary report
 --omit-redundancy[=true|false] Omit redundant per-function status in the primary report
@@ -113,7 +113,7 @@ npx crap-typescript packages/api packages/web
 
 ## Report Formats
 
-The CLI defaults to TOON output for compact, agent-readable reports. `--format` can select `toon`, `json`, `text`, or `junit`.
+The CLI defaults to TOON output for compact, agent-readable reports. `--format` can select `toon`, `json`, `text`, `junit`, or `none`. `--format none` suppresses primary stdout output; when used with `--output`, it creates an empty primary report file.
 
 Primary reports expose overall `status` and the run-level `threshold`. Per-function entries use the shared fields `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. Method-level entries never repeat `threshold`.
 
