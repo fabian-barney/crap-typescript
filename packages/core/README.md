@@ -20,7 +20,7 @@ console.log(report);
 
 Key exports: `analyzeProject`, `calculateCrapScore`, `formatAnalysisReport`, `formatReport`, `parseCoverageReport`, `parseFileMethods`.
 
-`formatAnalysisReport` supports `toon`, `json`, `text`, and `junit`. Primary reports expose run-level `status` and `threshold`; method-level entries use `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. JUnit writes `threshold` as a testsuite property. Pass `agent: true` with `toon`, `json`, or `text` to include failed methods only and omit method-level `status`.
+`formatAnalysisReport` supports `toon`, `json`, `text`, and `junit`. Primary reports expose run-level `status` and `threshold`; method-level entries use `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. Pass `failuresOnly: true` to include failed method entries only. Pass `omitRedundancy: true` to omit method-level `status` while keeping run-level metadata; with `format: "junit"`, this omits the custom testcase `status` property while preserving JUnit failure and skipped elements. JUnit writes `threshold` as a testsuite property. Pass `agent: true` with `toon`, `json`, or `text` to include failed methods only and omit method-level `status`.
 
 ## Formula
 

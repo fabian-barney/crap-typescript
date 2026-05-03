@@ -34,6 +34,7 @@ describe("cli", () => {
       threshold: 8,
       agent: true,
       failuresOnly: false,
+      omitRedundancy: false,
       output: "reports/crap.json",
       junit: true,
       junitReport: "reports/crap.xml"
@@ -55,6 +56,7 @@ describe("cli", () => {
       threshold: 8,
       agent: false,
       failuresOnly: false,
+      omitRedundancy: false,
       junit: false
     });
     expect(parseCliArguments(["--help", "--package-manager", "yarn"])).toEqual({
@@ -66,6 +68,7 @@ describe("cli", () => {
       threshold: 8,
       agent: false,
       failuresOnly: false,
+      omitRedundancy: false,
       junit: false
     });
     expect(parseCliArguments(["--help", "--changed", "src/app.ts", "--agent", "--format", "junit"])).toEqual({
@@ -77,6 +80,7 @@ describe("cli", () => {
       threshold: 8,
       agent: true,
       failuresOnly: false,
+      omitRedundancy: false,
       junit: false
     });
   });
@@ -97,6 +101,9 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--agent", "--agent"])).toThrow("--agent can only be provided once");
     expect(() => parseCliArguments(["--failures-only", "--failures-only=false"])).toThrow(
       "--failures-only can only be provided once"
+    );
+    expect(() => parseCliArguments(["--omit-redundancy", "--omit-redundancy=false"])).toThrow(
+      "--omit-redundancy can only be provided once"
     );
     expect(() => parseCliArguments(["--output", "a", "--output", "b"])).toThrow("--output can only be provided once");
     expect(() => parseCliArguments(["--junit-report", "a", "--junit-report", "b"])).toThrow(
@@ -124,6 +131,9 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--failures-only=maybe"])).toThrow(
       "--failures-only requires true or false when a value is provided"
     );
+    expect(() => parseCliArguments(["--omit-redundancy=maybe"])).toThrow(
+      "--omit-redundancy requires true or false when a value is provided"
+    );
     expect(() => parseCliArguments(["--unknown"])).toThrow("Unknown option: --unknown");
   });
 
@@ -143,6 +153,18 @@ describe("cli", () => {
     });
     expect(parseCliArguments(["--failures-only=false"])).toMatchObject({
       failuresOnly: false
+    });
+  });
+
+  it("parses omit-redundancy boolean syntax", () => {
+    expect(parseCliArguments(["--omit-redundancy"])).toMatchObject({
+      omitRedundancy: true
+    });
+    expect(parseCliArguments(["--omit-redundancy=true"])).toMatchObject({
+      omitRedundancy: true
+    });
+    expect(parseCliArguments(["--omit-redundancy=false"])).toMatchObject({
+      omitRedundancy: false
     });
   });
 
@@ -539,6 +561,124 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(junit).toContain('name="safe"');
     expect(junit).toContain('name="risky"');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
+  });
+
+  it("omits redundant primary status fields and writes full JUnit sidecars", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli([
+      "--omit-redundancy",
+      "--format",
+      "json",
+      "--output",
+      "reports/crap.json",
+      "--junit-report",
+      "reports/crap.xml"
+    ], projectRoot, stdout, stderr);
+
+    const primary = JSON.parse(await readText(`${projectRoot}/reports/crap.json`)) as {
+      status: string;
+      threshold: number;
+      methods: Array<Record<string, unknown>>;
+    };
+    const junit = await readText(`${projectRoot}/reports/crap.xml`);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toBe("");
+    expect(primary.status).toBe("passed");
+    expect(primary.threshold).toBe(8);
+    expect(primary.methods).toHaveLength(1);
+    expect(primary.methods[0]).not.toHaveProperty("status");
+    expect(primary.methods[0]).toMatchObject({
+      func: "safe"
+    });
+    expect(junit).toContain('tests="1"');
+    expect(junit).toContain('name="safe"');
+    expect(junit).toContain('<property name="status" value="passed"/>');
+    expect(stderr.toString()).toBe("");
+  });
+
+  it("omits redundant status from primary JUnit reports and writes full JUnit sidecars", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function safe(value: number): number {
+  return value + 1;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            }
+          },
+          fnMap: {},
+          branchMap: {},
+          s: {
+            "0": 1
+          },
+          f: {},
+          b: {}
+        }
+      })
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const exitCode = await runCli([
+      "--omit-redundancy",
+      "--format",
+      "junit",
+      "--output",
+      "reports/primary.xml",
+      "--junit-report",
+      "reports/sidecar.xml"
+    ], projectRoot, stdout, stderr);
+
+    const primary = await readText(`${projectRoot}/reports/primary.xml`);
+    const sidecar = await readText(`${projectRoot}/reports/sidecar.xml`);
+
+    expect(exitCode).toBe(0);
+    expect(stdout.toString()).toBe("");
+    expect(primary).toContain('tests="1"');
+    expect(primary).toContain('name="safe"');
+    expect(primary).not.toContain('<property name="status"');
+    expect(sidecar).toContain('tests="1"');
+    expect(sidecar).toContain('name="safe"');
+    expect(sidecar).toContain('<property name="status" value="passed"/>');
+    expect(stderr.toString()).toBe("");
   });
 
   it("prints a report and exits cleanly when CRAP stays below the threshold", async () => {

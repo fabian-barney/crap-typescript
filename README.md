@@ -87,6 +87,7 @@ npx crap-typescript
 --format <format>            Emit toon, json, text, or junit (default: toon)
 --agent                      Emit only overall status and failed methods for toon, json, or text
 --failures-only[=true|false] Emit failed methods only in the primary report
+--omit-redundancy[=true|false] Omit redundant per-function status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
 --threshold <number>         Override the CRAP threshold (`8.0` by default)
@@ -103,6 +104,7 @@ npx crap-typescript --changed
 npx crap-typescript --package-manager npm --test-runner vitest
 npx crap-typescript --format json --output reports/crap.json
 npx crap-typescript --failures-only --format json
+npx crap-typescript --omit-redundancy --format toon
 npx crap-typescript --agent --junit-report reports/crap-junit.xml
 npx crap-typescript --threshold 6
 npx crap-typescript src/sample.ts
@@ -117,9 +119,11 @@ Primary reports expose overall `status` and the run-level `threshold`. Per-funct
 
 Use `--failures-only` to keep run-level metadata but emit only failed function entries in the primary report. `--failures-only=true` and `--failures-only=false` are accepted for explicit boolean configuration.
 
+Use `--omit-redundancy` to keep run-level metadata but omit per-function `status` in the primary report. With `--format junit`, it omits the custom testcase `status` property while preserving JUnit failure and skipped elements. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
+
 `--agent` is a filtering mode, not a report format. It is available with `toon`, `json`, and `text`; it keeps the overall `status` and `threshold`, includes failed methods only, and omits method-level `status` because included method entries are implicitly failed.
 
-Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--failures-only`. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
+Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--failures-only` or `--omit-redundancy`. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
 
 The default threshold is `8.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates. The warning recommends `8.0` for hard gates, targeting `6.0` during implementation, and using the `8.0` default when in doubt.
 

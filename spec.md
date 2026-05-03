@@ -48,6 +48,8 @@ It shall also accept optional overrides:
 - `--threshold <finite-positive-number>`
 - `--failures-only`
 - `--failures-only=true|false`
+- `--omit-redundancy`
+- `--omit-redundancy=true|false`
 
 Invalid argument parsing shall exit with usage error and print the usage text.
 
@@ -218,6 +220,8 @@ The report shall be sorted by CRAP descending.
 Functions with `N/A` CRAP shall appear after functions with numeric CRAP.
 
 When `--failures-only` is enabled, primary reports shall keep run-level metadata and emit only function rows whose status is failed. JUnit sidecar reports shall not be affected by this option and shall always contain the full function set.
+
+When `--omit-redundancy` is enabled, primary reports shall keep run-level metadata and omit only function-row status. If the primary report format is JUnit, the primary report shall omit custom testcase `status` properties while preserving JUnit failure and skipped elements. JUnit sidecar reports shall not be affected by this option and shall always contain the full function set, including custom testcase `status` properties.
 
 ## 11. Threshold
 
