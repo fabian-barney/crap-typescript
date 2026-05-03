@@ -229,6 +229,51 @@ describe("report formatting", () => {
     });
   });
 
+  it("omits redundant method statuses from TOON reports", () => {
+    const output = formatAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "toon", omitRedundancy: true });
+
+    expect(output).toContain("status: failed");
+    expect(output).toContain("threshold: 8");
+    expect(output).toContain("methods[2]{crap,cc,cov,covKind,func,src,lineStart,lineEnd}:");
+    expect(output).toContain("risky");
+    expect(output).toContain("safe");
+    expect(output).not.toContain("{status,crap");
+  });
+
+  it("omits redundant method statuses from text reports", () => {
+    const output = formatAnalysisReport([
+      metric(),
+      metric({
+        displayName: "risky",
+        complexity: 4,
+        coverage: measured(0),
+        statementCoverage: measured(0),
+        branchCoverage: measured(0),
+        coveragePercent: 0,
+        crapScore: 20
+      })
+    ], { format: "text", omitRedundancy: true });
+    const tableLines = output.split("\n").filter((line) => line.startsWith("|"));
+
+    expect(output).toContain("status: failed");
+    expect(output).toContain("threshold: 8.0");
+    expect(tableLines[0]).toBe("| crap | cc |    cov | covKind | func  | src           | lineStart | lineEnd |");
+    expect(output).toContain("risky");
+    expect(output).toContain("safe");
+    expect(output).not.toContain("| status |");
+  });
+
   it("omits redundant JUnit status properties while preserving failure elements", () => {
     const output = formatAnalysisReport([
       metric({
