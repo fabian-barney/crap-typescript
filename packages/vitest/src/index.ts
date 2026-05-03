@@ -29,6 +29,8 @@ export interface CrapTypescriptVitestOptions {
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
+  failuresOnly?: boolean;
+  omitRedundancy?: boolean;
   output?: string;
   junit?: boolean;
   junitReport?: string;
@@ -77,13 +79,7 @@ export function withCrapTypescriptVitest(
   const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "json", "text");
   const reporters = ensureDefaultReporter(asArray(testConfig.reporters));
   const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory);
-  reporters.push(new CrapTypescriptVitestReporter({
-    ...options,
-    coverageReportPath,
-    junitReport: options.junitReport === undefined
-      ? buildJunitReportFromCoverage(coverageReportPath)
-      : options.junitReport
-  }));
+  reporters.push(new CrapTypescriptVitestReporter(reporterOptions(options, coverageReportPath)));
 
   return {
     ...config,
@@ -135,6 +131,29 @@ function buildCoverageReportPath(reportsDirectory: string | undefined): string {
   return `${reportsDirectory ?? "coverage"}/coverage-final.json`;
 }
 
+function reporterOptions(
+  options: CrapTypescriptVitestOptions,
+  coverageReportPath: string
+): CrapTypescriptVitestOptions {
+  return {
+    ...options,
+    coverageReportPath,
+    format: configuredFormat(options),
+    junit: options.junit ?? true,
+    junitReport: configuredJunitReport(options, coverageReportPath)
+  };
+}
+
+function configuredFormat(options: CrapTypescriptVitestOptions): ReportFormat {
+  return options.format ?? (options.agent ? "toon" : "none");
+}
+
+function configuredJunitReport(options: CrapTypescriptVitestOptions, coverageReportPath: string): string {
+  return options.junitReport === undefined
+    ? buildJunitReportFromCoverage(coverageReportPath)
+    : options.junitReport;
+}
+
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -148,6 +167,8 @@ interface ResolvedReporterOptions {
   threshold: number | undefined;
   format: ReportFormat;
   agent: boolean;
+  failuresOnly: boolean | undefined;
+  omitRedundancy: boolean | undefined;
   output: string | undefined;
   junit: boolean;
   junitReport: string;
@@ -165,6 +186,8 @@ function resolveReporterOptions(options: CrapTypescriptVitestOptions): ResolvedR
     threshold: options.threshold,
     format: resolveFormat(options),
     agent: resolveAgent(options),
+    failuresOnly: options.failuresOnly,
+    omitRedundancy: options.omitRedundancy,
     output: options.output,
     junit: resolveJunit(options),
     junitReport: resolveJunitReport(options),
@@ -190,7 +213,7 @@ function resolvePackageManager(options: CrapTypescriptVitestOptions): PackageMan
 }
 
 function resolveFormat(options: CrapTypescriptVitestOptions): ReportFormat {
-  return options.format ?? (options.agent ? "toon" : "text");
+  return options.format ?? (options.agent ? "toon" : "none");
 }
 
 function resolveAgent(options: CrapTypescriptVitestOptions): boolean {
@@ -214,7 +237,9 @@ async function writeReporterReports(
   const primaryReport = formatAnalysisReport(metrics, {
     format: options.format,
     agent: options.agent,
-    threshold: options.threshold
+    threshold: options.threshold,
+    failuresOnly: options.failuresOnly,
+    omitRedundancy: options.omitRedundancy
   });
   if (options.output) {
     await writeReportFile(options.projectRoot, options.output, primaryReport);

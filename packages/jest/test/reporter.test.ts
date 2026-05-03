@@ -2,7 +2,14 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { StringWriter, createTempDir, disposeTempDir, readText, writeProjectFiles } from "../../core/test/testUtils";
+import {
+  StringWriter,
+  createTempDir,
+  disposeTempDir,
+  mixedCoverageProjectFiles,
+  readText,
+  writeProjectFiles
+} from "../../core/test/testUtils";
 import CrapTypescriptJestReporter from "../src/reporter";
 
 const tempDirs: string[] = [];
@@ -46,7 +53,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(finalize).toHaveBeenCalledTimes(1);
   });
 
-  it("prints a passed text report when no analyzable source files are selected", async () => {
+  it("emits no primary report by default and writes a full JUnit sidecar", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -64,7 +71,7 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8.0\n");
+    expect(stdout.toString()).toBe("");
     expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain('status="passed"');
     expect(stderr.toString()).toBe("");
     expect(reporter.getLastError()).toBeUndefined();
@@ -95,7 +102,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(stderr.toString()).toBe("");
   });
 
-  it("writes renamed output and JUnit report options", async () => {
+  it("writes renamed output and JUnit report options with the default empty primary report", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -116,7 +123,7 @@ describe("CrapTypescriptJestReporter", () => {
     await callFinalize(reporter);
 
     expect(stdout.toString()).toBe("");
-    expect(await readText(`${projectRoot}/reports/crap.txt`)).toBe("status: passed\nthreshold: 8.0\n");
+    expect(await readText(`${projectRoot}/reports/crap.txt`)).toBe("");
     expect(await readText(`${projectRoot}/reports/custom-junit.xml`)).toContain('status="passed"');
     expect(stderr.toString()).toBe("");
   });
@@ -134,6 +141,7 @@ describe("CrapTypescriptJestReporter", () => {
     const reporter = new CrapTypescriptJestReporter(undefined, {
       projectRoot,
       threshold: 9,
+      format: "text",
       stdout,
       stderr
     });
@@ -228,6 +236,7 @@ describe("CrapTypescriptJestReporter", () => {
       changedOnly: false,
       packageManager: "npm",
       coverageReportPath,
+      format: "text",
       stdout,
       stderr
     });
@@ -245,6 +254,52 @@ describe("CrapTypescriptJestReporter", () => {
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
     expect(reporter.getLastError()).toBeInstanceOf(Error);
     expect(reporter.getLastError()?.message).toContain("CRAP threshold exceeded");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("applies primary report controls without reducing the JUnit sidecar", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      ...mixedCoverageProjectFiles()
+    });
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptJestReporter(undefined, {
+      projectRoot,
+      paths: ["src"],
+      changedOnly: false,
+      packageManager: "npm",
+      format: "json",
+      failuresOnly: true,
+      omitRedundancy: true,
+      stdout,
+      stderr
+    });
+
+    await callFinalize(reporter);
+
+    const primary = JSON.parse(stdout.toString()) as {
+      status: string;
+      methods: Array<Record<string, unknown>>;
+    };
+    const junit = await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`);
+
+    expect(primary.status).toBe("failed");
+    expect(primary.methods).toEqual([
+      expect.objectContaining({
+        func: "risky"
+      })
+    ]);
+    expect(primary.methods[0]).not.toHaveProperty("status");
+    expect(junit).toContain('tests="2"');
+    expect(junit).toContain('name="safe"');
+    expect(junit).toContain('name="risky"');
+    expect(junit).toContain('<property name="status" value="passed"/>');
+    expect(junit).toContain('<property name="status" value="failed"/>');
+    expect(stderr.toString()).toContain("CRAP threshold exceeded");
     expect(process.exitCode).toBe(1);
   });
 

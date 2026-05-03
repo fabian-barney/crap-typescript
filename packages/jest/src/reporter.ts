@@ -17,6 +17,8 @@ export interface CrapTypescriptJestOptions {
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
+  failuresOnly?: boolean;
+  omitRedundancy?: boolean;
   output?: string;
   junit?: boolean;
   junitReport?: string;
@@ -33,6 +35,8 @@ interface ResolvedReporterOptions {
   threshold: number | undefined;
   format: ReportFormat;
   agent: boolean;
+  failuresOnly: boolean | undefined;
+  omitRedundancy: boolean | undefined;
   output: string | undefined;
   junit: boolean;
   junitReport: string;
@@ -142,6 +146,8 @@ function resolveAnalysisOptions(
     threshold: options.threshold,
     format: resolveFormat(options),
     agent: resolveAgent(options),
+    failuresOnly: options.failuresOnly,
+    omitRedundancy: options.omitRedundancy,
     output: options.output,
     junit: resolveJunit(options),
     junitReport: resolveJunitReport(options, coverageReportPath)
@@ -169,7 +175,7 @@ function resolveCoverageReportPathOption(options: CrapTypescriptJestOptions): st
 }
 
 function resolveFormat(options: CrapTypescriptJestOptions): ReportFormat {
-  return options.format ?? (options.agent ? "toon" : "text");
+  return options.format ?? (options.agent ? "toon" : "none");
 }
 
 function resolveAgent(options: CrapTypescriptJestOptions): boolean {
@@ -202,7 +208,9 @@ async function writeReporterReports(
   const primaryReport = formatAnalysisReport(metrics, {
     format: options.format,
     agent: options.agent,
-    threshold: options.threshold
+    threshold: options.threshold,
+    failuresOnly: options.failuresOnly,
+    omitRedundancy: options.omitRedundancy
   });
   if (options.output) {
     await writeReportFile(options.projectRoot, options.output, primaryReport);

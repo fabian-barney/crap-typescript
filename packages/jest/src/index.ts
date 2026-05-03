@@ -15,6 +15,8 @@ export interface CrapTypescriptJestOptions {
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
+  failuresOnly?: boolean;
+  omitRedundancy?: boolean;
   output?: string;
   junit?: boolean;
   junitReport?: string;
@@ -39,13 +41,7 @@ export function withCrapTypescriptJest(
   const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(config.coverageDirectory as string | undefined);
   reporters.push([
     resolveReporterPath(),
-    {
-      ...options,
-      coverageReportPath,
-      junitReport: options.junitReport === undefined
-        ? buildJunitReportFromCoverage(coverageReportPath)
-        : options.junitReport
-    }
+    reporterOptions(options, coverageReportPath)
   ]);
 
   return {
@@ -93,6 +89,29 @@ function buildCoverageReportPath(coverageDirectory: string | undefined): string 
 
 function buildJunitReportFromCoverage(coverageReportPath: string): string {
   return `${path.dirname(coverageReportPath).replace(/\\/g, "/")}/crap-typescript-junit.xml`;
+}
+
+function reporterOptions(
+  options: CrapTypescriptJestOptions,
+  coverageReportPath: string
+): CrapTypescriptJestOptions {
+  return {
+    ...options,
+    coverageReportPath,
+    format: configuredFormat(options),
+    junit: options.junit ?? true,
+    junitReport: configuredJunitReport(options, coverageReportPath)
+  };
+}
+
+function configuredFormat(options: CrapTypescriptJestOptions): ReportFormat {
+  return options.format ?? (options.agent ? "toon" : "none");
+}
+
+function configuredJunitReport(options: CrapTypescriptJestOptions, coverageReportPath: string): string {
+  return options.junitReport === undefined
+    ? buildJunitReportFromCoverage(coverageReportPath)
+    : options.junitReport;
 }
 
 function resolveReporterPath(): string {
