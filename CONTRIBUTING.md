@@ -5,7 +5,7 @@ All changes in this repository are expected to be issue-linked.
 ## Workflow
 
 1. Create or confirm the GitHub issue first.
-2. Create a branch named `<issue-number>-<slug>`.
+2. Create a branch named `codex/<issue-number>-<slug>`.
 3. Reference the issue number in every commit message.
 4. Open a pull request that closes the issue.
 5. Keep the pull request green, reply to review comments, and resolve threads only after the fix or an explicit invalidation response.
