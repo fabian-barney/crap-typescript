@@ -13,6 +13,8 @@ interface ResolvedReportPathTarget {
   collisionPath: string;
 }
 
+type FilesystemCaseCache = Map<string, boolean>;
+
 export async function validateReportPathTargets(
   projectRoot: string,
   targets: ReportPathTarget[]
@@ -21,8 +23,11 @@ export async function validateReportPathTargets(
     target.path !== undefined
   ));
   const shouldCheckCaseCollisions = reportTargets.length > 1;
+  const filesystemCaseCache: FilesystemCaseCache = new Map();
   const resolvedTargets = await Promise.all(
-    reportTargets.map((target) => resolveReportPathTarget(projectRoot, target, shouldCheckCaseCollisions))
+    reportTargets.map((target) => (
+      resolveReportPathTarget(projectRoot, target, shouldCheckCaseCollisions, filesystemCaseCache)
+    ))
   );
 
   for (let leftIndex = 0; leftIndex < resolvedTargets.length; leftIndex += 1) {
@@ -35,7 +40,8 @@ export async function validateReportPathTargets(
 async function resolveReportPathTarget(
   projectRoot: string,
   target: { label: string; path: string },
-  shouldCheckCaseCollisions: boolean
+  shouldCheckCaseCollisions: boolean,
+  filesystemCaseCache: FilesystemCaseCache
 ): Promise<ResolvedReportPathTarget> {
   const absolutePath = path.resolve(projectRoot, target.path);
   if (isFilesystemRoot(absolutePath)) {
@@ -49,7 +55,7 @@ async function resolveReportPathTarget(
 
   const canonicalPath = await canonicalizeReportPath(absolutePath);
   const caseInsensitiveFilesystem = shouldCheckCaseCollisions
-    ? await isCaseInsensitiveFilesystem(await nearestExistingParent(path.dirname(absolutePath)))
+    ? await caseInsensitiveFilesystemForTarget(absolutePath, filesystemCaseCache)
     : false;
 
   return {
@@ -58,6 +64,20 @@ async function resolveReportPathTarget(
     absolutePath,
     collisionPath: normalizeReportPathForCollision(canonicalPath, caseInsensitiveFilesystem)
   };
+}
+
+async function caseInsensitiveFilesystemForTarget(
+  absolutePath: string,
+  filesystemCaseCache: FilesystemCaseCache
+): Promise<boolean> {
+  const parent = await nearestExistingParent(path.dirname(absolutePath));
+  const cached = filesystemCaseCache.get(parent);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const caseInsensitiveFilesystem = await isCaseInsensitiveFilesystem(parent);
+  filesystemCaseCache.set(parent, caseInsensitiveFilesystem);
+  return caseInsensitiveFilesystem;
 }
 
 async function statIfExists(filePath: string): Promise<Awaited<ReturnType<typeof stat>> | undefined> {

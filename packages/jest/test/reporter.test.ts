@@ -173,25 +173,45 @@ describe("CrapTypescriptJestReporter", () => {
       output: "reports",
       junit: false
     });
+    expect(directoryTarget.stderr.toString()).toContain("output must target a report file, not an existing directory");
+    expect(directoryTarget.reporter.getLastError()?.message).toContain(
+      "output must target a report file, not an existing directory"
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
     const symlinkedDirectoryTarget = await finalizeWithOptions(projectRoot, {
       output: "linked-directory",
       junit: false
     });
+    expect(symlinkedDirectoryTarget.stderr.toString()).toContain(
+      "output must target a report file, not an existing directory"
+    );
+    expect(symlinkedDirectoryTarget.reporter.getLastError()?.message).toContain(
+      "output must target a report file, not an existing directory"
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
     const rootTarget = await finalizeWithOptions(projectRoot, {
       output: path.parse(projectRoot).root,
       junit: false
     });
+    expect(rootTarget.stderr.toString()).toContain("output must target a report file, not a filesystem root");
+    expect(rootTarget.reporter.getLastError()?.message).toContain(
+      "output must target a report file, not a filesystem root"
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
     const aliasTarget = await finalizeWithOptions(projectRoot, {
       output: "real-reports/crap.xml",
       junitReport: "linked-reports/crap.xml"
     });
-
-    expect(directoryTarget.stderr.toString()).toContain("output must target a report file, not an existing directory");
-    expect(symlinkedDirectoryTarget.stderr.toString()).toContain(
-      "output must target a report file, not an existing directory"
-    );
-    expect(rootTarget.stderr.toString()).toContain("output must target a report file, not a filesystem root");
     expect(aliasTarget.stderr.toString()).toContain("output and junitReport must target different report files");
+    expect(aliasTarget.reporter.getLastError()?.message).toContain(
+      "output and junitReport must target different report files"
+    );
     expect(process.exitCode).toBe(1);
   });
 

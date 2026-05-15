@@ -140,24 +140,32 @@ describe("CrapTypescriptVitestReporter", () => {
       output: "reports",
       junit: false
     });
+    expect(directoryTarget.stderr.toString()).toContain("output must target a report file, not an existing directory");
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
     const symlinkedDirectoryTarget = await finishWithOptions(projectRoot, {
       output: "linked-directory",
       junit: false
     });
+    expect(symlinkedDirectoryTarget.stderr.toString()).toContain(
+      "output must target a report file, not an existing directory"
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
     const rootTarget = await finishWithOptions(projectRoot, {
       output: path.parse(projectRoot).root,
       junit: false
     });
+    expect(rootTarget.stderr.toString()).toContain("output must target a report file, not a filesystem root");
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
     const aliasTarget = await finishWithOptions(projectRoot, {
       output: "real-reports/crap.xml",
       junitReport: "linked-reports/crap.xml"
     });
-
-    expect(directoryTarget.stderr.toString()).toContain("output must target a report file, not an existing directory");
-    expect(symlinkedDirectoryTarget.stderr.toString()).toContain(
-      "output must target a report file, not an existing directory"
-    );
-    expect(rootTarget.stderr.toString()).toContain("output must target a report file, not a filesystem root");
     expect(aliasTarget.stderr.toString()).toContain("output and junitReport must target different report files");
     expect(process.exitCode).toBe(1);
   });
