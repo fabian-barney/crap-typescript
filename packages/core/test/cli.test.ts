@@ -149,8 +149,8 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--output"])).toThrow("--output requires a path");
     expect(() => parseCliArguments(["--junit-report"])).toThrow("--junit-report requires a path");
     expect(() => parseCliArguments(["--exclude"])).toThrow("--exclude requires a path");
-    expect(() => parseCliArguments(["--exclude-path-regex"])).toThrow("--exclude-path-regex requires a path");
-    expect(() => parseCliArguments(["--exclude-generated-marker"])).toThrow("--exclude-generated-marker requires a path");
+    expect(() => parseCliArguments(["--exclude-path-regex"])).toThrow("--exclude-path-regex requires a regex");
+    expect(() => parseCliArguments(["--exclude-generated-marker"])).toThrow("--exclude-generated-marker requires a marker");
     expect(() => parseCliArguments(["--package-manager", "bun"])).toThrow(
       "--package-manager requires one of: auto, npm, pnpm, yarn"
     );

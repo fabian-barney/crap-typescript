@@ -156,11 +156,11 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     return index + 1;
   },
   "--exclude-path-regex": (state, args, index) => {
-    state.excludePathRegexes.push(parsePathOption(args[index + 1], "--exclude-path-regex"));
+    state.excludePathRegexes.push(parseRequiredOption(args[index + 1], "--exclude-path-regex", "regex"));
     return index + 1;
   },
   "--exclude-generated-marker": (state, args, index) => {
-    state.excludeGeneratedMarkers.push(parsePathOption(args[index + 1], "--exclude-generated-marker"));
+    state.excludeGeneratedMarkers.push(parseRequiredOption(args[index + 1], "--exclude-generated-marker", "marker"));
     return index + 1;
   }
 };
@@ -359,8 +359,12 @@ function parseBooleanOption(value: string | undefined, option: string): boolean 
 }
 
 function parsePathOption(value: string | undefined, option: string): string {
+  return parseRequiredOption(value, option, "path");
+}
+
+function parseRequiredOption(value: string | undefined, option: string, valueName: string): string {
   if (!value) {
-    throw new Error(`${option} requires a path`);
+    throw new Error(`${option} requires a ${valueName}`);
   }
   return value;
 }

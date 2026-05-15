@@ -56,6 +56,12 @@ describe("source exclusions", () => {
       includedFiles: 1,
       excludedFiles: relativePaths.length - 1
     });
+    expect(result.audit.reasons).toContainEqual({
+      source: "default",
+      kind: "path",
+      rule: "**/*_grpc_pb.ts",
+      count: 1
+    });
   });
 
   it("does not add broad handwritten-code patterns as defaults", async () => {
