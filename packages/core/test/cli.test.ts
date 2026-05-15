@@ -242,6 +242,23 @@ describe("cli", () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain("--output and --junit-report must target different report files");
     });
+
+    it("rejects case-insensitive absolute report path collisions outside the project root on Windows", async () => {
+      const projectRoot = await createTempDir("crap-cli-");
+      const reportRoot = await createTempDir("crap-reports-");
+      tempDirs.push(projectRoot, reportRoot);
+      const result = await runPathValidation([
+        "--format",
+        "none",
+        "--output",
+        path.join(reportRoot, "CRAP.xml"),
+        "--junit-report",
+        path.join(reportRoot, "crap.xml")
+      ], projectRoot);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("--output and --junit-report must target different report files");
+    });
   }
 
   it("rejects existing directory report targets", async () => {

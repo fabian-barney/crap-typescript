@@ -20,11 +20,9 @@ export async function validateReportPathTargets(
   const reportTargets = targets.filter((target): target is { label: string; path: string } => (
     target.path !== undefined
   ));
-  const caseInsensitiveFilesystem = reportTargets.length > 1
-    ? await isCaseInsensitiveFilesystem(projectRoot)
-    : false;
+  const shouldCheckCaseCollisions = reportTargets.length > 1;
   const resolvedTargets = await Promise.all(
-    reportTargets.map((target) => resolveReportPathTarget(projectRoot, target, caseInsensitiveFilesystem))
+    reportTargets.map((target) => resolveReportPathTarget(projectRoot, target, shouldCheckCaseCollisions))
   );
 
   for (let leftIndex = 0; leftIndex < resolvedTargets.length; leftIndex += 1) {
@@ -37,7 +35,7 @@ export async function validateReportPathTargets(
 async function resolveReportPathTarget(
   projectRoot: string,
   target: { label: string; path: string },
-  caseInsensitiveFilesystem: boolean
+  shouldCheckCaseCollisions: boolean
 ): Promise<ResolvedReportPathTarget> {
   const absolutePath = path.resolve(projectRoot, target.path);
   if (isFilesystemRoot(absolutePath)) {
@@ -49,11 +47,16 @@ async function resolveReportPathTarget(
     throw new Error(`${target.label} must target a report file, not an existing directory`);
   }
 
+  const canonicalPath = await canonicalizeReportPath(absolutePath);
+  const caseInsensitiveFilesystem = shouldCheckCaseCollisions
+    ? await isCaseInsensitiveFilesystem(await nearestExistingParent(path.dirname(absolutePath)))
+    : false;
+
   return {
     label: target.label,
     path: target.path,
     absolutePath,
-    collisionPath: normalizeReportPathForCollision(await canonicalizeReportPath(absolutePath), caseInsensitiveFilesystem)
+    collisionPath: normalizeReportPathForCollision(canonicalPath, caseInsensitiveFilesystem)
   };
 }
 
@@ -104,6 +107,18 @@ async function canonicalizeExistingParent(directoryPath: string): Promise<string
     }
     return path.join(await canonicalizeExistingParent(parent), path.basename(directoryPath));
   }
+}
+
+async function nearestExistingParent(directoryPath: string): Promise<string> {
+  const stats = await statIfExists(directoryPath);
+  if (stats?.isDirectory()) {
+    return realpath(directoryPath);
+  }
+  const parent = path.dirname(directoryPath);
+  if (parent === directoryPath) {
+    return directoryPath;
+  }
+  return nearestExistingParent(parent);
 }
 
 function normalizeReportPathForCollision(filePath: string, caseInsensitiveFilesystem: boolean): string {
