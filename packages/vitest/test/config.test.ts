@@ -60,7 +60,11 @@ describe("withCrapTypescriptVitest", () => {
       omitRedundancy: true,
       output: "reports/crap.txt",
       junit: false,
-      junitReport: "reports/custom-junit.xml"
+      junitReport: "reports/custom-junit.xml",
+      excludes: ["src/generated/**"],
+      excludePathRegexes: ["^src/proto/"],
+      excludeGeneratedMarkers: ["@custom-generated"],
+      useDefaultExclusions: false
     });
 
     expect(config.test?.reporters).toEqual([
@@ -73,7 +77,11 @@ describe("withCrapTypescriptVitest", () => {
           failuresOnly: true,
           omitRedundancy: true,
           junit: false,
-          junitReport: "reports/custom-junit.xml"
+          junitReport: "reports/custom-junit.xml",
+          excludes: ["src/generated/**"],
+          excludePathRegexes: ["^src/proto/"],
+          excludeGeneratedMarkers: ["@custom-generated"],
+          useDefaultExclusions: false
         })
       })
     ]);

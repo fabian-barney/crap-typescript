@@ -47,6 +47,10 @@ export interface CliArguments {
   output?: string;
   junit: boolean;
   junitReport?: string;
+  excludes?: string[];
+  excludePathRegexes?: string[];
+  excludeGeneratedMarkers?: string[];
+  useDefaultExclusions?: boolean;
 }
 
 export interface MethodDescriptor {
@@ -97,6 +101,27 @@ export interface AnalyzeProjectOptions {
   stdout?: Writer;
   stderr?: Writer;
   executor?: CommandExecutor;
+  excludes?: string[];
+  excludePathRegexes?: string[];
+  excludeGeneratedMarkers?: string[];
+  useDefaultExclusions?: boolean;
+}
+
+export type SourceExclusionSource = "default" | "user";
+export type SourceExclusionKind = "path" | "pathRegex" | "generatedMarker";
+
+export interface SourceExclusionReasonCount {
+  source: SourceExclusionSource;
+  kind: SourceExclusionKind;
+  rule: string;
+  count: number;
+}
+
+export interface SourceExclusionAudit {
+  candidateFiles: number;
+  includedFiles: number;
+  excludedFiles: number;
+  reasons: SourceExclusionReasonCount[];
 }
 
 export interface AnalysisResult {
@@ -107,4 +132,5 @@ export interface AnalysisResult {
   selectedFiles: string[];
   coverageCommands: CoverageCommand[];
   warnings: string[];
+  sourceExclusionAudit: SourceExclusionAudit;
 }

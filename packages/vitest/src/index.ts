@@ -2,7 +2,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { analyzeProject, formatAnalysisReport, validateReportPathTargets } from "@barney-media/crap-typescript-core";
-import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
+import type {
+  PackageManagerSelection,
+  ReportFormat,
+  SourceExclusionAudit,
+  Writer
+} from "@barney-media/crap-typescript-core";
 
 type VitestReporterEntry = string | [string, unknown] | {
   onTestRunEnd?: () => Promise<void>;
@@ -36,6 +41,10 @@ export interface CrapTypescriptVitestOptions {
   junitReport?: string;
   stdout?: Writer;
   stderr?: Writer;
+  excludes?: string[];
+  excludePathRegexes?: string[];
+  excludeGeneratedMarkers?: string[];
+  useDefaultExclusions?: boolean;
 }
 
 export class CrapTypescriptVitestReporter {
@@ -54,11 +63,15 @@ export class CrapTypescriptVitestReporter {
         threshold: options.threshold,
         coverageMode: "existing-only",
         coverageReportPath: options.coverageReportPath,
+        excludes: options.excludes,
+        excludePathRegexes: options.excludePathRegexes,
+        excludeGeneratedMarkers: options.excludeGeneratedMarkers,
+        useDefaultExclusions: options.useDefaultExclusions,
         stdout: options.stdout,
         stderr: options.stderr
       });
 
-      await writeReporterReports(result.metrics, options);
+      await writeReporterReports(result.metrics, result.sourceExclusionAudit, options);
       if (result.thresholdExceeded) {
         const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${result.threshold.toFixed(1)}`;
         options.stderr.write(`${error}\n`);
@@ -175,6 +188,10 @@ interface ResolvedReporterOptions {
   junitReport: string;
   stdout: Writer;
   stderr: Writer;
+  excludes: string[] | undefined;
+  excludePathRegexes: string[] | undefined;
+  excludeGeneratedMarkers: string[] | undefined;
+  useDefaultExclusions: boolean | undefined;
 }
 
 function resolveReporterOptions(options: CrapTypescriptVitestOptions): ResolvedReporterOptions {
@@ -193,7 +210,11 @@ function resolveReporterOptions(options: CrapTypescriptVitestOptions): ResolvedR
     junit: resolveJunit(options),
     junitReport: resolveJunitReport(options),
     stdout: options.stdout ?? process.stdout,
-    stderr: options.stderr ?? process.stderr
+    stderr: options.stderr ?? process.stderr,
+    excludes: options.excludes,
+    excludePathRegexes: options.excludePathRegexes,
+    excludeGeneratedMarkers: options.excludeGeneratedMarkers,
+    useDefaultExclusions: options.useDefaultExclusions
   };
 }
 
@@ -233,6 +254,7 @@ function resolveJunitReport(options: CrapTypescriptVitestOptions): string {
 
 async function writeReporterReports(
   metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"],
+  sourceExclusionAudit: SourceExclusionAudit,
   options: ResolvedReporterOptions
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(metrics, {
@@ -240,7 +262,8 @@ async function writeReporterReports(
     agent: options.agent,
     threshold: options.threshold,
     failuresOnly: options.failuresOnly,
-    omitRedundancy: options.omitRedundancy
+    omitRedundancy: options.omitRedundancy,
+    sourceExclusionAudit
   });
   if (options.output) {
     await writeReportFile(options.projectRoot, options.output, primaryReport);
@@ -251,7 +274,8 @@ async function writeReporterReports(
   if (options.junit) {
     await writeReportFile(options.projectRoot, options.junitReport, formatAnalysisReport(metrics, {
       format: "junit",
-      threshold: options.threshold
+      threshold: options.threshold,
+      sourceExclusionAudit
     }));
   }
 }

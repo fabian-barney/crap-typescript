@@ -22,6 +22,10 @@ export interface CrapTypescriptJestOptions {
   junitReport?: string;
   stdout?: Writer;
   stderr?: Writer;
+  excludes?: string[];
+  excludePathRegexes?: string[];
+  excludeGeneratedMarkers?: string[];
+  useDefaultExclusions?: boolean;
 }
 
 type JestReporterEntry = string | [string, unknown];

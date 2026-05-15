@@ -7,7 +7,12 @@ import {
   formatAnalysisReport,
   validateReportPathTargets
 } from "@barney-media/crap-typescript-core";
-import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
+import type {
+  PackageManagerSelection,
+  ReportFormat,
+  SourceExclusionAudit,
+  Writer
+} from "@barney-media/crap-typescript-core";
 
 export interface CrapTypescriptJestOptions {
   projectRoot?: string;
@@ -25,6 +30,10 @@ export interface CrapTypescriptJestOptions {
   junitReport?: string;
   stdout?: Writer;
   stderr?: Writer;
+  excludes?: string[];
+  excludePathRegexes?: string[];
+  excludeGeneratedMarkers?: string[];
+  useDefaultExclusions?: boolean;
 }
 
 interface ResolvedReporterOptions {
@@ -43,6 +52,10 @@ interface ResolvedReporterOptions {
   junitReport: string;
   stdout: Writer;
   stderr: Writer;
+  excludes: string[] | undefined;
+  excludePathRegexes: string[] | undefined;
+  excludeGeneratedMarkers: string[] | undefined;
+  useDefaultExclusions: boolean | undefined;
 }
 
 export default class CrapTypescriptJestReporter {
@@ -78,11 +91,15 @@ export default class CrapTypescriptJestReporter {
         threshold: options.threshold,
         coverageMode: "existing-only",
         coverageReportPath: options.coverageReportPath,
+        excludes: options.excludes,
+        excludePathRegexes: options.excludePathRegexes,
+        excludeGeneratedMarkers: options.excludeGeneratedMarkers,
+        useDefaultExclusions: options.useDefaultExclusions,
         stdout: options.stdout,
         stderr: options.stderr
       });
 
-      await writeReporterReports(result.metrics, options);
+      await writeReporterReports(result.metrics, result.sourceExclusionAudit, options);
       if (result.thresholdExceeded) {
         this.error = createThresholdExceededError(result.maxCrap, result.threshold);
         options.stderr.write(`${this.error.message}\n`);
@@ -152,7 +169,11 @@ function resolveAnalysisOptions(
     omitRedundancy: options.omitRedundancy,
     output: options.output,
     junit: resolveJunit(options),
-    junitReport: resolveJunitReport(options, coverageReportPath)
+    junitReport: resolveJunitReport(options, coverageReportPath),
+    excludes: options.excludes,
+    excludePathRegexes: options.excludePathRegexes,
+    excludeGeneratedMarkers: options.excludeGeneratedMarkers,
+    useDefaultExclusions: options.useDefaultExclusions
   };
 }
 
@@ -205,6 +226,7 @@ function resolveOutputWriters(
 
 async function writeReporterReports(
   metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"],
+  sourceExclusionAudit: SourceExclusionAudit,
   options: ResolvedReporterOptions
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(metrics, {
@@ -212,7 +234,8 @@ async function writeReporterReports(
     agent: options.agent,
     threshold: options.threshold,
     failuresOnly: options.failuresOnly,
-    omitRedundancy: options.omitRedundancy
+    omitRedundancy: options.omitRedundancy,
+    sourceExclusionAudit
   });
   if (options.output) {
     await writeReportFile(options.projectRoot, options.output, primaryReport);
@@ -223,7 +246,8 @@ async function writeReporterReports(
   if (options.junit) {
     await writeReportFile(options.projectRoot, options.junitReport, formatAnalysisReport(metrics, {
       format: "junit",
-      threshold: options.threshold
+      threshold: options.threshold,
+      sourceExclusionAudit
     }));
   }
 }
