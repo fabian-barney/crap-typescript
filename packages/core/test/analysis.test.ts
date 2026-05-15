@@ -71,6 +71,35 @@ describe("analyzeProject", () => {
     await expect(analyzeProject({ threshold: 0 })).rejects.toThrow("Threshold must be a finite number greater than 0");
   });
 
+  it("excludes generated files before parsing, metrics, and threshold evaluation", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/generated/risky.ts": `export function risky(flagA: boolean, flagB: boolean): number {
+  if (flagA && flagB) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      coverageMode: "existing-only"
+    });
+
+    expect(result.selectedFiles).toEqual([]);
+    expect(result.metrics).toEqual([]);
+    expect(result.thresholdExceeded).toBe(false);
+    expect(result.sourceExclusionAudit).toMatchObject({
+      candidateFiles: 1,
+      includedFiles: 0,
+      excludedFiles: 1
+    });
+  });
+
   it("warns and reports N/A coverage when existing coverage is missing", async () => {
     const projectRoot = await createTempDir("crap-analysis-");
     tempDirs.push(projectRoot);

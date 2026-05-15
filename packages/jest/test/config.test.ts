@@ -80,7 +80,11 @@ describe("withCrapTypescriptJest", () => {
       omitRedundancy: true,
       output: "reports/crap.txt",
       junit: false,
-      junitReport: "reports/custom-junit.xml"
+      junitReport: "reports/custom-junit.xml",
+      excludes: ["src/generated/**"],
+      excludePathRegexes: ["^src/proto/"],
+      excludeGeneratedMarkers: ["@custom-generated"],
+      useDefaultExclusions: false
     });
 
     expect(config.reporters).toEqual([
@@ -94,7 +98,11 @@ describe("withCrapTypescriptJest", () => {
           omitRedundancy: true,
           output: "reports/crap.txt",
           junit: false,
-          junitReport: "reports/custom-junit.xml"
+          junitReport: "reports/custom-junit.xml",
+          excludes: ["src/generated/**"],
+          excludePathRegexes: ["^src/proto/"],
+          excludeGeneratedMarkers: ["@custom-generated"],
+          useDefaultExclusions: false
         })
       ]
     ]);

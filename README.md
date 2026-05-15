@@ -82,6 +82,10 @@ npx crap-typescript
 --help                       Print usage to stdout
 (no args)                    Analyze all TypeScript files under any nested src/ tree
 --changed                    Analyze changed TypeScript files under src/
+--exclude <glob>             Exclude source paths by normalized relative glob; repeatable
+--exclude-path-regex <regex> Exclude source paths by normalized relative regex; repeatable
+--exclude-generated-marker <marker> Exclude leading generated-header markers; repeatable
+--use-default-exclusions[=true|false] Enable generated-code defaults (`true` by default)
 --package-manager <tool>     Force auto, npm, pnpm, or yarn
 --test-runner <runner>       Force auto, vitest, or jest
 --format <format>            Emit toon, json, text, junit, or none (default: toon)
@@ -107,9 +111,32 @@ npx crap-typescript --failures-only --format json
 npx crap-typescript --omit-redundancy --format toon
 npx crap-typescript --agent --junit-report reports/crap-junit.xml
 npx crap-typescript --threshold 6
+npx crap-typescript --exclude 'packages/api/generated/**'
+npx crap-typescript --exclude-path-regex '^src/proto/'
+npx crap-typescript --exclude-generated-marker '@custom-generated'
+npx crap-typescript --use-default-exclusions=false
 npx crap-typescript src/sample.ts
 npx crap-typescript packages/api packages/web
 ```
+
+## Source Selection And Exclusions
+
+The baseline analyzability filter always skips declaration files, test/spec files, files under `__tests__/`, and files under `dist/`, `coverage/`, and `node_modules/`. The generated-code exclusion layer runs after CLI paths, `--changed`, or adapter `paths` choose the candidate source set. Disabling generated-code defaults with `useDefaultExclusions: false` does not disable those baseline analyzability exclusions.
+
+Default generated-code path exclusions are conservative:
+
+- any source file below a directory segment containing `generated`
+- any source file below a directory segment exactly named `gen`
+- `**/*.generated.ts`, `**/*.generated.tsx`, `**/*.gen.ts`, `**/*.gen.tsx`
+- `**/*Generated.ts`, `**/*Generated.tsx`
+- `**/*_pb.ts`, `**/*_grpc_pb.ts`, `**/*.pb.ts`
+- `**/*.ngfactory.ts`, `**/*.ngsummary.ts`, `**/*.ngtypecheck.ts`
+
+Default generated-header markers are matched only in leading comments before the first non-comment source token: `@generated`, `@auto-generated`, `AUTO-GENERATED`, `This file was generated`, `This file is generated`, `Do not edit`, and `DO NOT EDIT`. `eslint-disable` and `tslint:disable` are not generated markers by themselves.
+
+Use `--exclude <glob>` for package/path/file globs such as `packages/api/**`, `--exclude-path-regex <regex>` for normalized relative source-path regexes, and `--exclude-generated-marker <marker>` for project-specific generated headers. Core, Vitest, and Jest expose the same controls as `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, and `useDefaultExclusions`.
+
+Full primary reports and JUnit sidecars include source-exclusion audit counts when files were excluded. Optimized primary reports from default `--agent` mode stay compact and omit that audit; use a full primary report or the JUnit sidecar when agent workflows need exclusion visibility.
 
 ## Report Formats
 
@@ -141,7 +168,7 @@ export default withCrapTypescriptVitest({
 });
 ```
 
-The Vitest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
+The Vitest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, `threshold`, `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, or `useDefaultExclusions` in the adapter options to customize analysis and reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
 Jest:
 
@@ -153,7 +180,7 @@ export default withCrapTypescriptJest({
 });
 ```
 
-The Jest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, or `threshold` in the adapter options to customize reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
+The Jest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, `threshold`, `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, or `useDefaultExclusions` in the adapter options to customize analysis and reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
 ## Exit Codes
 

@@ -10,6 +10,7 @@ import {
   formatToonReport
 } from "../src/report";
 import type { CoverageMetric, MethodMetrics } from "../src/types";
+import type { SourceExclusionAudit } from "../src/types";
 
 const measured = (percent: number): CoverageMetric => ({
   percent,
@@ -57,6 +58,20 @@ function metric(overrides: Partial<MethodMetrics> = {}): MethodMetrics {
     ...overrides
   };
 }
+
+const sourceExclusionAudit: SourceExclusionAudit = {
+  candidateFiles: 2,
+  includedFiles: 1,
+  excludedFiles: 1,
+  reasons: [
+    {
+      source: "default",
+      kind: "path",
+      rule: "**/*.generated.ts",
+      count: 1
+    }
+  ]
+};
 
 describe("report formatting", () => {
   it("builds status, method status, and coverage kind from metrics", () => {
@@ -176,6 +191,55 @@ describe("report formatting", () => {
         lineEnd: 3
       }
     ]);
+  });
+
+  it("includes source exclusion audit in full reports and JUnit sidecars", () => {
+    const parsed = JSON.parse(formatAnalysisReport([metric()], {
+      format: "json",
+      sourceExclusionAudit
+    })) as {
+      sourceExclusions: SourceExclusionAudit;
+    };
+    const text = formatAnalysisReport([metric()], {
+      format: "text",
+      sourceExclusionAudit
+    });
+    const junit = formatAnalysisReport([metric()], {
+      format: "junit",
+      sourceExclusionAudit
+    });
+
+    expect(parsed.sourceExclusions).toEqual(sourceExclusionAudit);
+    expect(text).toContain("sourceExclusions:");
+    expect(text).toContain("  default path **/*.generated.ts: 1");
+    expect(junit).toContain('name="sourceExclusions.candidateFiles" value="2"');
+    expect(junit).toContain('value="default path **/*.generated.ts: 1"');
+  });
+
+  it("omits source exclusion audit from optimized agent primary reports", () => {
+    const compactAgent = JSON.parse(formatAnalysisReport([metric({
+      displayName: "risky",
+      complexity: 4,
+      coverage: measured(0),
+      statementCoverage: measured(0),
+      branchCoverage: measured(0),
+      coveragePercent: 0,
+      crapScore: 20
+    })], {
+      format: "json",
+      agent: true,
+      sourceExclusionAudit
+    })) as Record<string, unknown>;
+    const fullAgentOverride = JSON.parse(formatAnalysisReport([metric()], {
+      format: "json",
+      agent: true,
+      failuresOnly: false,
+      omitRedundancy: false,
+      sourceExclusionAudit
+    })) as Record<string, unknown>;
+
+    expect(compactAgent).not.toHaveProperty("sourceExclusions");
+    expect(fullAgentOverride).toHaveProperty("sourceExclusions");
   });
 
   it("uses configured thresholds for method status and report metadata", () => {

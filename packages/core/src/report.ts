@@ -8,7 +8,8 @@ import type {
   MethodMetrics,
   MethodReportStatus,
   ReportFormat,
-  ReportStatus
+  ReportStatus,
+  SourceExclusionAudit
 } from "./types.js";
 
 const METHOD_COLUMNS = ["status", "crap", "cc", "cov", "covKind", "method", "src", "lineStart", "lineEnd"] as const;
@@ -33,12 +34,14 @@ export interface AnalysisReport {
   status: ReportStatus;
   threshold: number;
   methods: MethodReportEntry[];
+  sourceExclusions?: SourceExclusionAudit;
 }
 
 export interface AgentAnalysisReport {
   status: ReportStatus;
   threshold: number;
   methods: AgentMethodReportEntry[];
+  sourceExclusions?: SourceExclusionAudit;
 }
 
 export interface FormatAnalysisReportOptions {
@@ -47,6 +50,8 @@ export interface FormatAnalysisReportOptions {
   threshold?: number;
   failuresOnly?: boolean;
   omitRedundancy?: boolean;
+  sourceExclusionAudit?: SourceExclusionAudit;
+  includeExclusionAudit?: boolean;
 }
 
 type SerializableReport = AnalysisReport | AgentAnalysisReport;
@@ -90,25 +95,32 @@ export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
 export function buildAnalysisReport(
   metrics: MethodMetrics[],
   threshold = CRAP_THRESHOLD,
-  failuresOnly = false
+  failuresOnly = false,
+  sourceExclusionAudit?: SourceExclusionAudit
 ): AnalysisReport {
   threshold = validateThreshold(threshold);
   const allMethods = sortMetrics(metrics).map((metric) => toMethodReportEntry(metric, threshold));
   return {
     status: allMethods.some((method) => method.status === "failed") ? "failed" : "passed",
     threshold,
-    methods: failuresOnly ? allMethods.filter((method) => method.status === "failed") : allMethods
+    methods: failuresOnly ? allMethods.filter((method) => method.status === "failed") : allMethods,
+    ...optionalSourceExclusions(sourceExclusionAudit)
   };
 }
 
-export function buildAgentAnalysisReport(metrics: MethodMetrics[], threshold = CRAP_THRESHOLD): AgentAnalysisReport {
-  const report = buildAnalysisReport(metrics, threshold);
+export function buildAgentAnalysisReport(
+  metrics: MethodMetrics[],
+  threshold = CRAP_THRESHOLD,
+  sourceExclusionAudit?: SourceExclusionAudit
+): AgentAnalysisReport {
+  const report = buildAnalysisReport(metrics, threshold, false, sourceExclusionAudit);
   return {
     status: report.status,
     threshold: report.threshold,
     methods: report.methods
       .filter((method) => method.status === "failed")
-      .map(({ status: _status, ...method }) => method)
+      .map(({ status: _status, ...method }) => method),
+    ...optionalSourceExclusions(report.sourceExclusions)
   };
 }
 
@@ -119,25 +131,50 @@ export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAn
     return "";
   }
 
+  const resolvedOptions = resolveFormatOptions(options);
+  const report = buildPrimaryAnalysisReport(metrics, threshold, options.format, resolvedOptions);
+  return REPORT_FORMATTERS[options.format](
+    report,
+    resolvedOptions.omitRedundancy
+  );
+}
+
+interface ResolvedFormatOptions {
+  failuresOnly: boolean;
+  omitRedundancy: boolean;
+  sourceExclusionAudit: SourceExclusionAudit | undefined;
+}
+
+function resolveFormatOptions(options: FormatAnalysisReportOptions): ResolvedFormatOptions {
   const agent = options.agent ?? false;
   const failuresOnly = options.failuresOnly ?? agent;
   const omitRedundancy = options.omitRedundancy ?? agent;
-  const report = buildPrimaryAnalysisReport(metrics, threshold, failuresOnly, omitRedundancy, options.format);
-  return REPORT_FORMATTERS[options.format](
-    report,
-    omitRedundancy
-  );
+  return {
+    failuresOnly,
+    omitRedundancy,
+    sourceExclusionAudit: resolvedSourceExclusionAudit(options, agent, failuresOnly, omitRedundancy)
+  };
+}
+
+function resolvedSourceExclusionAudit(
+  options: FormatAnalysisReportOptions,
+  agent: boolean,
+  failuresOnly: boolean,
+  omitRedundancy: boolean
+): SourceExclusionAudit | undefined {
+  const optimizedAgentPrimary = agent && failuresOnly && omitRedundancy;
+  const includeExclusionAudit = options.includeExclusionAudit ?? !optimizedAgentPrimary;
+  return includeExclusionAudit ? options.sourceExclusionAudit : undefined;
 }
 
 function buildPrimaryAnalysisReport(
   metrics: MethodMetrics[],
   threshold: number,
-  failuresOnly: boolean,
-  omitRedundancy: boolean,
-  format: ReportFormat
+  format: ReportFormat,
+  options: ResolvedFormatOptions
 ): SerializableReport {
-  const report = buildAnalysisReport(metrics, threshold, failuresOnly);
-  return omitRedundancy && format !== "junit" ? omitMethodStatuses(report) : report;
+  const report = buildAnalysisReport(metrics, threshold, options.failuresOnly, options.sourceExclusionAudit);
+  return options.omitRedundancy && format !== "junit" ? omitMethodStatuses(report) : report;
 }
 
 export function formatReport(metrics: MethodMetrics[]): string {
@@ -153,8 +190,9 @@ export function formatToonReport(report: SerializableReport, agent = false): str
 
 export function formatTextReport(report: SerializableReport, agent = false): string {
   const summary = [`status: ${report.status}`, `threshold: ${formatNumber(report.threshold)}`];
+  const sourceExclusionLines = formatTextSourceExclusions(report.sourceExclusions);
   if (report.methods.length === 0) {
-    return `${summary.join("\n")}\n`;
+    return `${[...summary, ...sourceExclusionLines].join("\n")}\n`;
   }
 
   const includeStatus = !agent && reportHasMethodStatus(report);
@@ -171,7 +209,7 @@ export function formatTextReport(report: SerializableReport, agent = false): str
   const separator = formatTextSeparator(widths);
   const body = rows.map((row) => formatTextRow(row, widths, columns));
 
-  return [...summary, "", headerLine, separator, ...body].join("\n") + "\n";
+  return [...summary, ...sourceExclusionLines, "", headerLine, separator, ...body].join("\n") + "\n";
 }
 
 export function formatJunitReport(report: AnalysisReport, omitRedundancy = false): string {
@@ -200,7 +238,8 @@ function omitMethodStatuses(report: AnalysisReport): AgentAnalysisReport {
   return {
     status: report.status,
     threshold: report.threshold,
-    methods: report.methods.map(({ status: _status, ...method }) => method)
+    methods: report.methods.map(({ status: _status, ...method }) => method),
+    ...optionalSourceExclusions(report.sourceExclusions)
   };
 }
 
@@ -308,7 +347,8 @@ function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
     "@_time": 0,
     properties: {
       property: [
-        toXmlProperty("threshold", formatNumber(report.threshold))
+        toXmlProperty("threshold", formatNumber(report.threshold)),
+        ...sourceExclusionXmlProperties(report.sourceExclusions)
       ]
     }
   };
@@ -328,6 +368,49 @@ function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
       testsuite
     }
   };
+}
+
+function optionalSourceExclusions(sourceExclusionAudit: SourceExclusionAudit | undefined): {
+  sourceExclusions?: SourceExclusionAudit;
+} {
+  if (!sourceExclusionAudit || sourceExclusionAudit.excludedFiles === 0) {
+    return {};
+  }
+  return { sourceExclusions: sourceExclusionAudit };
+}
+
+function formatTextSourceExclusions(sourceExclusions: SourceExclusionAudit | undefined): string[] {
+  if (!sourceExclusions) {
+    return [];
+  }
+  const lines = [
+    "sourceExclusions:",
+    `  candidates: ${sourceExclusions.candidateFiles}`,
+    `  included: ${sourceExclusions.includedFiles}`,
+    `  excluded: ${sourceExclusions.excludedFiles}`
+  ];
+  for (const reason of sourceExclusions.reasons) {
+    lines.push(`  ${reason.source} ${reason.kind} ${reason.rule}: ${reason.count}`);
+  }
+  return lines;
+}
+
+function sourceExclusionXmlProperties(sourceExclusions: SourceExclusionAudit | undefined): XmlNode[] {
+  if (!sourceExclusions) {
+    return [];
+  }
+  const properties = [
+    toXmlProperty("sourceExclusions.candidateFiles", String(sourceExclusions.candidateFiles)),
+    toXmlProperty("sourceExclusions.includedFiles", String(sourceExclusions.includedFiles)),
+    toXmlProperty("sourceExclusions.excludedFiles", String(sourceExclusions.excludedFiles))
+  ];
+  sourceExclusions.reasons.forEach((reason, index) => {
+    properties.push(toXmlProperty(
+      `sourceExclusions.reason.${index}`,
+      `${reason.source} ${reason.kind} ${reason.rule}: ${reason.count}`
+    ));
+  });
+  return properties;
 }
 
 function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCounts {

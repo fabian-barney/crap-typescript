@@ -9,6 +9,7 @@ import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTyp
 import { parseCoverageReport } from "./istanbul.js";
 import { resolveModuleRoot } from "./moduleResolution.js";
 import { parseFileMethods } from "./parser.js";
+import { emptySourceExclusionAudit, filterSourceFiles } from "./sourceExclusions.js";
 import { DefaultCommandExecutor, normalizePathForMatch, toRelativePath, writeLine } from "./utils.js";
 import type {
   AnalysisResult,
@@ -22,9 +23,11 @@ import type {
 export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promise<AnalysisResult> {
   const context = createAnalyzeContext(options);
   const runWarnings = emitThresholdWarning(context.stderr, context.threshold);
-  const selectedFiles = await selectFiles(context.projectRoot, options.explicitPaths ?? [], options.changedOnly ?? false);
+  const candidateFiles = await selectFiles(context.projectRoot, options.explicitPaths ?? [], options.changedOnly ?? false);
+  const exclusionResult = await filterSourceFiles(context.projectRoot, candidateFiles, options);
+  const selectedFiles = exclusionResult.files;
   if (selectedFiles.length === 0) {
-    return emptyAnalysisResult(context.threshold, runWarnings);
+    return emptyAnalysisResult(context.threshold, runWarnings, exclusionResult.audit);
   }
 
   const groupedByModule = await groupFilesByModule(context.projectRoot, selectedFiles);
@@ -41,7 +44,8 @@ export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promi
     thresholdExceeded: max > context.threshold,
     selectedFiles,
     coverageCommands,
-    warnings
+    warnings,
+    sourceExclusionAudit: exclusionResult.audit
   };
 }
 
@@ -86,7 +90,11 @@ function createAnalyzeContext(options: AnalyzeProjectOptions): AnalyzeContext {
   };
 }
 
-function emptyAnalysisResult(threshold: number, warnings: string[]): AnalysisResult {
+function emptyAnalysisResult(
+  threshold: number,
+  warnings: string[],
+  sourceExclusionAudit = emptySourceExclusionAudit()
+): AnalysisResult {
   return {
     metrics: [],
     maxCrap: 0,
@@ -94,7 +102,8 @@ function emptyAnalysisResult(threshold: number, warnings: string[]): AnalysisRes
     thresholdExceeded: false,
     selectedFiles: [],
     coverageCommands: [],
-    warnings
+    warnings,
+    sourceExclusionAudit
   };
 }
 

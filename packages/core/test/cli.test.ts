@@ -42,7 +42,16 @@ describe("cli", () => {
       "--output",
       "reports/crap.json",
       "--junit-report",
-      "reports/crap.xml"
+      "reports/crap.xml",
+      "--exclude",
+      "src/generated/**",
+      "--exclude",
+      "**/*.pb.ts",
+      "--exclude-path-regex",
+      "^src/proto/",
+      "--exclude-generated-marker",
+      "@custom-generated",
+      "--use-default-exclusions=false"
     ])).toEqual({
       mode: "changed",
       fileArgs: [],
@@ -55,7 +64,11 @@ describe("cli", () => {
       omitRedundancy: true,
       output: "reports/crap.json",
       junit: true,
-      junitReport: "reports/crap.xml"
+      junitReport: "reports/crap.xml",
+      excludes: ["src/generated/**", "**/*.pb.ts"],
+      excludePathRegexes: ["^src/proto/"],
+      excludeGeneratedMarkers: ["@custom-generated"],
+      useDefaultExclusions: false
     });
   });
 
@@ -126,12 +139,18 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--junit-report", "a", "--junit-report", "b"])).toThrow(
       "--junit-report can only be provided once"
     );
+    expect(() => parseCliArguments(["--use-default-exclusions", "--use-default-exclusions=false"])).toThrow(
+      "--use-default-exclusions can only be provided once"
+    );
     expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn");
     expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest");
     expect(() => parseCliArguments(["--format"])).toThrow("--format requires one of: toon, json, text, junit, none");
     expect(() => parseCliArguments(["--threshold"])).toThrow("--threshold requires a finite number greater than 0");
     expect(() => parseCliArguments(["--output"])).toThrow("--output requires a path");
     expect(() => parseCliArguments(["--junit-report"])).toThrow("--junit-report requires a path");
+    expect(() => parseCliArguments(["--exclude"])).toThrow("--exclude requires a path");
+    expect(() => parseCliArguments(["--exclude-path-regex"])).toThrow("--exclude-path-regex requires a path");
+    expect(() => parseCliArguments(["--exclude-generated-marker"])).toThrow("--exclude-generated-marker requires a path");
     expect(() => parseCliArguments(["--package-manager", "bun"])).toThrow(
       "--package-manager requires one of: auto, npm, pnpm, yarn"
     );
@@ -150,6 +169,9 @@ describe("cli", () => {
     );
     expect(() => parseCliArguments(["--omit-redundancy=maybe"])).toThrow(
       "--omit-redundancy requires true or false when a value is provided"
+    );
+    expect(() => parseCliArguments(["--use-default-exclusions=maybe"])).toThrow(
+      "--use-default-exclusions requires true or false when a value is provided"
     );
     expect(() => parseCliArguments(["--unknown"])).toThrow("Unknown option: --unknown");
   });
@@ -369,6 +391,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
   return 0;
 }
 `,
+      "src/generated/client.ts": "export function generatedClient(): number { return 1; }\n",
       "coverage/coverage-final.json": JSON.stringify({
         "src/sample.ts": {
           path: "src/sample.ts",
@@ -509,6 +532,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
   return 0;
 }
 `,
+      "src/generated/client.ts": "export function generatedClient(): number { return 1; }\n",
       "coverage/coverage-final.json": JSON.stringify({
         "src/sample.ts": {
           path: "src/sample.ts",
@@ -603,9 +627,11 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary.methods[0].method).toBe("risky");
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(primary.methods[0]).not.toHaveProperty("threshold");
+    expect(primary).not.toHaveProperty("sourceExclusions");
     expect(junit).toContain('tests="2"');
     expect(junit).toContain('name="safe:1"');
     expect(junit).toContain('name="risky:5"');
+    expect(junit).toContain('name="sourceExclusions.candidateFiles" value="2"');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
 
     const overrideStdout = new StringWriter();
@@ -634,6 +660,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
       method: "safe",
       status: "passed"
     });
+    expect(fullPrimary).toHaveProperty("sourceExclusions");
     expect(overrideStderr.toString()).toContain("CRAP threshold exceeded");
   });
 

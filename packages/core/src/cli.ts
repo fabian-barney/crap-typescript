@@ -16,12 +16,19 @@ const HELP_TEXT = `crap-typescript
 
 Usage:
   crap-typescript [--help]
-  crap-typescript [--changed] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>]
-  crap-typescript [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>] <path ...>
+  crap-typescript [--changed] [--exclude <glob>] [--exclude-path-regex <regex>] [--exclude-generated-marker <marker>] [--use-default-exclusions[=true|false]] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>]
+  crap-typescript [--exclude <glob>] [--exclude-path-regex <regex>] [--exclude-generated-marker <marker>] [--use-default-exclusions[=true|false]] [--package-manager <tool>] [--test-runner <runner>] [--format <format>] [--agent] [--failures-only[=true|false]] [--omit-redundancy[=true|false]] [--output <path>] [--junit-report <path>] [--threshold <number>] <path ...>
 
 Options:
   --help                     Print usage to stdout
   --changed                  Analyze changed TypeScript files under src/
+  --exclude <glob>           Exclude source paths by project-relative glob; repeatable
+  --exclude-path-regex <regex>
+                             Exclude source paths by project-relative regex; repeatable
+  --exclude-generated-marker <marker>
+                             Exclude files with a leading generated-header marker; repeatable
+  --use-default-exclusions[=true|false]
+                             Enable generated-code defaults (default: true)
   --package-manager <tool>   Force auto, npm, pnpm, or yarn
   --test-runner <runner>     Force auto, vitest, or jest
   --format <format>          Emit ${REPORT_FORMAT_LIST} (default: toon)
@@ -81,10 +88,16 @@ interface ParseState {
   omitRedundancySeen: boolean;
   outputSeen: boolean;
   junitReportSeen: boolean;
+  useDefaultExclusionsSeen: boolean;
   fileArgs: string[];
+  excludes: string[];
+  excludePathRegexes: string[];
+  excludeGeneratedMarkers: string[];
+  useDefaultExclusions: boolean;
 }
 
 type OptionHandler = (state: ParseState, args: string[], index: number) => number;
+type InlineBooleanOptionHandler = (state: ParseState, value: string | undefined) => void;
 
 const OPTION_HANDLERS: Record<string, OptionHandler> = {
   "--help": (state, _args, index) => {
@@ -137,7 +150,25 @@ const OPTION_HANDLERS: Record<string, OptionHandler> = {
     state.junitReport = parsePathOption(args[index + 1], "--junit-report");
     state.junitReportSeen = true;
     return index + 1;
+  },
+  "--exclude": (state, args, index) => {
+    state.excludes.push(parsePathOption(args[index + 1], "--exclude"));
+    return index + 1;
+  },
+  "--exclude-path-regex": (state, args, index) => {
+    state.excludePathRegexes.push(parsePathOption(args[index + 1], "--exclude-path-regex"));
+    return index + 1;
+  },
+  "--exclude-generated-marker": (state, args, index) => {
+    state.excludeGeneratedMarkers.push(parsePathOption(args[index + 1], "--exclude-generated-marker"));
+    return index + 1;
   }
+};
+
+const INLINE_BOOLEAN_OPTION_HANDLERS: Record<string, InlineBooleanOptionHandler> = {
+  "--failures-only": parseFailuresOnly,
+  "--omit-redundancy": parseOmitRedundancy,
+  "--use-default-exclusions": parseUseDefaultExclusions
 };
 
 function createParseState(): ParseState {
@@ -163,18 +194,20 @@ function createParseState(): ParseState {
     omitRedundancySeen: false,
     outputSeen: false,
     junitReportSeen: false,
-    fileArgs: []
+    useDefaultExclusionsSeen: false,
+    fileArgs: [],
+    excludes: [],
+    excludePathRegexes: [],
+    excludeGeneratedMarkers: [],
+    useDefaultExclusions: true
   };
 }
 
 function consumeOption(state: ParseState, args: string[], index: number): number {
   const [option, value] = splitInlineBooleanOption(args[index]);
-  if (option === "--failures-only") {
-    parseFailuresOnly(state, value);
-    return index;
-  }
-  if (option === "--omit-redundancy") {
-    parseOmitRedundancy(state, value);
+  const inlineBooleanHandler = INLINE_BOOLEAN_OPTION_HANDLERS[option];
+  if (inlineBooleanHandler) {
+    inlineBooleanHandler(state, value);
     return index;
   }
 
@@ -207,7 +240,11 @@ function finalizeCliArguments(state: ParseState): CliArguments {
     omitRedundancy: state.omitRedundancy,
     ...optionalPath("output", state.output),
     junit: state.junit,
-    ...optionalPath("junitReport", state.junitReport)
+    ...optionalPath("junitReport", state.junitReport),
+    ...optionalArray("excludes", state.excludes),
+    ...optionalArray("excludePathRegexes", state.excludePathRegexes),
+    ...optionalArray("excludeGeneratedMarkers", state.excludeGeneratedMarkers),
+    ...optionalBoolean("useDefaultExclusions", state.useDefaultExclusions, state.useDefaultExclusionsSeen)
   };
 }
 
@@ -302,6 +339,12 @@ function parseOmitRedundancy(state: ParseState, value: string | undefined): void
   state.omitRedundancySeen = true;
 }
 
+function parseUseDefaultExclusions(state: ParseState, value: string | undefined): void {
+  ensureOptionIsUnique(state.useDefaultExclusionsSeen, "--use-default-exclusions");
+  state.useDefaultExclusions = parseBooleanOption(value, "--use-default-exclusions");
+  state.useDefaultExclusionsSeen = true;
+}
+
 function parseBooleanOption(value: string | undefined, option: string): boolean {
   if (value === undefined) {
     return true;
@@ -320,6 +363,21 @@ function parsePathOption(value: string | undefined, option: string): string {
     throw new Error(`${option} requires a path`);
   }
   return value;
+}
+
+function optionalArray<K extends "excludes" | "excludePathRegexes" | "excludeGeneratedMarkers">(
+  key: K,
+  values: string[]
+): Pick<CliArguments, K> | {} {
+  return values.length === 0 ? {} : { [key]: values } as Pick<CliArguments, K>;
+}
+
+function optionalBoolean<K extends "useDefaultExclusions">(
+  key: K,
+  value: boolean,
+  include: boolean
+): Pick<CliArguments, K> | {} {
+  return include ? { [key]: value } as Pick<CliArguments, K> : {};
 }
 
 export async function runCli(
@@ -371,6 +429,10 @@ async function analyzeCliProject(
       packageManager: parsed.packageManager,
       testRunner: parsed.testRunner,
       threshold: parsed.threshold,
+      excludes: parsed.excludes,
+      excludePathRegexes: parsed.excludePathRegexes,
+      excludeGeneratedMarkers: parsed.excludeGeneratedMarkers,
+      useDefaultExclusions: parsed.useDefaultExclusions,
       stdout,
       stderr
     });
@@ -412,7 +474,8 @@ async function writeCliReports(
     agent: parsed.agent,
     threshold: result.threshold,
     failuresOnly: parsed.failuresOnly,
-    omitRedundancy: parsed.omitRedundancy
+    omitRedundancy: parsed.omitRedundancy,
+    sourceExclusionAudit: result.sourceExclusionAudit
   });
   if (parsed.output) {
     await writeReportFile(projectRoot, parsed.output, primaryReport);
@@ -423,7 +486,8 @@ async function writeCliReports(
   if (parsed.junit && parsed.junitReport) {
     await writeReportFile(projectRoot, parsed.junitReport, formatAnalysisReport(result.metrics, {
       format: "junit",
-      threshold: result.threshold
+      threshold: result.threshold,
+      sourceExclusionAudit: result.sourceExclusionAudit
     }));
   }
 }
