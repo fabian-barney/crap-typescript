@@ -295,8 +295,8 @@ describe("CrapTypescriptJestReporter", () => {
     ]);
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="safe"');
-    expect(junit).toContain('name="risky"');
+    expect(junit).toContain('name="safe:1"');
+    expect(junit).toContain('name="risky:5"');
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(junit).toContain('<property name="status" value="failed"/>');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");

@@ -470,8 +470,8 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(primary.methods[0]).not.toHaveProperty("threshold");
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="safe"');
-    expect(junit).toContain('name="risky"');
+    expect(junit).toContain('name="safe:1"');
+    expect(junit).toContain('name="risky:5"');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
 
     const overrideStdout = new StringWriter();
@@ -615,8 +615,8 @@ export function risky(flagA: boolean, flagB: boolean): number {
       method: "risky"
     });
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="safe"');
-    expect(junit).toContain('name="risky"');
+    expect(junit).toContain('name="safe:1"');
+    expect(junit).toContain('name="risky:5"');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
   });
 
@@ -678,7 +678,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
       method: "safe"
     });
     expect(junit).toContain('tests="1"');
-    expect(junit).toContain('name="safe"');
+    expect(junit).toContain('name="safe:1"');
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(stderr.toString()).toBe("");
   });
@@ -730,10 +730,10 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toBe("");
     expect(primary).toContain('tests="1"');
-    expect(primary).toContain('name="safe"');
+    expect(primary).toContain('name="safe:1"');
     expect(primary).not.toContain('<property name="status"');
     expect(sidecar).toContain('tests="1"');
-    expect(sidecar).toContain('name="safe"');
+    expect(sidecar).toContain('name="safe:1"');
     expect(sidecar).toContain('<property name="status" value="passed"/>');
     expect(stderr.toString()).toBe("");
   });
@@ -785,7 +785,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(stdout.toString()).toBe("");
     expect(primary).toBe("");
     expect(sidecar).toContain('tests="1"');
-    expect(sidecar).toContain('name="safe"');
+    expect(sidecar).toContain('name="safe:1"');
     expect(sidecar).toContain('<property name="status" value="passed"/>');
     expect(stderr.toString()).toBe("");
   });

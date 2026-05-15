@@ -235,6 +235,14 @@ function formatJunitNullableNumber(value: number | null): string {
   return value === null ? "" : formatNumber(value);
 }
 
+function formatJunitDiagnosticNumber(value: number | null): string {
+  return value === null ? "N/A" : formatNumber(value);
+}
+
+function formatJunitDiagnosticPercent(value: number | null): string {
+  return value === null ? "N/A" : `${formatNumber(value)}%`;
+}
+
 function formatTextValue(column: MethodColumn | AgentMethodColumn, value: ReportValue): string {
   if (column === "cov") {
     return value === null ? "N/A" : `${formatNumber(value as number)}%`;
@@ -297,6 +305,7 @@ function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
     "@_failures": counts.failures,
     "@_skipped": counts.skipped,
     "@_errors": 0,
+    "@_time": 0,
     properties: {
       property: [
         toXmlProperty("threshold", formatNumber(report.threshold))
@@ -308,7 +317,17 @@ function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
     testsuite.testcase = report.methods.map((method) => toJunitTestcaseXml(method, report.threshold, omitRedundancy));
   }
 
-  return { testsuite };
+  return {
+    testsuites: {
+      "@_name": "crap-typescript",
+      "@_tests": report.methods.length,
+      "@_failures": counts.failures,
+      "@_skipped": counts.skipped,
+      "@_errors": 0,
+      "@_time": 0,
+      testsuite
+    }
+  };
 }
 
 function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCounts {
@@ -326,14 +345,19 @@ function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCoun
 function toJunitTestcaseXml(entry: MethodReportEntry, threshold: number, omitRedundancy: boolean): XmlNode {
   return {
     "@_classname": entry.src,
-    "@_name": entry.method,
+    "@_name": junitTestcaseName(entry),
     "@_file": entry.src,
+    "@_time": 0,
     "@_line": entry.lineStart,
     properties: {
       property: methodProperties(entry, omitRedundancy).map(([name, value]) => toXmlProperty(name, value))
     },
     ...junitStatusXml(entry, threshold)
   };
+}
+
+function junitTestcaseName(entry: MethodReportEntry): string {
+  return `${entry.method}:${entry.lineStart}`;
 }
 
 function toXmlProperty(name: string, value: string): XmlNode {
@@ -350,16 +374,28 @@ function junitStatusXml(entry: MethodReportEntry, threshold: number): XmlNode {
       failure: {
         "@_type": "crap-threshold",
         "@_message": message,
-        "#text": message
+        "#text": junitDiagnosticText(entry, threshold)
       }
     };
   }
   if (entry.status === "skipped") {
     return {
       skipped: {
-        "@_message": "CRAP score unavailable"
+        "@_message": "CRAP score unavailable",
+        "#text": junitDiagnosticText(entry, threshold)
       }
     };
   }
   return {};
+}
+
+function junitDiagnosticText(entry: MethodReportEntry, threshold: number): string {
+  return [
+    `CRAP score: ${formatJunitDiagnosticNumber(entry.crap)}`,
+    `Threshold: ${formatNumber(threshold)}`,
+    `Coverage: ${formatJunitDiagnosticPercent(entry.cov)} (${entry.covKind})`,
+    `Source: ${entry.src}:${entry.lineStart}-${entry.lineEnd}`,
+    `Method: ${entry.method}`,
+    `Complexity: ${entry.cc}`
+  ].join("\n");
 }

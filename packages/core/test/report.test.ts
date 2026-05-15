@@ -385,7 +385,7 @@ describe("report formatting", () => {
       })
     ], { format: "junit", omitRedundancy: true });
 
-    expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0">');
+    expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0" time="0">');
     expect(output).toContain("<failure");
     expect(output).not.toContain('<property name="status"');
   });
@@ -425,8 +425,8 @@ describe("report formatting", () => {
     ], { format: "junit", agent: true });
 
     expect(output).toContain('tests="1"');
-    expect(output).toContain('name="risky"');
-    expect(output).not.toContain('name="safe"');
+    expect(output).toContain('name="risky:1"');
+    expect(output).not.toContain('name="safe:1"');
     expect(output).not.toContain('<property name="status"');
   });
 
@@ -533,16 +533,24 @@ describe("report formatting", () => {
       })
     ]));
 
-    expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0">');
+    expect(output).toContain('<testsuites name="crap-typescript" tests="1" failures="1" skipped="0" errors="0" time="0">');
+    expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0" time="0">');
     expect(output).toContain('<property name="threshold" value="8.0"/>');
-    expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;"');
+    expect(output).toContain('classname="src/&quot;special&quot;&amp;file.ts"');
+    expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;:1"');
     expect(output).toContain('file="src/&quot;special&quot;&amp;file.ts"');
+    expect(output).toContain('time="0"');
     expect(output).toContain('<property name="status" value="failed"/>');
     expect(output).toContain('<property name="crap" value="20.0"/>');
     expect(output).toContain('<property name="cov" value="0.0"/>');
     expect(output).toContain('<property name="covKind" value="stmt"/>');
     expect(output.match(/property name="threshold"/g)).toHaveLength(1);
     expect(output).toContain("<failure");
+    expect(output).toContain("CRAP score: 20.0");
+    expect(output).toContain("Threshold: 8.0");
+    expect(output).toContain("Coverage: 0.0% (stmt)");
+    expect(output).toContain("Source: src/");
+    expect(output).toContain(":1-3");
     expect(output.endsWith("\n")).toBe(true);
     expect(output.endsWith("\n\n")).toBe(false);
   });
@@ -562,12 +570,17 @@ describe("report formatting", () => {
     expect(output).toContain('<property name="crap" value=""/>');
     expect(output).toContain('<property name="cov" value=""/>');
     expect(output).toContain("<skipped");
+    expect(output).toContain("CRAP score: N/A");
+    expect(output).toContain("Threshold: 8.0");
+    expect(output).toContain("Coverage: N/A (N/A)");
+    expect(output).toContain("Source: src/sample.ts:1-3");
   });
 
   it("formats empty JUnit reports without testcase elements", () => {
     const output = formatJunitReport(buildAnalysisReport([]));
 
-    expect(output).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0">');
+    expect(output).toContain('<testsuites name="crap-typescript" tests="0" failures="0" skipped="0" errors="0" time="0">');
+    expect(output).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0" time="0">');
     expect(output).toContain('<property name="threshold" value="8.0"/>');
     expect(output).not.toContain("<testcase");
     expect(output.endsWith("\n")).toBe(true);
