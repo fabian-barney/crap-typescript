@@ -123,7 +123,7 @@ Use `--omit-redundancy` to keep run-level metadata but omit per-method `status` 
 
 `--agent` is a composite shortcut, not a report format. It defaults primary output to `--format toon`, `--failures-only=true`, and `--omit-redundancy=true`. Explicit `--format`, `--failures-only=false`, or `--omit-redundancy=false` options override those defaults.
 
-Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--agent`, `--failures-only`, or `--omit-redundancy`. JUnit output keeps the aggregate XML attributes required by CI parsers, writes `threshold` as a testsuite property, and puts method details on each testcase.
+Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--agent`, `--failures-only`, or `--omit-redundancy`. JUnit output is shaped for GitLab's Tests tab: it wraps the suite in `<testsuites>`, sets testcase `classname` and `file` to `src`, sets testcase `name` to `method:lineStart`, writes `time="0"`, and includes CRAP score, threshold, coverage kind, source path, and line range in failure or skipped element content. Custom properties remain for CI tools that read them, but GitLab-visible details do not rely on properties.
 
 The default threshold is `8.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates. The warning recommends `8.0` for hard gates, targeting `6.0` during implementation, and using the `8.0` default when in doubt.
 
