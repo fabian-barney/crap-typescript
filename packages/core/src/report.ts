@@ -5,7 +5,6 @@ import { CRAP_THRESHOLD, validateThreshold } from "./constants.js";
 import { formatNumber } from "./utils.js";
 import type {
   CoverageKind,
-  CoverageMetric,
   MethodMetrics,
   MethodReportStatus,
   ReportFormat,
@@ -213,19 +212,19 @@ function methodStatus(metric: MethodMetrics, threshold: number): MethodReportSta
 }
 
 function coverageKind(metric: MethodMetrics): CoverageKind {
-  if (metric.statementCoverage.status === "unknown") {
+  if (metric.coverage.status === "unknown") {
+    return "N/A";
+  }
+  if (metric.statementCoverage.status === "measured" && metric.branchCoverage.status === "measured") {
+    return metric.branchCoverage.percent! < metric.statementCoverage.percent! ? "branch" : "stmt";
+  }
+  if (metric.statementCoverage.status === "measured") {
     return "stmt";
   }
-  if (metric.branchCoverage.status === "unknown") {
+  if (metric.branchCoverage.status === "measured") {
     return "branch";
   }
-  const statementPercent = effectivePercent(metric.statementCoverage);
-  const branchPercent = effectivePercent(metric.branchCoverage);
-  return branchPercent < statementPercent ? "branch" : "stmt";
-}
-
-function effectivePercent(metric: CoverageMetric): number {
-  return metric.percent ?? 100;
+  return "stmt";
 }
 
 function formatNullableNumber(value: number | null): string {

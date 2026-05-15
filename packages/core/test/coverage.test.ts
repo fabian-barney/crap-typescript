@@ -306,7 +306,7 @@ export function enumDeclOnly(): void {
     });
   });
 
-  it("keeps coverage unknown when branch syntax exists but no branch counters can be attributed", async () => {
+  it("uses measured statement coverage when branch counters cannot be attributed", async () => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -351,9 +351,44 @@ export function enumDeclOnly(): void {
 
     expect(coverageForMethods(methods, [...coverageReport.values()][0]).map(summarizeMethodCoverage)).toEqual([
       {
-        coverage: { percent: null, status: "unknown", reason: "branch_unattributed" },
+        coverage: { percent: 100.0, status: "measured", reason: null },
         statement: { percent: 100.0, status: "measured", reason: null },
         branch: { percent: null, status: "unknown", reason: "branch_unattributed" }
+      }
+    ]);
+  });
+
+  it("uses measured branch coverage when statement counters cannot be attributed", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/sample.ts": `export function branchy(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`
+    });
+
+    const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
+    expect(
+      coverageForMethods(methods, {
+        statements: [],
+        branches: [
+          {
+            span: { startLine: 2, startColumn: 2, endLine: 4, endColumn: 3 },
+            hits: [1, 0]
+          }
+        ],
+        functions: []
+      }).map(summarizeMethodCoverage)
+    ).toEqual([
+      {
+        coverage: { percent: 50.0, status: "measured", reason: null },
+        statement: { percent: null, status: "unknown", reason: "statement_unattributed" },
+        branch: { percent: 50.0, status: "measured", reason: null }
       }
     ]);
   });

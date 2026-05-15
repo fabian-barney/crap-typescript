@@ -61,12 +61,20 @@ function toBranchCoverageMetric(
 }
 
 function combineCoverageMetrics(statementCoverage: CoverageMetric, branchCoverage: CoverageMetric): CoverageMetric {
-  if (statementCoverage.status === "unknown") {
-    return unknownCoverageMetric(statementCoverage.unknownReason!);
+  if (statementCoverage.status === "unknown" && branchCoverage.status === "unknown") {
+    return unknownCoverageMetric(statementCoverage.unknownReason ?? branchCoverage.unknownReason!);
   }
-  if (branchCoverage.status === "unknown") {
-    return unknownCoverageMetric(branchCoverage.unknownReason!);
+  return combinedKnownCoverage(statementCoverage, branchCoverage);
+}
+
+function combinedKnownCoverage(statementCoverage: CoverageMetric, branchCoverage: CoverageMetric): CoverageMetric {
+  const measuredPercents = [statementCoverage, branchCoverage]
+    .filter((metric) => metric.status === "measured")
+    .map((metric) => metric.percent!);
+  if (measuredPercents.length > 0) {
+    return measuredCoverageMetric(Math.min(...measuredPercents));
   }
+
   if (statementCoverage.status === "structural_na" && branchCoverage.status === "structural_na") {
     return {
       percent: 100,
@@ -74,7 +82,8 @@ function combineCoverageMetrics(statementCoverage: CoverageMetric, branchCoverag
       unknownReason: null
     };
   }
-  return measuredCoverageMetric(Math.min(statementCoverage.percent ?? 100, branchCoverage.percent ?? 100));
+
+  return unknownCoverageMetric(statementCoverage.unknownReason ?? branchCoverage.unknownReason!);
 }
 
 function measuredCoverageMetric(percent: number): CoverageMetric {
