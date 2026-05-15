@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { analyzeProject, formatAnalysisReport } from "@barney-media/crap-typescript-core";
+import { analyzeProject, formatAnalysisReport, validateReportPathTargets } from "@barney-media/crap-typescript-core";
 import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
 
 type VitestReporterEntry = string | [string, unknown] | {
@@ -44,6 +44,7 @@ export class CrapTypescriptVitestReporter {
   async onFinishedReportCoverage(): Promise<void> {
     const options = resolveReporterOptions(this.options);
     try {
+      await validateReporterReportPaths(options);
       const result = await analyzeProject({
         projectRoot: options.projectRoot,
         explicitPaths: options.paths,
@@ -253,6 +254,13 @@ async function writeReporterReports(
       threshold: options.threshold
     }));
   }
+}
+
+async function validateReporterReportPaths(options: ResolvedReporterOptions): Promise<void> {
+  await validateReportPathTargets(options.projectRoot, [
+    { label: "output", path: options.output },
+    { label: "junitReport", path: options.junit ? options.junitReport : undefined }
+  ]);
 }
 
 async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {

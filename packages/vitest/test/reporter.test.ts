@@ -94,6 +94,27 @@ describe("CrapTypescriptVitestReporter", () => {
     expect(stderr.toString()).toBe("");
   });
 
+  it("rejects colliding output and JUnit report paths", async () => {
+    const projectRoot = await createTempDir("crap-vitest-reporter-");
+    tempDirs.push(projectRoot);
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptVitestReporter({
+      projectRoot,
+      output: "reports/crap.xml",
+      junitReport: "reports/crap.xml",
+      stdout,
+      stderr
+    });
+
+    await reporter.onFinishedReportCoverage();
+
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toContain("output and junitReport must target different report files");
+    expect(process.exitCode).toBe(1);
+  });
+
 
   it("honors custom thresholds and emits threshold warnings", async () => {
     const projectRoot = await createTempDir("crap-vitest-reporter-");

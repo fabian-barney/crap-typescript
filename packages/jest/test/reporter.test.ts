@@ -128,6 +128,28 @@ describe("CrapTypescriptJestReporter", () => {
     expect(stderr.toString()).toBe("");
   });
 
+  it("rejects colliding output and JUnit report paths", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+
+    const stdout = new StringWriter();
+    const stderr = new StringWriter();
+    const reporter = new CrapTypescriptJestReporter(undefined, {
+      projectRoot,
+      output: "reports/crap.xml",
+      junitReport: "reports/crap.xml",
+      stdout,
+      stderr
+    });
+
+    await callFinalize(reporter);
+
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toContain("output and junitReport must target different report files");
+    expect(reporter.getLastError()?.message).toContain("output and junitReport must target different report files");
+    expect(process.exitCode).toBe(1);
+  });
+
   it("honors custom thresholds and emits threshold warnings", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);
