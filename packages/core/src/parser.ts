@@ -30,6 +30,7 @@ const NESTED_BOUNDARY_KINDS = new Set([
   ts.SyntaxKind.FunctionExpression,
   ts.SyntaxKind.ArrowFunction,
   ts.SyntaxKind.MethodDeclaration,
+  ts.SyntaxKind.Constructor,
   ts.SyntaxKind.GetAccessor,
   ts.SyntaxKind.SetAccessor,
   ts.SyntaxKind.ClassDeclaration,
@@ -70,6 +71,7 @@ type DescriptorBuilder = (node: ts.Node, sourceFile: ts.SourceFile) => MethodDes
 const DESCRIPTOR_BUILDERS: DescriptorBuilder[] = [
   descriptorFromFunctionDeclaration,
   descriptorFromMethodDeclaration,
+  descriptorFromConstructorDeclaration,
   descriptorFromAccessorDeclaration,
   descriptorFromAssignedFunction
 ];
@@ -90,6 +92,13 @@ function descriptorFromMethodDeclaration(node: ts.Node, sourceFile: ts.SourceFil
     return null;
   }
   return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, sourceFile);
+}
+
+function descriptorFromConstructorDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
+  if (!ts.isConstructorDeclaration(node) || !node.body) {
+    return null;
+  }
+  return buildMethodDescriptor("constructor", findContainerName(node), node, sourceFile);
 }
 
 function descriptorFromAccessorDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
