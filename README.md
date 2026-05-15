@@ -117,9 +117,9 @@ The CLI defaults to TOON output for compact, agent-readable reports. `--format` 
 
 Primary reports expose overall `status` and the run-level `threshold`. Method entries use the shared fields `status`, `crap`, `cc`, `cov`, `covKind`, `method`, `src`, `lineStart`, and `lineEnd`. `src` is the project-relative source file path. Method-level entries never repeat `threshold`.
 
-Use `--failures-only` to keep run-level metadata but emit only failed function entries in the primary report. `--failures-only=true` and `--failures-only=false` are accepted for explicit boolean configuration.
+Use `--failures-only` to keep run-level metadata but emit only failed method entries in the primary report. `--failures-only=true` and `--failures-only=false` are accepted for explicit boolean configuration.
 
-Use `--omit-redundancy` to keep run-level metadata but omit per-function `status` in the primary report. With `--format junit`, it omits the custom testcase `status` property while preserving JUnit failure and skipped elements. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
+Use `--omit-redundancy` to keep run-level metadata but omit per-method `status` in the primary report. With `--format junit`, it omits the custom testcase `status` property while preserving JUnit failure and skipped elements. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
 
 `--agent` is a composite shortcut, not a report format. It defaults primary output to `--format toon`, `--failures-only=true`, and `--omit-redundancy=true`. Explicit `--format`, `--failures-only=false`, or `--omit-redundancy=false` options override those defaults.
 

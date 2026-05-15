@@ -261,18 +261,18 @@ function formatTextSeparator(widths: number[]): string {
   return `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`;
 }
 
-function methodProperties(method: MethodReportEntry, omitRedundancy: boolean): Array<[string, string]> {
+function methodProperties(entry: MethodReportEntry, omitRedundancy: boolean): Array<[string, string]> {
   const properties: Array<[string, string]> = [
-    ["crap", formatJunitNullableNumber(method.crap)],
-    ["cc", String(method.cc)],
-    ["cov", formatJunitNullableNumber(method.cov)],
-    ["covKind", method.covKind],
-    ["method", method.method],
-    ["src", method.src],
-    ["lineStart", String(method.lineStart)],
-    ["lineEnd", String(method.lineEnd)]
+    ["crap", formatJunitNullableNumber(entry.crap)],
+    ["cc", String(entry.cc)],
+    ["cov", formatJunitNullableNumber(entry.cov)],
+    ["covKind", entry.covKind],
+    ["method", entry.method],
+    ["src", entry.src],
+    ["lineStart", String(entry.lineStart)],
+    ["lineEnd", String(entry.lineEnd)]
   ];
-  return omitRedundancy ? properties : [["status", method.status], ...properties];
+  return omitRedundancy ? properties : [["status", entry.status], ...properties];
 }
 
 function formatXmlDeclaration(): string {
@@ -323,16 +323,16 @@ function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCoun
   return counts;
 }
 
-function toJunitTestcaseXml(method: MethodReportEntry, threshold: number, omitRedundancy: boolean): XmlNode {
+function toJunitTestcaseXml(entry: MethodReportEntry, threshold: number, omitRedundancy: boolean): XmlNode {
   return {
-    "@_classname": method.src,
-    "@_name": method.method,
-    "@_file": method.src,
-    "@_line": method.lineStart,
+    "@_classname": entry.src,
+    "@_name": entry.method,
+    "@_file": entry.src,
+    "@_line": entry.lineStart,
     properties: {
-      property: methodProperties(method, omitRedundancy).map(([name, value]) => toXmlProperty(name, value))
+      property: methodProperties(entry, omitRedundancy).map(([name, value]) => toXmlProperty(name, value))
     },
-    ...junitStatusXml(method, threshold)
+    ...junitStatusXml(entry, threshold)
   };
 }
 
@@ -343,9 +343,9 @@ function toXmlProperty(name: string, value: string): XmlNode {
   };
 }
 
-function junitStatusXml(method: MethodReportEntry, threshold: number): XmlNode {
-  if (method.status === "failed") {
-    const message = `CRAP score ${formatNullableNumber(method.crap)} exceeds threshold ${formatNumber(threshold)}`;
+function junitStatusXml(entry: MethodReportEntry, threshold: number): XmlNode {
+  if (entry.status === "failed") {
+    const message = `CRAP score ${formatNullableNumber(entry.crap)} exceeds threshold ${formatNumber(threshold)}`;
     return {
       failure: {
         "@_type": "crap-threshold",
@@ -354,7 +354,7 @@ function junitStatusXml(method: MethodReportEntry, threshold: number): XmlNode {
       }
     };
   }
-  if (method.status === "skipped") {
+  if (entry.status === "skipped") {
     return {
       skipped: {
         "@_message": "CRAP score unavailable"
