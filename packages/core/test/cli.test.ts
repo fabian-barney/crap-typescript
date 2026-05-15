@@ -1,3 +1,6 @@
+import { mkdir, symlink } from "node:fs/promises";
+import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import { parseCliArguments, runCli } from "../src/cli";
@@ -8,6 +11,21 @@ const tempDirs: string[] = [];
 afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
 });
+
+async function runPathValidation(args: string[], projectRoot: string): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}> {
+  const stdout = new StringWriter();
+  const stderr = new StringWriter();
+  const exitCode = await runCli(args, projectRoot, stdout, stderr);
+  return {
+    exitCode,
+    stdout: stdout.toString(),
+    stderr: stderr.toString()
+  };
+}
 
 describe("cli", () => {
   it("parses supported options", () => {
@@ -171,6 +189,122 @@ describe("cli", () => {
     expect(parseCliArguments(["--omit-redundancy=false"])).toMatchObject({
       omitRedundancy: false
     });
+  });
+
+  it("rejects identical primary and JUnit report paths", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    const result = await runPathValidation([
+      "--format",
+      "none",
+      "--output",
+      "reports/crap.xml",
+      "--junit-report",
+      "reports/crap.xml"
+    ], projectRoot);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--output and --junit-report must target different report files");
+  });
+
+  it("rejects realpath aliases for primary and JUnit report paths", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await mkdir(path.join(projectRoot, "real-reports"));
+    await symlink(path.join(projectRoot, "real-reports"), path.join(projectRoot, "linked-reports"), "junction");
+
+    const result = await runPathValidation([
+      "--format",
+      "none",
+      "--output",
+      "real-reports/crap.xml",
+      "--junit-report",
+      "linked-reports/crap.xml"
+    ], projectRoot);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--output and --junit-report must target different report files");
+  });
+
+  if (process.platform === "win32") {
+    it("rejects case-insensitive report path collisions on Windows", async () => {
+      const projectRoot = await createTempDir("crap-cli-");
+      tempDirs.push(projectRoot);
+      const result = await runPathValidation([
+        "--format",
+        "none",
+        "--output",
+        "reports/CRAP.xml",
+        "--junit-report",
+        "reports/crap.xml"
+      ], projectRoot);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("--output and --junit-report must target different report files");
+    });
+
+    it("rejects case-insensitive absolute report path collisions outside the project root on Windows", async () => {
+      const projectRoot = await createTempDir("crap-cli-");
+      const reportRoot = await createTempDir("crap-reports-");
+      tempDirs.push(projectRoot, reportRoot);
+      const result = await runPathValidation([
+        "--format",
+        "none",
+        "--output",
+        path.join(reportRoot, "CRAP.xml"),
+        "--junit-report",
+        path.join(reportRoot, "crap.xml")
+      ], projectRoot);
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("--output and --junit-report must target different report files");
+    });
+  }
+
+  it("rejects existing directory report targets", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await mkdir(path.join(projectRoot, "reports"));
+    const result = await runPathValidation([
+      "--format",
+      "none",
+      "--output",
+      "reports"
+    ], projectRoot);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--output must target a report file, not an existing directory");
+  });
+
+  it("rejects symlinked directory report targets", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await mkdir(path.join(projectRoot, "reports"));
+    await symlink(path.join(projectRoot, "reports"), path.join(projectRoot, "linked-reports"), "junction");
+
+    const result = await runPathValidation([
+      "--format",
+      "none",
+      "--output",
+      "linked-reports"
+    ], projectRoot);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--output must target a report file, not an existing directory");
+  });
+
+  it("rejects filesystem root report targets", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    const result = await runPathValidation([
+      "--format",
+      "none",
+      "--output",
+      path.parse(projectRoot).root
+    ], projectRoot);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--output must target a report file, not a filesystem root");
   });
 
   it("applies agent composite defaults and explicit overrides", () => {

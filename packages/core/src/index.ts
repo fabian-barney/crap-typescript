@@ -15,6 +15,7 @@ export {
   formatToonReport,
   sortMetrics
 } from "./report.js";
+export { validateReportPathTargets } from "./reportPaths.js";
 export type {
   AgentAnalysisReport,
   AgentMethodReportEntry,
@@ -22,6 +23,7 @@ export type {
   FormatAnalysisReportOptions,
   MethodReportEntry
 } from "./report.js";
+export type { ReportPathTarget } from "./reportPaths.js";
 export {
   CRAP_THRESHOLD,
   COVERAGE_REPORT_RELATIVE_PATH,

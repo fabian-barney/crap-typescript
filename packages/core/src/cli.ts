@@ -4,6 +4,7 @@ import path from "node:path";
 import { CRAP_THRESHOLD, validateThreshold } from "./constants.js";
 import { analyzeProject } from "./analyzeProject.js";
 import { formatAnalysisReport } from "./report.js";
+import { validateReportPathTargets } from "./reportPaths.js";
 import { formatNumber, writeLine } from "./utils.js";
 import type { CliArguments, PackageManagerSelection, ReportFormat, TestRunnerSelection, Writer } from "./types.js";
 
@@ -336,6 +337,13 @@ export async function runCli(
     return 0;
   }
 
+  try {
+    await validateCliReportPaths(parsed, projectRoot);
+  } catch (error) {
+    writeLine(stderr, (error as Error).message);
+    return 1;
+  }
+
   return handleCliResult(await analyzeCliProject(parsed, projectRoot, stdout, stderr), parsed, projectRoot, stdout, stderr);
 }
 
@@ -418,6 +426,13 @@ async function writeCliReports(
       threshold: result.threshold
     }));
   }
+}
+
+async function validateCliReportPaths(parsed: CliArguments, projectRoot: string): Promise<void> {
+  await validateReportPathTargets(projectRoot, [
+    { label: "--output", path: parsed.output },
+    { label: "--junit-report", path: parsed.junit ? parsed.junitReport : undefined }
+  ]);
 }
 
 async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {

@@ -4,7 +4,8 @@ import path from "node:path";
 import {
   analyzeProject,
   COVERAGE_REPORT_RELATIVE_PATH,
-  formatAnalysisReport
+  formatAnalysisReport,
+  validateReportPathTargets
 } from "@barney-media/crap-typescript-core";
 import type { PackageManagerSelection, ReportFormat, Writer } from "@barney-media/crap-typescript-core";
 
@@ -66,6 +67,7 @@ export default class CrapTypescriptJestReporter {
   private async finalize(): Promise<void> {
     const options = resolveReporterOptions(this.options);
     try {
+      await validateReporterReportPaths(options);
       await waitForCoverageReport(options.projectRoot, options.coverageReportPath);
       const result = await analyzeProject({
         projectRoot: options.projectRoot,
@@ -224,6 +226,13 @@ async function writeReporterReports(
       threshold: options.threshold
     }));
   }
+}
+
+async function validateReporterReportPaths(options: ResolvedReporterOptions): Promise<void> {
+  await validateReportPathTargets(options.projectRoot, [
+    { label: "output", path: options.output },
+    { label: "junitReport", path: options.junit ? options.junitReport : undefined }
+  ]);
 }
 
 async function writeReportFile(projectRoot: string, reportPath: string, content: string): Promise<void> {

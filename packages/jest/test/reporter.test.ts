@@ -1,3 +1,4 @@
+import { mkdir, symlink } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,7 +11,7 @@ import {
   readText,
   writeProjectFiles
 } from "../../core/test/testUtils";
-import CrapTypescriptJestReporter from "../src/reporter";
+import CrapTypescriptJestReporter, { type CrapTypescriptJestOptions } from "../src/reporter";
 
 const tempDirs: string[] = [];
 let originalExitCode: number | undefined;
@@ -27,6 +28,23 @@ afterEach(async () => {
 
 async function callFinalize(reporter: CrapTypescriptJestReporter): Promise<void> {
   await (reporter as unknown as { finalize: () => Promise<void> }).finalize();
+}
+
+async function finalizeWithOptions(
+  projectRoot: string,
+  options: CrapTypescriptJestOptions
+): Promise<{ stdout: StringWriter; stderr: StringWriter; reporter: CrapTypescriptJestReporter }> {
+  const stdout = new StringWriter();
+  const stderr = new StringWriter();
+  const reporter = new CrapTypescriptJestReporter(undefined, {
+    projectRoot,
+    stdout,
+    stderr,
+    ...options
+  });
+
+  await callFinalize(reporter);
+  return { stdout, stderr, reporter };
 }
 
 describe("CrapTypescriptJestReporter", () => {
@@ -126,6 +144,75 @@ describe("CrapTypescriptJestReporter", () => {
     expect(await readText(`${projectRoot}/reports/crap.txt`)).toBe("");
     expect(await readText(`${projectRoot}/reports/custom-junit.xml`)).toContain('status="passed"');
     expect(stderr.toString()).toBe("");
+  });
+
+  it("rejects colliding output and JUnit report paths", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+
+    const { stdout, stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      output: "reports/crap.xml",
+      junitReport: "reports/crap.xml"
+    });
+
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toContain("output and junitReport must target different report files");
+    expect(reporter.getLastError()?.message).toContain("output and junitReport must target different report files");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("rejects directory, root, and aliased report paths", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await mkdir(path.join(projectRoot, "reports"));
+    await mkdir(path.join(projectRoot, "real-reports"));
+    await symlink(path.join(projectRoot, "real-reports"), path.join(projectRoot, "linked-reports"), "junction");
+    await symlink(path.join(projectRoot, "reports"), path.join(projectRoot, "linked-directory"), "junction");
+
+    const directoryTarget = await finalizeWithOptions(projectRoot, {
+      output: "reports",
+      junit: false
+    });
+    expect(directoryTarget.stderr.toString()).toContain("output must target a report file, not an existing directory");
+    expect(directoryTarget.reporter.getLastError()?.message).toContain(
+      "output must target a report file, not an existing directory"
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
+    const symlinkedDirectoryTarget = await finalizeWithOptions(projectRoot, {
+      output: "linked-directory",
+      junit: false
+    });
+    expect(symlinkedDirectoryTarget.stderr.toString()).toContain(
+      "output must target a report file, not an existing directory"
+    );
+    expect(symlinkedDirectoryTarget.reporter.getLastError()?.message).toContain(
+      "output must target a report file, not an existing directory"
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
+    const rootTarget = await finalizeWithOptions(projectRoot, {
+      output: path.parse(projectRoot).root,
+      junit: false
+    });
+    expect(rootTarget.stderr.toString()).toContain("output must target a report file, not a filesystem root");
+    expect(rootTarget.reporter.getLastError()?.message).toContain(
+      "output must target a report file, not a filesystem root"
+    );
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
+
+    const aliasTarget = await finalizeWithOptions(projectRoot, {
+      output: "real-reports/crap.xml",
+      junitReport: "linked-reports/crap.xml"
+    });
+    expect(aliasTarget.stderr.toString()).toContain("output and junitReport must target different report files");
+    expect(aliasTarget.reporter.getLastError()?.message).toContain(
+      "output and junitReport must target different report files"
+    );
+    expect(process.exitCode).toBe(1);
   });
 
   it("honors custom thresholds and emits threshold warnings", async () => {
