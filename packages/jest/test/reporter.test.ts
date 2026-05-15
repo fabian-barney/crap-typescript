@@ -290,7 +290,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(primary.status).toBe("failed");
     expect(primary.methods).toEqual([
       expect.objectContaining({
-        func: "risky"
+        method: "risky"
       })
     ]);
     expect(primary.methods[0]).not.toHaveProperty("status");

@@ -87,7 +87,7 @@ npx crap-typescript
 --format <format>            Emit toon, json, text, junit, or none (default: toon)
 --agent                      Default primary output to toon, failures-only, omit-redundancy
 --failures-only[=true|false] Emit failed methods only in the primary report
---omit-redundancy[=true|false] Omit redundant per-function status in the primary report
+--omit-redundancy[=true|false] Omit redundant per-method status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
 --threshold <number>         Override the CRAP threshold (`8.0` by default)
@@ -115,11 +115,11 @@ npx crap-typescript packages/api packages/web
 
 The CLI defaults to TOON output for compact, agent-readable reports. `--format` can select `toon`, `json`, `text`, `junit`, or `none`. `--format none` suppresses primary stdout output; when used with `--output`, it creates an empty primary report file.
 
-Primary reports expose overall `status` and the run-level `threshold`. Per-function entries use the shared fields `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. Method-level entries never repeat `threshold`.
+Primary reports expose overall `status` and the run-level `threshold`. Method entries use the shared fields `status`, `crap`, `cc`, `cov`, `covKind`, `method`, `src`, `lineStart`, and `lineEnd`. `src` is the project-relative source file path. Method-level entries never repeat `threshold`.
 
-Use `--failures-only` to keep run-level metadata but emit only failed function entries in the primary report. `--failures-only=true` and `--failures-only=false` are accepted for explicit boolean configuration.
+Use `--failures-only` to keep run-level metadata but emit only failed method entries in the primary report. `--failures-only=true` and `--failures-only=false` are accepted for explicit boolean configuration.
 
-Use `--omit-redundancy` to keep run-level metadata but omit per-function `status` in the primary report. With `--format junit`, it omits the custom testcase `status` property while preserving JUnit failure and skipped elements. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
+Use `--omit-redundancy` to keep run-level metadata but omit per-method `status` in the primary report. With `--format junit`, it omits the custom testcase `status` property while preserving JUnit failure and skipped elements. The value can also be assigned explicitly with `--omit-redundancy=true` or `--omit-redundancy=false`.
 
 `--agent` is a composite shortcut, not a report format. It defaults primary output to `--format toon`, `--failures-only=true`, and `--omit-redundancy=true`. Explicit `--format`, `--failures-only=false`, or `--omit-redundancy=false` options override those defaults.
 

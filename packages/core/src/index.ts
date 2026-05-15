@@ -15,6 +15,13 @@ export {
   formatToonReport,
   sortMetrics
 } from "./report.js";
+export type {
+  AgentAnalysisReport,
+  AgentMethodReportEntry,
+  AnalysisReport,
+  FormatAnalysisReportOptions,
+  MethodReportEntry
+} from "./report.js";
 export {
   CRAP_THRESHOLD,
   COVERAGE_REPORT_RELATIVE_PATH,

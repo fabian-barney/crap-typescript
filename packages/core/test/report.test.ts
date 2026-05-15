@@ -90,17 +90,17 @@ describe("report formatting", () => {
     expect(report.methods).toMatchObject([
       {
         status: "failed",
-        func: "risky",
+        method: "risky",
         covKind: "branch"
       },
       {
         status: "passed",
-        func: "safe",
+        method: "safe",
         covKind: "stmt"
       },
       {
         status: "skipped",
-        func: "unknownCoverage",
+        method: "unknownCoverage",
         covKind: "N/A"
       }
     ]);
@@ -170,7 +170,7 @@ describe("report formatting", () => {
         cc: 1,
         cov: 100,
         covKind: "stmt",
-        func: "safe",
+        method: "safe",
         src: "src/sample.ts",
         lineStart: 1,
         lineEnd: 3
@@ -217,7 +217,7 @@ describe("report formatting", () => {
     ], { format: "json", failuresOnly: true })) as {
       status: string;
       threshold: number;
-      methods: Array<{ status: string; func: string }>;
+      methods: Array<{ status: string; method: string }>;
     };
 
     expect(parsed.status).toBe("failed");
@@ -225,7 +225,7 @@ describe("report formatting", () => {
     expect(parsed.methods).toEqual([
       expect.objectContaining({
         status: "failed",
-        func: "risky"
+        method: "risky"
       })
     ]);
   });
@@ -255,11 +255,11 @@ describe("report formatting", () => {
     expect(parsed.methods).toHaveLength(2);
     expect(parsed.methods[0]).not.toHaveProperty("status");
     expect(parsed.methods[0]).toMatchObject({
-      func: "risky"
+      method: "risky"
     });
     expect(parsed.methods[1]).not.toHaveProperty("status");
     expect(parsed.methods[1]).toMatchObject({
-      func: "safe"
+      method: "safe"
     });
   });
 
@@ -287,7 +287,7 @@ describe("report formatting", () => {
     expect(parsed.threshold).toBe(8);
     expect(parsed.methods).toEqual([
       expect.objectContaining({
-        func: "risky"
+        method: "risky"
       })
     ]);
     expect(parsed.methods[0]).not.toHaveProperty("status");
@@ -313,17 +313,17 @@ describe("report formatting", () => {
       failuresOnly: false,
       omitRedundancy: false
     })) as {
-      methods: Array<{ status: string; func: string }>;
+      methods: Array<{ status: string; method: string }>;
     };
 
     expect(parsed.methods).toHaveLength(2);
     expect(parsed.methods[0]).toMatchObject({
       status: "failed",
-      func: "risky"
+      method: "risky"
     });
     expect(parsed.methods[1]).toMatchObject({
       status: "passed",
-      func: "safe"
+      method: "safe"
     });
   });
 
@@ -343,7 +343,7 @@ describe("report formatting", () => {
 
     expect(output).toContain("status: failed");
     expect(output).toContain("threshold: 8");
-    expect(output).toContain("methods[2]{crap,cc,cov,covKind,func,src,lineStart,lineEnd}:");
+    expect(output).toContain("methods[2]{crap,cc,cov,covKind,method,src,lineStart,lineEnd}:");
     expect(output).toContain("risky");
     expect(output).toContain("safe");
     expect(output).not.toContain("{status,crap");
@@ -366,7 +366,7 @@ describe("report formatting", () => {
 
     expect(output).toContain("status: failed");
     expect(output).toContain("threshold: 8.0");
-    expect(tableLines[0]).toBe("| crap | cc |    cov | covKind | func  | src           | lineStart | lineEnd |");
+    expect(tableLines[0]).toBe("| crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |");
     expect(output).toContain("risky");
     expect(output).toContain("safe");
     expect(output).not.toContain("| status |");
@@ -448,7 +448,7 @@ describe("report formatting", () => {
     expect(output).toBe(`${encode(report)}\n`);
     expect(output).toContain("status: failed");
     expect(output).toContain("threshold: 8");
-    expect(output).toContain("methods[1]{crap,cc,cov,covKind,func,src,lineStart,lineEnd}:");
+    expect(output).toContain("methods[1]{crap,cc,cov,covKind,method,src,lineStart,lineEnd}:");
     expect(output).toContain("risky value");
     expect(output).not.toContain("safe");
     expect(output).not.toContain("status,crap");
@@ -504,7 +504,7 @@ describe("report formatting", () => {
 
     expect(output).toContain("status: failed");
     expect(output).toContain("threshold: 8.0");
-    expect(tableLines[0]).toBe("| status |  crap | cc |    cov | covKind | func  | src           | lineStart | lineEnd |");
+    expect(tableLines[0]).toBe("| status |  crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |");
     expect(new Set(pipePositions.map((positions) => positions.join(","))).size).toBe(1);
     expect(output).toContain("safe");
     expect(output).not.toContain("Summary");
