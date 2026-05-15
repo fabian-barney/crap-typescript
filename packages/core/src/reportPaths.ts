@@ -55,15 +55,33 @@ async function resolveReportPathTarget(
 async function lstatIfExists(filePath: string): Promise<Awaited<ReturnType<typeof lstat>> | undefined> {
   try {
     return await lstat(filePath);
-  } catch {
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return errorCode(error) === "ENOENT";
+}
+
+function errorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
     return undefined;
   }
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
 }
 
 async function canonicalizeReportPath(filePath: string): Promise<string> {
   try {
     return await realpath(filePath);
-  } catch {
+  } catch (error) {
+    if (!isMissingPathError(error)) {
+      throw error;
+    }
     return path.join(await canonicalizeExistingParent(path.dirname(filePath)), path.basename(filePath));
   }
 }
@@ -71,7 +89,10 @@ async function canonicalizeReportPath(filePath: string): Promise<string> {
 async function canonicalizeExistingParent(directoryPath: string): Promise<string> {
   try {
     return await realpath(directoryPath);
-  } catch {
+  } catch (error) {
+    if (!isMissingPathError(error)) {
+      throw error;
+    }
     const parent = path.dirname(directoryPath);
     if (parent === directoryPath) {
       return directoryPath;
@@ -86,7 +107,7 @@ function normalizeReportPathForCollision(filePath: string): string {
 }
 
 function isCaseInsensitivePlatform(): boolean {
-  return process.platform === "win32" || process.platform === "darwin";
+  return process.platform === "win32";
 }
 
 function isFilesystemRoot(filePath: string): boolean {
