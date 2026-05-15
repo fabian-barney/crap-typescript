@@ -87,7 +87,7 @@ npx crap-typescript
 --format <format>            Emit toon, json, text, junit, or none (default: toon)
 --agent                      Default primary output to toon, failures-only, omit-redundancy
 --failures-only[=true|false] Emit failed methods only in the primary report
---omit-redundancy[=true|false] Omit redundant per-function status in the primary report
+--omit-redundancy[=true|false] Omit redundant per-method status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
 --threshold <number>         Override the CRAP threshold (`8.0` by default)
