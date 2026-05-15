@@ -115,7 +115,7 @@ npx crap-typescript packages/api packages/web
 
 The CLI defaults to TOON output for compact, agent-readable reports. `--format` can select `toon`, `json`, `text`, `junit`, or `none`. `--format none` suppresses primary stdout output; when used with `--output`, it creates an empty primary report file.
 
-Primary reports expose overall `status` and the run-level `threshold`. Per-function entries use the shared fields `status`, `crap`, `cc`, `cov`, `covKind`, `func`, `src`, `lineStart`, and `lineEnd`. Method-level entries never repeat `threshold`.
+Primary reports expose overall `status` and the run-level `threshold`. Method entries use the shared fields `status`, `crap`, `cc`, `cov`, `covKind`, `method`, `src`, `lineStart`, and `lineEnd`. `src` is the project-relative source file path. Method-level entries never repeat `threshold`.
 
 Use `--failures-only` to keep run-level metadata but emit only failed function entries in the primary report. `--failures-only=true` and `--failures-only=false` are accepted for explicit boolean configuration.
 

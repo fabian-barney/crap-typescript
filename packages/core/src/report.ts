@@ -11,8 +11,8 @@ import type {
   ReportStatus
 } from "./types.js";
 
-const METHOD_COLUMNS = ["status", "crap", "cc", "cov", "covKind", "func", "src", "lineStart", "lineEnd"] as const;
-const AGENT_METHOD_COLUMNS = ["crap", "cc", "cov", "covKind", "func", "src", "lineStart", "lineEnd"] as const;
+const METHOD_COLUMNS = ["status", "crap", "cc", "cov", "covKind", "method", "src", "lineStart", "lineEnd"] as const;
+const AGENT_METHOD_COLUMNS = ["crap", "cc", "cov", "covKind", "method", "src", "lineStart", "lineEnd"] as const;
 const RIGHT_ALIGNED_TEXT_COLUMNS = new Set<MethodColumn>(["crap", "cc", "cov", "lineStart", "lineEnd"]);
 
 export interface MethodReportEntry {
@@ -21,7 +21,7 @@ export interface MethodReportEntry {
   cc: number;
   cov: number | null;
   covKind: CoverageKind;
-  func: string;
+  method: string;
   src: string;
   lineStart: number;
   lineEnd: number;
@@ -185,7 +185,7 @@ function toMethodReportEntry(metric: MethodMetrics, threshold: number): MethodRe
     cc: metric.complexity,
     cov: metric.coveragePercent,
     covKind: coverageKind(metric),
-    func: metric.displayName,
+    method: metric.displayName,
     src: metric.relativePath,
     lineStart: metric.startLine,
     lineEnd: metric.endLine
@@ -267,7 +267,7 @@ function methodProperties(method: MethodReportEntry, omitRedundancy: boolean): A
     ["cc", String(method.cc)],
     ["cov", formatJunitNullableNumber(method.cov)],
     ["covKind", method.covKind],
-    ["func", method.func],
+    ["method", method.method],
     ["src", method.src],
     ["lineStart", String(method.lineStart)],
     ["lineEnd", String(method.lineEnd)]
@@ -326,7 +326,7 @@ function countJunitMethodStatuses(methods: MethodReportEntry[]): JunitMethodCoun
 function toJunitTestcaseXml(method: MethodReportEntry, threshold: number, omitRedundancy: boolean): XmlNode {
   return {
     "@_classname": method.src,
-    "@_name": method.func,
+    "@_name": method.method,
     "@_file": method.src,
     "@_line": method.lineStart,
     properties: {

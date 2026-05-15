@@ -309,7 +309,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(exitCode).toBe(2);
     expect(stdout.toString()).toContain("status: failed");
     expect(stdout.toString()).toContain("threshold: 8");
-    expect(stdout.toString()).toContain("methods[2]{status,crap,cc,cov,covKind,func,src,lineStart,lineEnd}:");
+    expect(stdout.toString()).toContain("methods[2]{status,crap,cc,cov,covKind,method,src,lineStart,lineEnd}:");
     expect(stdout.toString()).toContain("risky");
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
   });
@@ -354,7 +354,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("status: passed");
     expect(stdout.toString()).toContain("threshold: 8");
-    expect(tableLines[0]).toBe("| status | crap | cc |    cov | covKind | func | src           | lineStart | lineEnd |");
+    expect(tableLines[0]).toBe("| status | crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |");
     expect(new Set(pipePositions.map((positions) => positions.join(","))).size).toBe(1);
     expect(stderr.toString()).toBe("");
   });
@@ -466,7 +466,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary.status).toBe("failed");
     expect(primary.threshold).toBe(8);
     expect(primary.methods).toHaveLength(1);
-    expect(primary.methods[0].func).toBe("risky");
+    expect(primary.methods[0].method).toBe("risky");
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(primary.methods[0]).not.toHaveProperty("threshold");
     expect(junit).toContain('tests="2"');
@@ -493,11 +493,11 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(overrideStdout.toString()).toBe("");
     expect(fullPrimary.methods).toHaveLength(2);
     expect(fullPrimary.methods[0]).toMatchObject({
-      func: "risky",
+      method: "risky",
       status: "failed"
     });
     expect(fullPrimary.methods[1]).toMatchObject({
-      func: "safe",
+      method: "safe",
       status: "passed"
     });
     expect(overrideStderr.toString()).toContain("CRAP threshold exceeded");
@@ -612,7 +612,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary.methods).toHaveLength(1);
     expect(primary.methods[0]).toMatchObject({
       status: "failed",
-      func: "risky"
+      method: "risky"
     });
     expect(junit).toContain('tests="2"');
     expect(junit).toContain('name="safe"');
@@ -675,7 +675,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary.methods).toHaveLength(1);
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(primary.methods[0]).toMatchObject({
-      func: "safe"
+      method: "safe"
     });
     expect(junit).toContain('tests="1"');
     expect(junit).toContain('name="safe"');
