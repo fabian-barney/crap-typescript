@@ -167,9 +167,14 @@ describe("CrapTypescriptJestReporter", () => {
     await mkdir(path.join(projectRoot, "reports"));
     await mkdir(path.join(projectRoot, "real-reports"));
     await symlink(path.join(projectRoot, "real-reports"), path.join(projectRoot, "linked-reports"), "junction");
+    await symlink(path.join(projectRoot, "reports"), path.join(projectRoot, "linked-directory"), "junction");
 
     const directoryTarget = await finalizeWithOptions(projectRoot, {
       output: "reports",
+      junit: false
+    });
+    const symlinkedDirectoryTarget = await finalizeWithOptions(projectRoot, {
+      output: "linked-directory",
       junit: false
     });
     const rootTarget = await finalizeWithOptions(projectRoot, {
@@ -182,6 +187,9 @@ describe("CrapTypescriptJestReporter", () => {
     });
 
     expect(directoryTarget.stderr.toString()).toContain("output must target a report file, not an existing directory");
+    expect(symlinkedDirectoryTarget.stderr.toString()).toContain(
+      "output must target a report file, not an existing directory"
+    );
     expect(rootTarget.stderr.toString()).toContain("output must target a report file, not a filesystem root");
     expect(aliasTarget.stderr.toString()).toContain("output and junitReport must target different report files");
     expect(process.exitCode).toBe(1);

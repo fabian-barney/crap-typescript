@@ -259,6 +259,23 @@ describe("cli", () => {
     expect(result.stderr).toContain("--output must target a report file, not an existing directory");
   });
 
+  it("rejects symlinked directory report targets", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await mkdir(path.join(projectRoot, "reports"));
+    await symlink(path.join(projectRoot, "reports"), path.join(projectRoot, "linked-reports"), "junction");
+
+    const result = await runPathValidation([
+      "--format",
+      "none",
+      "--output",
+      "linked-reports"
+    ], projectRoot);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--output must target a report file, not an existing directory");
+  });
+
   it("rejects filesystem root report targets", async () => {
     const projectRoot = await createTempDir("crap-cli-");
     tempDirs.push(projectRoot);
