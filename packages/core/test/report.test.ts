@@ -101,12 +101,12 @@ describe("report formatting", () => {
       {
         status: "skipped",
         func: "unknownCoverage",
-        covKind: "stmt"
+        covKind: "N/A"
       }
     ]);
   });
 
-  it("chooses branch coverage when branch coverage blocks the score", () => {
+  it("reports N/A coverage kind when score coverage is unavailable", () => {
     const report = buildAnalysisReport([
       metric({
         coverage: unknown("branch_unattributed"),
@@ -119,6 +119,40 @@ describe("report formatting", () => {
 
     expect(report.methods[0]).toMatchObject({
       status: "skipped",
+      covKind: "N/A"
+    });
+  });
+
+  it("reports statement coverage kind when it is the only measured component", () => {
+    const report = buildAnalysisReport([
+      metric({
+        coverage: measured(75),
+        statementCoverage: measured(75),
+        branchCoverage: unknown("branch_unattributed"),
+        coveragePercent: 75,
+        crapScore: 1.0625
+      })
+    ]);
+
+    expect(report.methods[0]).toMatchObject({
+      status: "passed",
+      covKind: "stmt"
+    });
+  });
+
+  it("reports branch coverage kind when it is the only measured component", () => {
+    const report = buildAnalysisReport([
+      metric({
+        coverage: measured(50),
+        statementCoverage: unknown("statement_unattributed"),
+        branchCoverage: measured(50),
+        coveragePercent: 50,
+        crapScore: 1.125
+      })
+    ]);
+
+    expect(report.methods[0]).toMatchObject({
+      status: "passed",
       covKind: "branch"
     });
   });
@@ -445,7 +479,7 @@ describe("report formatting", () => {
 
     expect(output).toBe(`${encode(report)}\n`);
     expect(output).toContain('failed,20,4,0,stmt,"risky \\"quoted\\", value","src/a,b.ts",1,3');
-    expect(output).toContain("skipped,null,1,null,stmt,missingCoverage");
+    expect(output).toContain("skipped,null,1,null,N/A,missingCoverage");
   });
 
   it("formats text reports with aligned method columns", () => {

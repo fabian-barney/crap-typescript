@@ -7,7 +7,7 @@ export type CoverageMode = "auto" | "existing-only";
 export type ReportFormat = "toon" | "json" | "text" | "junit" | "none";
 export type ReportStatus = "passed" | "failed";
 export type MethodReportStatus = ReportStatus | "skipped";
-export type CoverageKind = "stmt" | "branch";
+export type CoverageKind = "stmt" | "branch" | "N/A";
 export type CoverageStatus = "measured" | "structural_na" | "unknown";
 export type CoverageUnknownReason =
   | "missing_report"
