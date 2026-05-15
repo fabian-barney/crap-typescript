@@ -1,5 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 
 import { normalizeSlashes, toRelativePath } from "./utils.js";
 import type {
@@ -34,6 +35,7 @@ const DEFAULT_GENERATED_MARKERS = [
   "Do not edit",
   "DO NOT EDIT"
 ];
+const HEADER_READ_CHUNK_SIZE = 8192;
 
 interface ExclusionReason {
   source: SourceExclusionSource;
@@ -181,61 +183,133 @@ async function generatedMarkerExclusionReason(
   if (markerRules.length === 0) {
     return null;
   }
-  const header = leadingCommentHeader(await readFile(filePath, "utf8"));
+  const header = await leadingCommentHeader(filePath);
   return markerRules.find((rule) => rule.rule.length > 0 && header.includes(rule.rule)) ?? null;
 }
 
-function leadingCommentHeader(sourceText: string): string {
+async function leadingCommentHeader(filePath: string): Promise<string> {
+  const handle = await open(filePath, "r");
+  const decoder = new StringDecoder("utf8");
+  const buffer = Buffer.alloc(HEADER_READ_CHUNK_SIZE);
+  let sourceText = "";
+  let position = 0;
+  try {
+    while (true) {
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, position);
+      if (bytesRead === 0) {
+        sourceText += decoder.end();
+        return parseLeadingCommentHeader(sourceText, true).header;
+      }
+      position += bytesRead;
+      sourceText += decoder.write(buffer.subarray(0, bytesRead));
+      const parsed = parseLeadingCommentHeader(sourceText, false);
+      if (parsed.complete) {
+        return parsed.header;
+      }
+    }
+  } finally {
+    await handle.close();
+  }
+}
+
+interface LeadingCommentHeader {
+  header: string;
+  complete: boolean;
+}
+
+function parseLeadingCommentHeader(sourceText: string, finalChunk: boolean): LeadingCommentHeader {
   let index = sourceText.charCodeAt(0) === 0xfeff ? 1 : 0;
   const comments: string[] = [];
 
   while (index < sourceText.length) {
-    index = skipWhitespace(sourceText, index);
-    const comment = readLeadingComment(sourceText, index);
-    if (!comment) {
-      break;
+    const step = readHeaderStep(sourceText, index, finalChunk);
+    if (step.done) {
+      return headerResult(comments, step.complete);
     }
-    comments.push(comment.text);
-    index = comment.nextIndex;
+    comments.push(step.comment.text);
+    index = step.comment.nextIndex;
   }
 
-  return comments.join("\n");
+  return headerResult(comments, finalChunk);
+}
+
+interface HeaderStep {
+  done: true;
+  complete: boolean;
+}
+
+interface HeaderCommentStep {
+  done: false;
+  comment: LeadingComment;
+}
+
+function readHeaderStep(sourceText: string, startIndex: number, finalChunk: boolean): HeaderStep | HeaderCommentStep {
+  const index = skipWhitespace(sourceText, startIndex);
+  if (index >= sourceText.length) {
+    return doneHeaderStep(finalChunk);
+  }
+  const comment = readLeadingComment(sourceText, index, finalChunk);
+  if (!comment) {
+    return doneHeaderStep(true);
+  }
+  return comment.complete
+    ? { done: false, comment }
+    : doneHeaderStep(false);
+}
+
+function doneHeaderStep(complete: boolean): HeaderStep {
+  return {
+    done: true,
+    complete
+  };
+}
+
+function headerResult(comments: string[], complete: boolean): LeadingCommentHeader {
+  return {
+    header: comments.join("\n"),
+    complete
+  };
 }
 
 interface LeadingComment {
   text: string;
   nextIndex: number;
+  complete: boolean;
 }
 
-function readLeadingComment(sourceText: string, index: number): LeadingComment | null {
+function readLeadingComment(sourceText: string, index: number, finalChunk: boolean): LeadingComment | null {
   if (sourceText.startsWith("#!", index) || sourceText.startsWith("//", index)) {
-    return readLineComment(sourceText, index);
+    return readLineComment(sourceText, index, finalChunk);
   }
   if (sourceText.startsWith("/*", index)) {
-    return readBlockComment(sourceText, index);
+    return readBlockComment(sourceText, index, finalChunk);
   }
   return null;
 }
 
-function readLineComment(sourceText: string, index: number): LeadingComment {
+function readLineComment(sourceText: string, index: number, finalChunk: boolean): LeadingComment {
   const end = nextLineIndex(sourceText, index);
+  const complete = end < sourceText.length || finalChunk;
   return {
     text: sourceText.slice(index, end),
-    nextIndex: end
+    nextIndex: end,
+    complete
   };
 }
 
-function readBlockComment(sourceText: string, index: number): LeadingComment {
+function readBlockComment(sourceText: string, index: number, finalChunk: boolean): LeadingComment {
   const end = sourceText.indexOf("*/", index + 2);
   if (end === -1) {
     return {
       text: sourceText.slice(index),
-      nextIndex: sourceText.length
+      nextIndex: sourceText.length,
+      complete: finalChunk
     };
   }
   return {
     text: sourceText.slice(index, end + 2),
-    nextIndex: end + 2
+    nextIndex: end + 2,
+    complete: true
   };
 }
 
@@ -304,7 +378,7 @@ function globToRegex(glob: string): RegExp {
     }
     pattern += escapeRegex(char);
   }
-  return new RegExp(`${pattern}$`, "i");
+  return new RegExp(`${pattern}$`);
 }
 
 function normalizeGlob(glob: string): string {

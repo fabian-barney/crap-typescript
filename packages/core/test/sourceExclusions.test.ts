@@ -71,6 +71,7 @@ describe("source exclusions", () => {
       "src/openapi/client.ts",
       "src/build/output.ts",
       "src/story.stories.ts",
+      "src/api/clientgenerated.ts",
       "src/models/user.schema.ts"
     ];
     const projectRoot = await createFiles(Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"])));
