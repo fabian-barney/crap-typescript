@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   changedTypeScriptFilesUnderSourceRoots,
@@ -14,6 +14,8 @@ import { createTempDir, disposeTempDir, initGitRepository, runProcess, writeProj
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  vi.doUnmock("../src/utils");
+  vi.resetModules();
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
 });
 
@@ -194,5 +196,25 @@ describe("file selection", () => {
     const nonRepoDir = await createTempDir("crap-files-nonrepo-");
     tempDirs.push(nonRepoDir);
     await expect(changedTypeScriptFilesUnderSourceRoots(nonRepoDir)).rejects.toThrow("not a git repository");
+  });
+
+  it("requires complete git status output for changed-file parsing", async () => {
+    vi.resetModules();
+    const runCommand = vi.fn(async () => {
+      throw new Error("Command output exceeded 1 bytes: git status --porcelain -z");
+    });
+    vi.doMock("../src/utils", async () => {
+      const actual = await vi.importActual<typeof import("../src/utils")>("../src/utils");
+      return {
+        ...actual,
+        runCommand
+      };
+    });
+    const { changedTypeScriptFilesUnderSourceRoots: changedFiles } = await import("../src/fileSelection");
+
+    await expect(changedFiles("repo")).rejects.toThrow("Command output exceeded 1 bytes");
+    expect(runCommand).toHaveBeenCalledWith("git", ["status", "--porcelain", "-z"], "repo", {
+      rejectOnTruncatedOutput: true
+    });
   });
 });
