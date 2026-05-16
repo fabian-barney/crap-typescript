@@ -156,7 +156,16 @@ async function readPackageJson(root: string): Promise<PackageJsonShape | null> {
     return null;
   }
   const raw = await readFile(packageJsonPath, "utf8");
-  return JSON.parse(raw) as PackageJsonShape;
+  return parsePackageJson(packageJsonPath, raw);
+}
+
+function parsePackageJson(packageJsonPath: string, content: string): PackageJsonShape {
+  try {
+    return JSON.parse(content) as PackageJsonShape;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Package manifest at ${packageJsonPath} could not be parsed: ${message}`);
+  }
 }
 
 async function exists(filePath: string): Promise<boolean> {

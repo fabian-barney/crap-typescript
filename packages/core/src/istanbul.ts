@@ -20,11 +20,21 @@ export type { FileCoverage } from "./coverageUnits.js";
 
 type JsonRecord = Record<string, unknown>;
 
+export class CoverageReportParseError extends Error {
+  readonly reportPath: string;
+
+  constructor(reportPath: string, cause: unknown) {
+    super(`Coverage report at ${reportPath} could not be parsed: ${errorMessage(cause)}`);
+    this.name = "CoverageReportParseError";
+    this.reportPath = reportPath;
+  }
+}
+
 export async function parseCoverageReport(
   reportPath: string,
   sourceRoot: string
 ): Promise<Map<string, FileCoverage>> {
-  const raw = JSON.parse(await readFile(reportPath, "utf8")) as unknown;
+  const raw = parseCoverageJson(reportPath, await readFile(reportPath, "utf8"));
   const report = isRecord(raw) ? raw : {};
   const records = new Map<string, FileCoverage>();
 
@@ -39,6 +49,17 @@ export async function parseCoverageReport(
   return records;
 }
 
+function parseCoverageJson(reportPath: string, content: string): unknown {
+  try {
+    return JSON.parse(content) as unknown;
+  } catch (error) {
+    throw new CoverageReportParseError(reportPath, error);
+  }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function parseStatements(statementMapValue: unknown, hitsValue: unknown): StatementCoverageUnit[] {
   if (!isRecord(statementMapValue) || !isRecord(hitsValue)) {
