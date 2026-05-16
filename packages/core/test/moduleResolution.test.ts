@@ -137,9 +137,13 @@ describe("resolveTestRunner", () => {
 
   it("detects script runners through common command wrappers", async () => {
     const npmExecDir = await createTempDir("crap-runner-");
+    const npmExecSeparatorDir = await createTempDir("crap-runner-");
     const npxDir = await createTempDir("crap-runner-");
+    const npxFlagDir = await createTempDir("crap-runner-");
+    const yarnRunDir = await createTempDir("crap-runner-");
+    const pnpmExecDir = await createTempDir("crap-runner-");
     const nodeBinDir = await createTempDir("crap-runner-");
-    tempDirs.push(npmExecDir, npxDir, nodeBinDir);
+    tempDirs.push(npmExecDir, npmExecSeparatorDir, npxDir, npxFlagDir, yarnRunDir, pnpmExecDir, nodeBinDir);
 
     await writeProjectFiles(npmExecDir, {
       "package.json": JSON.stringify({
@@ -150,12 +154,48 @@ describe("resolveTestRunner", () => {
         }
       })
     });
+    await writeProjectFiles(npmExecSeparatorDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npm exec -- jest --runInBand"
+        }
+      })
+    });
     await writeProjectFiles(npxDir, {
       "package.json": JSON.stringify({
         name: "fixture",
         private: true,
         scripts: {
           test: "npx vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(npxFlagDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npx --yes vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(yarnRunDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "yarn run jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(pnpmExecDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "pnpm exec vitest run"
         }
       })
     });
@@ -170,7 +210,11 @@ describe("resolveTestRunner", () => {
     });
 
     await expect(resolveTestRunner("auto", npmExecDir, npmExecDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", npmExecSeparatorDir, npmExecSeparatorDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", npxDir, npxDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", npxFlagDir, npxFlagDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", yarnRunDir, yarnRunDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", pnpmExecDir, pnpmExecDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", nodeBinDir, nodeBinDir)).resolves.toBe("vitest");
   });
 

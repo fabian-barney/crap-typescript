@@ -97,7 +97,20 @@ const PACKAGE_MANAGER_LOCKFILES: [PackageManager, string[]][] = [
   ["yarn", ["yarn.lock"]],
   ["npm", ["package-lock.json", "npm-shrinkwrap.json"]]
 ];
-const SCRIPT_COMMAND_WRAPPERS = new Set(["npx", "pnpm", "yarn", "bun", "node", "node.exe"]);
+const SCRIPT_COMMAND_WRAPPERS = new Set(["npx", "pnpm", "yarn", "bun", "node"]);
+const PACKAGE_MANAGER_RUN_SUBCOMMANDS = new Set(["exec", "run"]);
+const NPM_RUN_SUBCOMMANDS = new Set(["exec", "x"]);
+const WRAPPER_OPTIONS_WITH_VALUE = new Set([
+  "-c",
+  "-p",
+  "--call",
+  "--cwd",
+  "--dir",
+  "--filter",
+  "--package",
+  "--shell",
+  "--workspace"
+]);
 
 async function detectTestRunnerAtRoot(root: string): Promise<TestRunner | null> {
   const packageJson = await readPackageJson(root);
@@ -179,11 +192,43 @@ function runnerTokenIndex(tokens: string[], commandIndex: number): number {
   if (commandName === "npm") {
     return npmRunnerTokenIndex(tokens, commandIndex);
   }
-  return SCRIPT_COMMAND_WRAPPERS.has(commandName) ? commandIndex + 1 : commandIndex;
+  if (commandName === "pnpm" || commandName === "yarn") {
+    return packageManagerRunnerTokenIndex(tokens, commandIndex);
+  }
+  return SCRIPT_COMMAND_WRAPPERS.has(commandName)
+    ? skipWrapperOptions(tokens, commandIndex + 1)
+    : commandIndex;
 }
 
 function npmRunnerTokenIndex(tokens: string[], commandIndex: number): number {
-  return ["exec", "x"].includes(tokens[commandIndex + 1] ?? "") ? commandIndex + 2 : commandIndex;
+  const subcommandIndex = skipWrapperOptions(tokens, commandIndex + 1);
+  return NPM_RUN_SUBCOMMANDS.has(tokens[subcommandIndex] ?? "")
+    ? skipWrapperOptions(tokens, subcommandIndex + 1)
+    : commandIndex;
+}
+
+function packageManagerRunnerTokenIndex(tokens: string[], commandIndex: number): number {
+  const runnerIndex = skipWrapperOptions(tokens, commandIndex + 1);
+  const subcommand = tokens[runnerIndex] ?? "";
+  return PACKAGE_MANAGER_RUN_SUBCOMMANDS.has(subcommand)
+    ? skipWrapperOptions(tokens, runnerIndex + 1)
+    : runnerIndex;
+}
+
+function skipWrapperOptions(tokens: string[], startIndex: number): number {
+  let index = startIndex;
+  while (isSkippableWrapperToken(tokens[index])) {
+    index += optionWidth(tokens[index]);
+  }
+  return index;
+}
+
+function isSkippableWrapperToken(token: string | undefined): token is string {
+  return token === "--" || token?.startsWith("-") === true;
+}
+
+function optionWidth(token: string): number {
+  return WRAPPER_OPTIONS_WITH_VALUE.has(token) ? 2 : 1;
 }
 
 function firstCommandTokenIndex(tokens: string[]): number | null {
