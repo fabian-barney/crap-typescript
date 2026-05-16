@@ -49,11 +49,19 @@ export async function runCommand(
     });
     const stdout = createBoundedOutput(maxBufferBytes);
     const stderr = createBoundedOutput(maxBufferBytes);
-    let timedOut = false;
     let settled = false;
-    const timeout = setTimeout(() => {
-      timedOut = true;
+    let timeout: ReturnType<typeof setTimeout>;
+    const rejectOnce = (error: Error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    };
+    timeout = setTimeout(() => {
       child.kill("SIGKILL");
+      rejectOnce(new Error(`Command timed out after ${timeoutMs}ms: ${command} ${args.join(" ")}`));
     }, timeoutMs);
 
     child.stdout.on("data", (chunk) => {
@@ -63,12 +71,7 @@ export async function runCommand(
       stderr.append(chunk);
     });
     child.on("error", (error) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timeout);
-      reject(error);
+      rejectOnce(error);
     });
     child.on("close", (exitCode) => {
       if (settled) {
@@ -76,10 +79,6 @@ export async function runCommand(
       }
       settled = true;
       clearTimeout(timeout);
-      if (timedOut) {
-        reject(new Error(`Command timed out after ${timeoutMs}ms: ${command} ${args.join(" ")}`));
-        return;
-      }
       resolve({
         exitCode: exitCode ?? 1,
         stdout: stdout.toString(),
@@ -99,7 +98,8 @@ function createBoundedOutput(maxBufferBytes: number): { append(chunk: Buffer): v
     append(chunk) {
       const remainingBytes = limit - totalBytes;
       if (remainingBytes > 0) {
-        const retained = chunk.byteLength > remainingBytes ? chunk.subarray(0, remainingBytes) : chunk;
+        const retainedView = chunk.byteLength > remainingBytes ? chunk.subarray(0, remainingBytes) : chunk;
+        const retained = Buffer.from(retainedView);
         chunks.push(retained);
         totalBytes += retained.byteLength;
       }

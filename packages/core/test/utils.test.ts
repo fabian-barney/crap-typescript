@@ -1,12 +1,44 @@
-import { describe, expect, it } from "vitest";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runCommand } from "../src/utils";
+
+afterEach(() => {
+  vi.doUnmock("node:child_process");
+  vi.resetModules();
+});
 
 describe("runCommand", () => {
   it("rejects when the command exceeds the timeout", async () => {
     await expect(
       runCommand(process.execPath, ["-e", "setTimeout(() => {}, 1000)"], process.cwd(), { timeoutMs: 50 })
     ).rejects.toThrow("Command timed out after 50ms");
+  });
+
+  it("rejects on timeout even when the child process does not close", async () => {
+    vi.resetModules();
+    const kill = vi.fn();
+    vi.doMock("node:child_process", () => ({
+      spawn: vi.fn(() => {
+        const child = new EventEmitter() as EventEmitter & {
+          stdout: PassThrough;
+          stderr: PassThrough;
+          kill: (signal: string) => boolean;
+        };
+        child.stdout = new PassThrough();
+        child.stderr = new PassThrough();
+        child.kill = kill.mockReturnValue(true);
+        return child;
+      })
+    }));
+    const { runCommand: runMockedCommand } = await import("../src/utils");
+
+    await expect(runMockedCommand("never-closes", [], process.cwd(), { timeoutMs: 1 })).rejects.toThrow(
+      "Command timed out after 1ms"
+    );
+    expect(kill).toHaveBeenCalledWith("SIGKILL");
   });
 
   it("bounds captured stdout and stderr", async () => {
