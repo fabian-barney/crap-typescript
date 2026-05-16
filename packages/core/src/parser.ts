@@ -261,16 +261,24 @@ function containerNameFromAncestors(start: ts.Node | undefined): string | null {
   while (current) {
     const segment = containerSegment(current);
     if (segment) {
-      segments.unshift(segment);
+      segments.unshift(segment.name);
+      if (segment.anchored) {
+        break;
+      }
     }
     current = current.parent;
   }
   return segments.length > 0 ? segments.join(".") : null;
 }
 
-function containerSegment(node: ts.Node): string | null {
+interface ContainerSegment {
+  name: string;
+  anchored: boolean;
+}
+
+function containerSegment(node: ts.Node): ContainerSegment | null {
   if ((ts.isClassDeclaration(node) || ts.isClassExpression(node)) && node.name) {
-    return node.name.text;
+    return relativeContainerSegment(node.name.text);
   }
   if (ts.isObjectLiteralExpression(node)) {
     return localObjectContainerName(node);
@@ -278,11 +286,11 @@ function containerSegment(node: ts.Node): string | null {
   return null;
 }
 
-function localObjectContainerName(node: ts.ObjectLiteralExpression): string | null {
+function localObjectContainerName(node: ts.ObjectLiteralExpression): ContainerSegment | null {
   for (const resolver of OBJECT_CONTAINER_RESOLVERS) {
-    const containerName = resolver(node.parent);
-    if (containerName) {
-      return containerName;
+    const segment = resolver(node.parent);
+    if (segment) {
+      return segment;
     }
   }
   return null;
@@ -301,7 +309,7 @@ function assignmentTarget(node: ts.Expression): { name: string; containerName: s
   };
 }
 
-type ObjectContainerResolver = (parent: ts.Node) => string | null;
+type ObjectContainerResolver = (parent: ts.Node) => ContainerSegment | null;
 
 const OBJECT_CONTAINER_RESOLVERS: ObjectContainerResolver[] = [
   containerFromVariableDeclaration,
@@ -310,33 +318,41 @@ const OBJECT_CONTAINER_RESOLVERS: ObjectContainerResolver[] = [
   containerFromBinaryAssignment
 ];
 
-function containerFromVariableDeclaration(parent: ts.Node): string | null {
+function containerFromVariableDeclaration(parent: ts.Node): ContainerSegment | null {
   if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
-    return parent.name.text;
+    return relativeContainerSegment(parent.name.text);
   }
   return null;
 }
 
-function containerFromPropertyAssignment(parent: ts.Node): string | null {
+function containerFromPropertyAssignment(parent: ts.Node): ContainerSegment | null {
   if (ts.isPropertyAssignment(parent)) {
-    return propertyName(parent.name);
+    return relativeContainerSegment(propertyName(parent.name));
   }
   return null;
 }
 
-function containerFromPropertyDeclaration(parent: ts.Node): string | null {
+function containerFromPropertyDeclaration(parent: ts.Node): ContainerSegment | null {
   if (ts.isPropertyDeclaration(parent)) {
-    return propertyName(parent.name);
+    return relativeContainerSegment(propertyName(parent.name));
   }
   return null;
 }
 
-function containerFromBinaryAssignment(parent: ts.Node): string | null {
+function containerFromBinaryAssignment(parent: ts.Node): ContainerSegment | null {
   if (!isAssignmentExpression(parent)) {
     return null;
   }
   const target = assignmentTarget(parent.left);
-  return toDisplayName(target.containerName, target.name);
+  return anchoredContainerSegment(toDisplayName(target.containerName, target.name));
+}
+
+function relativeContainerSegment(name: string): ContainerSegment {
+  return { name, anchored: false };
+}
+
+function anchoredContainerSegment(name: string): ContainerSegment {
+  return { name, anchored: true };
 }
 
 type AssignmentTargetResolver = (node: ts.Expression) => { name: string; containerName: string | null } | null;
