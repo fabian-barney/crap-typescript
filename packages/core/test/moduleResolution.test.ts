@@ -127,12 +127,187 @@ describe("resolveTestRunner", () => {
           vitest: "^4.0.0"
         },
         scripts: {
-          test: "jest --runInBand"
+          test: "./node_modules/.bin/jest --runInBand"
         }
       })
     });
 
     await expect(resolveTestRunner("auto", tempDir, tempDir)).resolves.toBe("jest");
+  });
+
+  it("detects script runners through common command wrappers", async () => {
+    const npmExecDir = await createTempDir("crap-runner-");
+    const npmExecSeparatorDir = await createTempDir("crap-runner-");
+    const npxDir = await createTempDir("crap-runner-");
+    const npxFlagDir = await createTempDir("crap-runner-");
+    const yarnRunDir = await createTempDir("crap-runner-");
+    const pnpmExecDir = await createTempDir("crap-runner-");
+    const nodeBinDir = await createTempDir("crap-runner-");
+    const nodeRequireDir = await createTempDir("crap-runner-");
+    const nodeLoaderDir = await createTempDir("crap-runner-");
+    const quotedEnvDir = await createTempDir("crap-runner-");
+    const crossEnvDir = await createTempDir("crap-runner-");
+    const crossEnvShellDir = await createTempDir("crap-runner-");
+    const envCmdDir = await createTempDir("crap-runner-");
+    const dotenvDir = await createTempDir("crap-runner-");
+    tempDirs.push(
+      npmExecDir,
+      npmExecSeparatorDir,
+      npxDir,
+      npxFlagDir,
+      yarnRunDir,
+      pnpmExecDir,
+      nodeBinDir,
+      nodeRequireDir,
+      nodeLoaderDir,
+      quotedEnvDir,
+      crossEnvDir,
+      crossEnvShellDir,
+      envCmdDir,
+      dotenvDir
+    );
+
+    await writeProjectFiles(npmExecDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npm exec jest -- --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(npmExecSeparatorDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npm exec -- jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(npxDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npx vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(npxFlagDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npx --yes vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(yarnRunDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "yarn run jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(pnpmExecDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "pnpm exec vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(nodeBinDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "node ./node_modules/.bin/vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(nodeRequireDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "node -r ts-node/register ./node_modules/.bin/jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(nodeLoaderDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "node --loader ts-node/esm ./node_modules/.bin/vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(quotedEnvDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "NODE_OPTIONS=\"--loader ts-node/esm\" vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(crossEnvDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "cross-env NODE_ENV=test vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(crossEnvShellDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "cross-env-shell NODE_ENV=test \"vitest run\""
+        }
+      })
+    });
+    await writeProjectFiles(envCmdDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "env-cmd -f .env jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(dotenvDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "dotenv -e .env -- vitest run"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", npmExecDir, npmExecDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", npmExecSeparatorDir, npmExecSeparatorDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", npxDir, npxDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", npxFlagDir, npxFlagDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", yarnRunDir, yarnRunDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", pnpmExecDir, pnpmExecDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", nodeBinDir, nodeBinDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", nodeRequireDir, nodeRequireDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", nodeLoaderDir, nodeLoaderDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", quotedEnvDir, quotedEnvDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", crossEnvDir, crossEnvDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", crossEnvShellDir, crossEnvShellDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", envCmdDir, envCmdDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", dotenvDir, dotenvDir)).resolves.toBe("vitest");
   });
 
   it("honors explicit selection, falls back from module to project dependencies, and errors when nothing can be detected", async () => {
@@ -226,5 +401,27 @@ describe("resolveTestRunner", () => {
     await expect(
       resolveTestRunner("auto", missingModulePackageDir, `${missingModulePackageDir}/packages/demo`)
     ).resolves.toBe("vitest");
+  });
+
+  it("does not detect runners from plugin package names or non-command script text", async () => {
+    const tempDir = await createTempDir("crap-runner-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        devDependencies: {
+          "vitest-coverage-istanbul": "^4.0.0",
+          "eslint-plugin-jest": "^29.0.0",
+          "ts-jest-mock-extended": "^1.0.0"
+        },
+        scripts: {
+          test: "echo vitest-coverage-istanbul && echo eslint-plugin-jest && echo jest && echo vitest",
+          env: "NODE_ENV=jest VITEST_POOL=threads"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", tempDir, tempDir)).rejects.toThrow("Unable to detect a test runner");
   });
 });
