@@ -24,6 +24,12 @@ export function toRelativePath(projectRoot: string, filePath: string): string {
   return normalizeSlashes(relative || path.basename(filePath));
 }
 
+export function isWithinOrEqual(candidatePath: string, parentPath: string): boolean {
+  const relative = path.relative(parentPath, candidatePath);
+  return relative === "" ||
+    (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
 export async function runCommand(
   command: string,
   args: string[],

@@ -275,7 +275,7 @@ describe("cli", () => {
         "--output",
         path.join(reportRoot, "CRAP.xml"),
         "--junit-report",
-        path.join(reportRoot, "crap.xml")
+        "reports/crap.xml"
       ], projectRoot);
 
       expect(result.exitCode).toBe(1);

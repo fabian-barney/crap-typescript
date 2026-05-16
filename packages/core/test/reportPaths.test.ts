@@ -77,6 +77,17 @@ describe("report path validation", () => {
       { label: "--output", path: "linked-reports/report.xml" }
     ])).rejects.toThrow("--output must target a report file inside the project root");
   });
+
+  it("accepts report paths below project directories whose names start with two dots", async () => {
+    const projectRoot = await createTempDir("crap-report-paths-");
+    tempDirs.push(projectRoot);
+    await mkdir(path.join(projectRoot, "..reports"));
+    const { validateReportPathTargets } = await import("../src/reportPaths");
+
+    await expect(validateReportPathTargets(projectRoot, [
+      { label: "--output", path: "..reports/crap.xml" }
+    ])).resolves.toBeUndefined();
+  });
 });
 
 async function mockCaseProbeDirectoryCreationFailure(): Promise<void> {

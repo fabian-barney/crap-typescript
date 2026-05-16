@@ -1,6 +1,8 @@
 import { access, mkdtemp, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { isWithinOrEqual } from "./utils.js";
+
 export interface ReportPathTarget {
   label: string;
   path: string | undefined;
@@ -74,11 +76,6 @@ function ensureReportPathInsideProjectRoot(label: string, filePath: string, proj
     return;
   }
   throw new Error(`${label} must target a report file inside the project root`);
-}
-
-function isWithinOrEqual(candidatePath: string, parentPath: string): boolean {
-  const relative = path.relative(parentPath, candidatePath);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 async function caseInsensitiveFilesystemForTarget(
