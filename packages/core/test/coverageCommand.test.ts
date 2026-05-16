@@ -159,6 +159,34 @@ describe("ensureCoverageReport", () => {
       `Coverage command failed with exit 3 for yarn/jest in ${moduleRoot}: yarn jest --coverage --runInBand --coverageReporters=json --coverageReporters=text "--coverageDirectory=custom coverage"`
     );
   });
+
+  it("escapes special characters in quoted coverage command arguments", async () => {
+    const projectRoot = await createTempDir("crap-coverage-command-");
+    tempDirs.push(projectRoot);
+    const moduleRoot = path.join(projectRoot, "packages", "demo");
+
+    await writeProjectFiles(projectRoot, {
+      "package.json": JSON.stringify({
+        name: "root",
+        private: true,
+        devDependencies: { jest: "^30.0.0" }
+      }),
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/yarn.lock": ""
+    });
+
+    await expect(
+      ensureCoverageReport(
+        projectRoot,
+        moduleRoot,
+        "auto",
+        "auto",
+        "auto",
+        'custom "coverage"/cost$dir/back\\slash/tick`dir/coverage-final.json',
+        { execute: vi.fn(async () => 3) }
+      )
+    ).rejects.toThrow('"--coverageDirectory=custom \\"coverage\\"/cost\\$dir/back\\\\slash/tick\\`dir"');
+  });
 });
 
 describe("expectedCoveragePath", () => {
