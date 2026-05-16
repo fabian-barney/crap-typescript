@@ -6,7 +6,7 @@ import { ensureCoverageReport, expectedCoveragePath } from "./coverage.js";
 import type { FileCoverage } from "./coverageUnits.js";
 import { calculateCrapScore, maxCrap } from "./crapScore.js";
 import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection.js";
-import { parseCoverageReport } from "./istanbul.js";
+import { CoverageReportParseError, parseCoverageReport } from "./istanbul.js";
 import { resolveModuleRoot } from "./moduleResolution.js";
 import { parseFileMethods } from "./parser.js";
 import { emptySourceExclusionAudit, filterSourceFiles } from "./sourceExclusions.js";
@@ -173,12 +173,15 @@ async function loadModuleCoverage(
       warnings: []
     };
   } catch (error) {
+    const parseMessage = error instanceof CoverageReportParseError
+      ? error.message
+      : `Coverage report at ${coverageResult.coverageSourcePath} could not be parsed: ${(error as Error).message}`;
     return {
       coverageByFile: new Map<string, FileCoverage>(),
       unknownReason: "unparseable_report",
       warnings: [emitWarning(
         context.stderr,
-        `Warning: Coverage report at ${coverageResult.coverageSourcePath} could not be parsed: ${(error as Error).message}. Coverage will be N/A.`
+        `Warning: ${parseMessage}. Coverage will be N/A.`
       )]
     };
   }
@@ -203,8 +206,19 @@ async function analyzeFile(
   loadedCoverage: LoadedCoverage,
   context: AnalyzeContext
 ): Promise<FileAnalysisResult> {
-  const descriptors = await parseFileMethods(filePath);
   const relativePath = toRelativePath(context.projectRoot, filePath);
+  let descriptors: MethodDescriptor[];
+  try {
+    descriptors = await parseFileMethods(filePath);
+  } catch (error) {
+    return {
+      metrics: [],
+      warnings: [emitWarning(
+        context.stderr,
+        `Warning: Could not parse ${relativePath}: ${(error as Error).message}. Skipping file.`
+      )]
+    };
+  }
   const fileCoverage = resolveFileCoverage(loadedCoverage.coverageByFile, filePath, relativePath, loadedCoverage.unknownReason);
   const methodCoverage = coverageForMethods(descriptors, fileCoverage.coverage, fileCoverage.unknownReason ?? undefined);
   const warnings: string[] = [];
