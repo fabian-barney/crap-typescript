@@ -38,7 +38,9 @@ export async function expandExplicitPaths(
 }
 
 export async function changedTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
-  const result = await runCommand("git", ["status", "--porcelain", "-z"], projectRoot);
+  const result = await runCommand("git", ["status", "--porcelain", "-z"], projectRoot, {
+    rejectOnTruncatedOutput: true
+  });
   if (result.exitCode !== 0) {
     throw new Error(result.stderr.trim() || "git status --porcelain failed");
   }
