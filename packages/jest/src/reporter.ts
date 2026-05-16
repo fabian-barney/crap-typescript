@@ -86,7 +86,12 @@ export default class CrapTypescriptJestReporter {
     try {
       const options = resolveReporterOptions(this.options);
       await validateReporterReportPaths(options);
-      await waitForCoverageReport(options.projectRoot, options.coverageReportPath, options.coverageReportWaitMs);
+      await waitForCoverageReport(
+        options.projectRoot,
+        options.paths,
+        options.coverageReportPath,
+        options.coverageReportWaitMs
+      );
       const result = await analyzeProject({
         projectRoot: options.projectRoot,
         explicitPaths: options.paths,
@@ -124,34 +129,92 @@ export default class CrapTypescriptJestReporter {
 
 async function waitForCoverageReport(
   projectRoot: string,
+  explicitPaths: string[],
   coverageReportPath: string,
   waitMs: number
 ): Promise<void> {
-  const coveragePath = resolveCoveragePath(projectRoot, coverageReportPath);
+  const coveragePaths = await resolveCoverageWaitPaths(projectRoot, explicitPaths, coverageReportPath);
   const deadline = Date.now() + waitMs;
   while (true) {
+    if (await anyCoveragePathExists(coveragePaths)) {
+      return;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out after ${waitMs}ms waiting for Jest coverage report at ${formatCoveragePaths(coveragePaths)}`);
+    }
+    await sleep(Math.min(COVERAGE_REPORT_POLL_INTERVAL_MS, Math.max(1, deadline - Date.now())));
+  }
+}
+
+async function anyCoveragePathExists(coveragePaths: string[]): Promise<boolean> {
+  for (const coveragePath of coveragePaths) {
     try {
       await access(coveragePath);
-      return;
+      return true;
     } catch {
-      if (Date.now() >= deadline) {
-        throw new Error(`Timed out after ${waitMs}ms waiting for Jest coverage report at ${coveragePath}`);
-      }
-      await sleep(Math.min(COVERAGE_REPORT_POLL_INTERVAL_MS, Math.max(1, deadline - Date.now())));
+      // Keep polling the remaining candidate paths until the deadline expires.
     }
   }
+  return false;
+}
+
+async function resolveCoverageWaitPaths(
+  projectRoot: string,
+  explicitPaths: string[],
+  coverageReportPath: string
+): Promise<string[]> {
+  if (path.isAbsolute(coverageReportPath)) {
+    return [coverageReportPath];
+  }
+  const roots = await coverageWaitRoots(projectRoot, explicitPaths);
+  return roots.map((root) => path.join(root, coverageReportPath));
+}
+
+async function coverageWaitRoots(projectRoot: string, explicitPaths: string[]): Promise<string[]> {
+  const roots = [path.resolve(projectRoot)];
+  for (const explicitPath of explicitPaths) {
+    roots.push(await nearestPackageRoot(projectRoot, path.resolve(projectRoot, explicitPath)));
+  }
+  return [...new Set(roots)];
+}
+
+async function nearestPackageRoot(projectRoot: string, candidatePath: string): Promise<string> {
+  const normalizedProjectRoot = path.resolve(projectRoot);
+  let current = path.extname(candidatePath) === "" ? candidatePath : path.dirname(candidatePath);
+  while (isWithinOrEqual(current, normalizedProjectRoot)) {
+    if (await exists(path.join(current, "package.json"))) {
+      return current;
+    }
+    if (current === normalizedProjectRoot) {
+      break;
+    }
+    current = path.dirname(current);
+  }
+  return normalizedProjectRoot;
+}
+
+async function exists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isWithinOrEqual(candidatePath: string, parentPath: string): boolean {
+  const relative = path.relative(parentPath, candidatePath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function formatCoveragePaths(coveragePaths: string[]): string {
+  return coveragePaths.join(" or ");
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
-
-function resolveCoveragePath(projectRoot: string, coverageReportPath: string): string {
-  return path.isAbsolute(coverageReportPath)
-    ? coverageReportPath
-    : path.join(projectRoot, coverageReportPath);
 }
 
 function resolveReporterOptions(options: CrapTypescriptJestOptions): ResolvedReporterOptions {

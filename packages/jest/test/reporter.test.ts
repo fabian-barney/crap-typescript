@@ -138,6 +138,50 @@ describe("CrapTypescriptJestReporter", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("waits until the coverage report appears before the deadline", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+    const delayedCoverage = setTimeout(() => {
+      void writeProjectFiles(projectRoot, {
+        "coverage/coverage-final.json": "{}"
+      });
+    }, 20);
+
+    try {
+      const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+        coverageReportWaitMs: 1_000
+      });
+
+      expect(stderr.toString()).toBe("");
+      expect(reporter.getLastError()).toBeUndefined();
+      expect(process.exitCode).toBe(originalExitCode);
+    } finally {
+      clearTimeout(delayedCoverage);
+    }
+  });
+
+  it("accepts coverage reports written under explicit package roots", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/src/sample.ts": "export function safe(): number { return 1; }\n",
+      "packages/demo/coverage/coverage-final.json": "{}"
+    });
+
+    const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      paths: ["packages/demo/src"],
+      coverageReportWaitMs: 0
+    });
+
+    expect(stderr.toString()).not.toContain("Timed out after 0ms");
+    expect(reporter.getLastError()).toBeUndefined();
+  });
+
   it("rejects invalid coverage report wait options", async () => {
     const projectRoot = await createTempDir("crap-jest-reporter-");
     tempDirs.push(projectRoot);
