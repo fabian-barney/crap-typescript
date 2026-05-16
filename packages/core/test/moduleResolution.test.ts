@@ -127,12 +127,51 @@ describe("resolveTestRunner", () => {
           vitest: "^4.0.0"
         },
         scripts: {
-          test: "jest --runInBand"
+          test: "./node_modules/.bin/jest --runInBand"
         }
       })
     });
 
     await expect(resolveTestRunner("auto", tempDir, tempDir)).resolves.toBe("jest");
+  });
+
+  it("detects script runners through common command wrappers", async () => {
+    const npmExecDir = await createTempDir("crap-runner-");
+    const npxDir = await createTempDir("crap-runner-");
+    const nodeBinDir = await createTempDir("crap-runner-");
+    tempDirs.push(npmExecDir, npxDir, nodeBinDir);
+
+    await writeProjectFiles(npmExecDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npm exec jest -- --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(npxDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "npx vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(nodeBinDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "node ./node_modules/.bin/vitest run"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", npmExecDir, npmExecDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", npxDir, npxDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", nodeBinDir, nodeBinDir)).resolves.toBe("vitest");
   });
 
   it("honors explicit selection, falls back from module to project dependencies, and errors when nothing can be detected", async () => {
@@ -241,7 +280,8 @@ describe("resolveTestRunner", () => {
           "ts-jest-mock-extended": "^1.0.0"
         },
         scripts: {
-          test: "echo vitest-coverage-istanbul && echo eslint-plugin-jest"
+          test: "echo vitest-coverage-istanbul && echo eslint-plugin-jest && echo jest && echo vitest",
+          env: "NODE_ENV=jest VITEST_POOL=threads"
         }
       })
     });

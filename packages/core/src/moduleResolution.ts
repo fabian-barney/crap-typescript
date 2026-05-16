@@ -97,8 +97,7 @@ const PACKAGE_MANAGER_LOCKFILES: [PackageManager, string[]][] = [
   ["yarn", ["yarn.lock"]],
   ["npm", ["package-lock.json", "npm-shrinkwrap.json"]]
 ];
-const VITEST_SCRIPT_COMMAND = /(?:^|[\s;&|()])vitest(?=$|[\s;&|()])/;
-const JEST_SCRIPT_COMMAND = /(?:^|[\s;&|()])jest(?=$|[\s;&|()])/;
+const SCRIPT_COMMAND_WRAPPERS = new Set(["npx", "pnpm", "yarn", "bun", "node", "node.exe"]);
 
 async function detectTestRunnerAtRoot(root: string): Promise<TestRunner | null> {
   const packageJson = await readPackageJson(root);
@@ -139,15 +138,65 @@ function detectSingleRunner(candidates: string[], matcher: (candidate: string, r
 }
 
 function matchesScriptRunner(script: string, runner: TestRunner): boolean {
-  return runner === "vitest"
-    ? VITEST_SCRIPT_COMMAND.test(script)
-    : JEST_SCRIPT_COMMAND.test(script);
+  return scriptExecutableNames(script).some((executableName) => executableName === runner);
 }
 
 function matchesDependencyRunner(dependencyName: string, runner: TestRunner): boolean {
   return runner === "vitest"
     ? dependencyName === "vitest"
     : dependencyName === "jest" || dependencyName === "ts-jest";
+}
+
+function scriptExecutableNames(script: string): string[] {
+  return splitShellCommandSegments(script)
+    .map(tokenizeShellWords)
+    .map(resolveScriptExecutableName)
+    .filter((name): name is string => name !== null);
+}
+
+function splitShellCommandSegments(script: string): string[] {
+  return script.split(/&&|\|\||[;|]/).map((segment) => segment.trim()).filter(Boolean);
+}
+
+function tokenizeShellWords(segment: string): string[] {
+  return segment.match(/"[^"]*"|'[^']*'|[^\s]+/g)?.map(unquoteShellWord) ?? [];
+}
+
+function unquoteShellWord(token: string): string {
+  return token.replace(/^(['"])(.*)\1$/, "$2");
+}
+
+function resolveScriptExecutableName(tokens: string[]): string | null {
+  const commandIndex = firstCommandTokenIndex(tokens);
+  if (commandIndex === null) {
+    return null;
+  }
+  return executableBaseName(tokens[runnerTokenIndex(tokens, commandIndex)]);
+}
+
+function runnerTokenIndex(tokens: string[], commandIndex: number): number {
+  const commandName = executableBaseName(tokens[commandIndex]);
+  if (commandName === "npm") {
+    return npmRunnerTokenIndex(tokens, commandIndex);
+  }
+  return SCRIPT_COMMAND_WRAPPERS.has(commandName) ? commandIndex + 1 : commandIndex;
+}
+
+function npmRunnerTokenIndex(tokens: string[], commandIndex: number): number {
+  return ["exec", "x"].includes(tokens[commandIndex + 1] ?? "") ? commandIndex + 2 : commandIndex;
+}
+
+function firstCommandTokenIndex(tokens: string[]): number | null {
+  const index = tokens.findIndex((token) => !isEnvironmentAssignment(token));
+  return index === -1 ? null : index;
+}
+
+function isEnvironmentAssignment(token: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(token);
+}
+
+function executableBaseName(token: string | undefined): string {
+  return path.basename(token?.replace(/\\/g, "/") ?? "").replace(/\.(?:cmd|ps1|bat|exe)$/i, "");
 }
 
 async function readPackageJson(root: string): Promise<PackageJsonShape | null> {
