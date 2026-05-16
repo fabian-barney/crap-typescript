@@ -55,7 +55,7 @@ describe("runCommand", () => {
     expect(result.stderrTruncated).toBe(true);
   });
 
-  it("does not mutate bounded output with truncation markers", async () => {
+  it("returns raw bounded output without mutation when truncated", async () => {
     const emptyResult = await runCommand(
       process.execPath,
       ["-e", "process.stdout.write('abc')"],
