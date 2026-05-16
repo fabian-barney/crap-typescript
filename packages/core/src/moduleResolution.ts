@@ -97,9 +97,11 @@ const PACKAGE_MANAGER_LOCKFILES: [PackageManager, string[]][] = [
   ["yarn", ["yarn.lock"]],
   ["npm", ["package-lock.json", "npm-shrinkwrap.json"]]
 ];
+const ENVIRONMENT_COMMAND_WRAPPERS = new Set(["cross-env", "cross-env-shell", "dotenv", "env-cmd"]);
 const SCRIPT_COMMAND_WRAPPERS = new Set(["npx", "pnpm", "yarn", "bun", "node"]);
 const PACKAGE_MANAGER_RUN_SUBCOMMANDS = new Set(["exec", "run"]);
 const NPM_RUN_SUBCOMMANDS = new Set(["exec", "x"]);
+const ENVIRONMENT_WRAPPER_OPTIONS_WITH_VALUE = new Set(["-e", "-f", "--environments", "--file"]);
 const WRAPPER_OPTIONS_WITH_VALUE = new Set([
   "-c",
   "-p",
@@ -199,6 +201,9 @@ function resolveScriptExecutableName(tokens: string[]): string | null {
 
 function runnerTokenIndex(tokens: string[], commandIndex: number): number {
   const commandName = executableBaseName(tokens[commandIndex]);
+  if (ENVIRONMENT_COMMAND_WRAPPERS.has(commandName)) {
+    return environmentWrapperRunnerTokenIndex(tokens, commandIndex);
+  }
   if (commandName === "npm") {
     return npmRunnerTokenIndex(tokens, commandIndex);
   }
@@ -208,6 +213,31 @@ function runnerTokenIndex(tokens: string[], commandIndex: number): number {
   return SCRIPT_COMMAND_WRAPPERS.has(commandName)
     ? skipWrapperOptions(tokens, commandIndex + 1)
     : commandIndex;
+}
+
+function environmentWrapperRunnerTokenIndex(tokens: string[], commandIndex: number): number {
+  const runnerIndex = skipEnvironmentWrapperOptions(tokens, commandIndex + 1);
+  return skipEnvironmentAssignments(tokens, runnerIndex);
+}
+
+function skipEnvironmentWrapperOptions(tokens: string[], startIndex: number): number {
+  let index = startIndex;
+  while (isSkippableWrapperToken(tokens[index])) {
+    index += environmentWrapperOptionWidth(tokens[index]);
+  }
+  return index;
+}
+
+function environmentWrapperOptionWidth(token: string): number {
+  return ENVIRONMENT_WRAPPER_OPTIONS_WITH_VALUE.has(token) ? 2 : 1;
+}
+
+function skipEnvironmentAssignments(tokens: string[], startIndex: number): number {
+  let index = startIndex;
+  while (isEnvironmentAssignment(tokens[index] ?? "")) {
+    index += 1;
+  }
+  return index;
 }
 
 function npmRunnerTokenIndex(tokens: string[], commandIndex: number): number {

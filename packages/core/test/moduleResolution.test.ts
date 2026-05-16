@@ -146,6 +146,9 @@ describe("resolveTestRunner", () => {
     const nodeRequireDir = await createTempDir("crap-runner-");
     const nodeLoaderDir = await createTempDir("crap-runner-");
     const quotedEnvDir = await createTempDir("crap-runner-");
+    const crossEnvDir = await createTempDir("crap-runner-");
+    const envCmdDir = await createTempDir("crap-runner-");
+    const dotenvDir = await createTempDir("crap-runner-");
     tempDirs.push(
       npmExecDir,
       npmExecSeparatorDir,
@@ -156,7 +159,10 @@ describe("resolveTestRunner", () => {
       nodeBinDir,
       nodeRequireDir,
       nodeLoaderDir,
-      quotedEnvDir
+      quotedEnvDir,
+      crossEnvDir,
+      envCmdDir,
+      dotenvDir
     );
 
     await writeProjectFiles(npmExecDir, {
@@ -249,6 +255,33 @@ describe("resolveTestRunner", () => {
         }
       })
     });
+    await writeProjectFiles(crossEnvDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "cross-env NODE_ENV=test vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(envCmdDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "env-cmd -f .env jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(dotenvDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "dotenv -e .env -- vitest run"
+        }
+      })
+    });
 
     await expect(resolveTestRunner("auto", npmExecDir, npmExecDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", npmExecSeparatorDir, npmExecSeparatorDir)).resolves.toBe("jest");
@@ -260,6 +293,9 @@ describe("resolveTestRunner", () => {
     await expect(resolveTestRunner("auto", nodeRequireDir, nodeRequireDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", nodeLoaderDir, nodeLoaderDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", quotedEnvDir, quotedEnvDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", crossEnvDir, crossEnvDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", envCmdDir, envCmdDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", dotenvDir, dotenvDir)).resolves.toBe("vitest");
   });
 
   it("honors explicit selection, falls back from module to project dependencies, and errors when nothing can be detected", async () => {
