@@ -143,7 +143,19 @@ describe("resolveTestRunner", () => {
     const yarnRunDir = await createTempDir("crap-runner-");
     const pnpmExecDir = await createTempDir("crap-runner-");
     const nodeBinDir = await createTempDir("crap-runner-");
-    tempDirs.push(npmExecDir, npmExecSeparatorDir, npxDir, npxFlagDir, yarnRunDir, pnpmExecDir, nodeBinDir);
+    const nodeRequireDir = await createTempDir("crap-runner-");
+    const nodeLoaderDir = await createTempDir("crap-runner-");
+    tempDirs.push(
+      npmExecDir,
+      npmExecSeparatorDir,
+      npxDir,
+      npxFlagDir,
+      yarnRunDir,
+      pnpmExecDir,
+      nodeBinDir,
+      nodeRequireDir,
+      nodeLoaderDir
+    );
 
     await writeProjectFiles(npmExecDir, {
       "package.json": JSON.stringify({
@@ -208,6 +220,24 @@ describe("resolveTestRunner", () => {
         }
       })
     });
+    await writeProjectFiles(nodeRequireDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "node -r ts-node/register ./node_modules/.bin/jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(nodeLoaderDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "node --loader ts-node/esm ./node_modules/.bin/vitest run"
+        }
+      })
+    });
 
     await expect(resolveTestRunner("auto", npmExecDir, npmExecDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", npmExecSeparatorDir, npmExecSeparatorDir)).resolves.toBe("jest");
@@ -216,6 +246,8 @@ describe("resolveTestRunner", () => {
     await expect(resolveTestRunner("auto", yarnRunDir, yarnRunDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", pnpmExecDir, pnpmExecDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", nodeBinDir, nodeBinDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", nodeRequireDir, nodeRequireDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", nodeLoaderDir, nodeLoaderDir)).resolves.toBe("vitest");
   });
 
   it("honors explicit selection, falls back from module to project dependencies, and errors when nothing can be detected", async () => {

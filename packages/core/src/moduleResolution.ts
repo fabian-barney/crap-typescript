@@ -103,11 +103,16 @@ const NPM_RUN_SUBCOMMANDS = new Set(["exec", "x"]);
 const WRAPPER_OPTIONS_WITH_VALUE = new Set([
   "-c",
   "-p",
+  "-r",
   "--call",
   "--cwd",
   "--dir",
+  "--experimental-loader",
   "--filter",
+  "--import",
+  "--loader",
   "--package",
+  "--require",
   "--shell",
   "--workspace"
 ]);
