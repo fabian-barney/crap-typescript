@@ -116,6 +116,8 @@ const WRAPPER_OPTIONS_WITH_VALUE = new Set([
   "--shell",
   "--workspace"
 ]);
+const SHELL_TOKEN_PATTERN = /(?:[^\s'"]+|"[^"]*"|'[^']*')+/g;
+const QUOTED_SHELL_TOKEN_PART_PATTERN = /"([^"]*)"|'([^']*)'/g;
 
 async function detectTestRunnerAtRoot(root: string): Promise<TestRunner | null> {
   const packageJson = await readPackageJson(root);
@@ -177,11 +179,14 @@ function splitShellCommandSegments(script: string): string[] {
 }
 
 function tokenizeShellWords(segment: string): string[] {
-  return segment.match(/"[^"]*"|'[^']*'|[^\s]+/g)?.map(unquoteShellWord) ?? [];
+  return segment.match(SHELL_TOKEN_PATTERN)?.map(unquoteShellTokenParts) ?? [];
 }
 
-function unquoteShellWord(token: string): string {
-  return token.replace(/^(['"])(.*)\1$/, "$2");
+function unquoteShellTokenParts(token: string): string {
+  return token.replace(
+    QUOTED_SHELL_TOKEN_PART_PATTERN,
+    (_match, doubleQuoted: string | undefined, singleQuoted: string | undefined) => doubleQuoted ?? singleQuoted ?? ""
+  );
 }
 
 function resolveScriptExecutableName(tokens: string[]): string | null {

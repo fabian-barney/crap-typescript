@@ -145,6 +145,7 @@ describe("resolveTestRunner", () => {
     const nodeBinDir = await createTempDir("crap-runner-");
     const nodeRequireDir = await createTempDir("crap-runner-");
     const nodeLoaderDir = await createTempDir("crap-runner-");
+    const quotedEnvDir = await createTempDir("crap-runner-");
     tempDirs.push(
       npmExecDir,
       npmExecSeparatorDir,
@@ -154,7 +155,8 @@ describe("resolveTestRunner", () => {
       pnpmExecDir,
       nodeBinDir,
       nodeRequireDir,
-      nodeLoaderDir
+      nodeLoaderDir,
+      quotedEnvDir
     );
 
     await writeProjectFiles(npmExecDir, {
@@ -238,6 +240,15 @@ describe("resolveTestRunner", () => {
         }
       })
     });
+    await writeProjectFiles(quotedEnvDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "NODE_OPTIONS=\"--loader ts-node/esm\" vitest run"
+        }
+      })
+    });
 
     await expect(resolveTestRunner("auto", npmExecDir, npmExecDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", npmExecSeparatorDir, npmExecSeparatorDir)).resolves.toBe("jest");
@@ -248,6 +259,7 @@ describe("resolveTestRunner", () => {
     await expect(resolveTestRunner("auto", nodeBinDir, nodeBinDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", nodeRequireDir, nodeRequireDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", nodeLoaderDir, nodeLoaderDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", quotedEnvDir, quotedEnvDir)).resolves.toBe("vitest");
   });
 
   it("honors explicit selection, falls back from module to project dependencies, and errors when nothing can be detected", async () => {
