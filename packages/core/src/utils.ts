@@ -13,6 +13,14 @@ export interface RunCommandOptions {
   maxBufferBytes?: number;
 }
 
+export interface RunCommandResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  stdoutTruncated: boolean;
+  stderrTruncated: boolean;
+}
+
 export function writeLine(writer: Writer | undefined, message: string): void {
   writer?.write(`${message}\n`);
 }
@@ -39,7 +47,7 @@ export async function runCommand(
   args: string[],
   cwd: string,
   options: RunCommandOptions = {}
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+): Promise<RunCommandResult> {
   return new Promise((resolve, reject) => {
     const timeoutMs = options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
     const maxBufferBytes = options.maxBufferBytes ?? DEFAULT_COMMAND_MAX_BUFFER_BYTES;
@@ -61,7 +69,7 @@ export async function runCommand(
     };
     timeout = setTimeout(() => {
       child.kill("SIGKILL");
-      rejectOnce(new Error(`Command timed out after ${timeoutMs}ms: ${command} ${args.join(" ")}`));
+      rejectOnce(new Error(`Command timed out after ${timeoutMs}ms: ${formatCommandForMessage(command, args)}`));
     }, timeoutMs);
 
     child.stdout.on("data", (chunk) => {
@@ -79,16 +87,23 @@ export async function runCommand(
       }
       settled = true;
       clearTimeout(timeout);
+      const stdoutResult = stdout.toResult();
+      const stderrResult = stderr.toResult();
       resolve({
         exitCode: exitCode ?? 1,
-        stdout: stdout.toString(),
-        stderr: stderr.toString()
+        stdout: stdoutResult.output,
+        stderr: stderrResult.output,
+        stdoutTruncated: stdoutResult.truncated,
+        stderrTruncated: stderrResult.truncated
       });
     });
   });
 }
 
-function createBoundedOutput(maxBufferBytes: number): { append(chunk: Buffer): void; toString(): string } {
+function createBoundedOutput(maxBufferBytes: number): {
+  append(chunk: Buffer): void;
+  toResult(): { output: string; truncated: boolean };
+} {
   const chunks: Buffer[] = [];
   let totalBytes = 0;
   let truncated = false;
@@ -105,18 +120,24 @@ function createBoundedOutput(maxBufferBytes: number): { append(chunk: Buffer): v
       }
       truncated ||= chunk.byteLength > remainingBytes;
     },
-    toString() {
-      const output = Buffer.concat(chunks, totalBytes).toString();
-      return truncated ? appendTruncationMarker(output, limit) : output;
+    toResult() {
+      return {
+        output: Buffer.concat(chunks, totalBytes).toString(),
+        truncated
+      };
     }
   };
 }
 
-function appendTruncationMarker(output: string, limit: number): string {
-  const marker = `[output truncated after ${limit} bytes]`;
-  return output.length > 0 && !output.endsWith("\n")
-    ? `${output}\n${marker}`
-    : `${output}${marker}`;
+function formatCommandForMessage(command: string, args: string[]): string {
+  return [command, ...args].map(quoteCommandArgument).join(" ");
+}
+
+function quoteCommandArgument(argument: string): string {
+  if (/^[A-Za-z0-9_./:=@+-]+$/.test(argument)) {
+    return argument;
+  }
+  return `"${argument.replace(/(["\\$`])/g, "\\$1")}"`;
 }
 
 export function formatNumber(value: number): string {

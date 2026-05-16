@@ -35,9 +35,9 @@ describe("runCommand", () => {
     }));
     const { runCommand: runMockedCommand } = await import("../src/utils");
 
-    await expect(runMockedCommand("never-closes", [], process.cwd(), { timeoutMs: 1 })).rejects.toThrow(
-      "Command timed out after 1ms"
-    );
+    await expect(
+      runMockedCommand("never-closes", ["arg with space", 'quoted"value'], process.cwd(), { timeoutMs: 1 })
+    ).rejects.toThrow('Command timed out after 1ms: never-closes "arg with space" "quoted\\"value"');
     expect(kill).toHaveBeenCalledWith("SIGKILL");
   });
 
@@ -49,11 +49,13 @@ describe("runCommand", () => {
       { maxBufferBytes: 3 }
     );
 
-    expect(result.stdout).toBe("abc\n[output truncated after 3 bytes]");
-    expect(result.stderr).toBe("uvw\n[output truncated after 3 bytes]");
+    expect(result.stdout).toBe("abc");
+    expect(result.stderr).toBe("uvw");
+    expect(result.stdoutTruncated).toBe(true);
+    expect(result.stderrTruncated).toBe(true);
   });
 
-  it("formats truncation markers without extra blank lines", async () => {
+  it("does not mutate bounded output with truncation markers", async () => {
     const emptyResult = await runCommand(
       process.execPath,
       ["-e", "process.stdout.write('abc')"],
@@ -67,7 +69,9 @@ describe("runCommand", () => {
       { maxBufferBytes: 4 }
     );
 
-    expect(emptyResult.stdout).toBe("[output truncated after 0 bytes]");
-    expect(newlineResult.stdout).toBe("abc\n[output truncated after 4 bytes]");
+    expect(emptyResult.stdout).toBe("");
+    expect(emptyResult.stdoutTruncated).toBe(true);
+    expect(newlineResult.stdout).toBe("abc\n");
+    expect(newlineResult.stdoutTruncated).toBe(true);
   });
 });
