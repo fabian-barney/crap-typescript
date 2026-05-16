@@ -52,6 +52,8 @@ Baseline analyzability exclusions always skip declarations, test/spec files, `__
 
 Full primary reports and JUnit sidecars include source-exclusion audit counts when files were excluded. Default agent primary output omits those details.
 
+Coverage commands run by the built-in executor time out after 300 seconds by default. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout.
+
 The default threshold is `8.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates.
 
 ## Exit Codes

@@ -32,6 +32,8 @@ For each resolved module today:
 6. Use Istanbul `fnMap` as a validation and secondary matching aid when it is present.
 7. Derive function statement and branch coverage from the Istanbul coverage counters and use their minimum as CRAP coverage.
 
+Coverage commands run by the built-in executor time out after 300 seconds by default. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout.
+
 ## Compatibility Matrix
 
 Verified and unverified coverage-attribution shapes are tracked in [docs/compatibility-matrix.md](docs/compatibility-matrix.md). The matrix is backed by golden fixtures under `tests/fixtures/compatibility-matrix/`.

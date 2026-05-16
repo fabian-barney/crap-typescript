@@ -5,12 +5,15 @@ import type { CoverageCommand, Writer } from "./types.js";
 
 const DEFAULT_COMMAND_TIMEOUT_MS = 300_000;
 const DEFAULT_COMMAND_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
+const COMMAND_TIMEOUT_ENV_VAR = "CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS";
 
 export interface RunCommandOptions {
-  /** Defaults to 300 seconds. */
+  /** Defaults to 300 seconds. Set 0 to disable the timeout. */
   timeoutMs?: number;
   /** Defaults to 10 MiB per stream. */
   maxBufferBytes?: number;
+  /** Reject instead of returning partial stdout/stderr when either stream is truncated. */
+  rejectOnTruncatedOutput?: boolean;
 }
 
 export interface RunCommandResult {
@@ -49,7 +52,7 @@ export async function runCommand(
   options: RunCommandOptions = {}
 ): Promise<RunCommandResult> {
   return new Promise((resolve, reject) => {
-    const timeoutMs = options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
+    const timeoutMs = options.timeoutMs ?? defaultCommandTimeoutMs();
     const maxBufferBytes = options.maxBufferBytes ?? DEFAULT_COMMAND_MAX_BUFFER_BYTES;
     const child = spawn(command, args, {
       cwd,
@@ -58,19 +61,21 @@ export async function runCommand(
     const stdout = createBoundedOutput(maxBufferBytes);
     const stderr = createBoundedOutput(maxBufferBytes);
     let settled = false;
-    let timeout: ReturnType<typeof setTimeout>;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     const rejectOnce = (error: Error) => {
       if (settled) {
         return;
       }
       settled = true;
-      clearTimeout(timeout);
+      clearCommandTimeout(timeout);
       reject(error);
     };
-    timeout = setTimeout(() => {
-      child.kill("SIGKILL");
-      rejectOnce(new Error(`Command timed out after ${timeoutMs}ms: ${formatCommandForMessage(command, args)}`));
-    }, timeoutMs);
+    if (timeoutMs > 0) {
+      timeout = setTimeout(() => {
+        child.kill("SIGKILL");
+        rejectOnce(new Error(`Command timed out after ${timeoutMs}ms: ${formatCommandForMessage(command, args)}`));
+      }, timeoutMs);
+    }
 
     child.stdout.on("data", (chunk) => {
       stdout.append(chunk);
@@ -85,10 +90,16 @@ export async function runCommand(
       if (settled) {
         return;
       }
-      settled = true;
-      clearTimeout(timeout);
       const stdoutResult = stdout.toResult();
       const stderrResult = stderr.toResult();
+      if (options.rejectOnTruncatedOutput && (stdoutResult.truncated || stderrResult.truncated)) {
+        rejectOnce(new Error(
+          `Command output exceeded ${maxBufferBytes} bytes: ${formatCommandForMessage(command, args)}`
+        ));
+        return;
+      }
+      settled = true;
+      clearCommandTimeout(timeout);
       resolve({
         exitCode: exitCode ?? 1,
         stdout: stdoutResult.output,
@@ -98,6 +109,21 @@ export async function runCommand(
       });
     });
   });
+}
+
+function defaultCommandTimeoutMs(): number {
+  const configured = process.env[COMMAND_TIMEOUT_ENV_VAR]?.trim();
+  if (configured === undefined || configured === "") {
+    return DEFAULT_COMMAND_TIMEOUT_MS;
+  }
+  const parsed = Number(configured);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_COMMAND_TIMEOUT_MS;
+}
+
+function clearCommandTimeout(timeout: ReturnType<typeof setTimeout> | undefined): void {
+  if (timeout !== undefined) {
+    clearTimeout(timeout);
+  }
 }
 
 function createBoundedOutput(maxBufferBytes: number): {

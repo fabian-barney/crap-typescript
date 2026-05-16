@@ -8,6 +8,7 @@ import { runCommand } from "../src/utils";
 afterEach(() => {
   vi.doUnmock("node:child_process");
   vi.resetModules();
+  vi.unstubAllEnvs();
 });
 
 describe("runCommand", () => {
@@ -41,6 +42,31 @@ describe("runCommand", () => {
     expect(kill).toHaveBeenCalledWith("SIGKILL");
   });
 
+  it("uses the configured default timeout from the environment", async () => {
+    vi.resetModules();
+    vi.stubEnv("CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS", "1");
+    const kill = vi.fn();
+    vi.doMock("node:child_process", () => ({
+      spawn: vi.fn(() => {
+        const child = new EventEmitter() as EventEmitter & {
+          stdout: PassThrough;
+          stderr: PassThrough;
+          kill: (signal: string) => boolean;
+        };
+        child.stdout = new PassThrough();
+        child.stderr = new PassThrough();
+        child.kill = kill.mockReturnValue(true);
+        return child;
+      })
+    }));
+    const { runCommand: runMockedCommand } = await import("../src/utils");
+
+    await expect(runMockedCommand("never-closes", [], process.cwd())).rejects.toThrow(
+      "Command timed out after 1ms: never-closes"
+    );
+    expect(kill).toHaveBeenCalledWith("SIGKILL");
+  });
+
   it("bounds captured stdout and stderr", async () => {
     const result = await runCommand(
       process.execPath,
@@ -53,6 +79,17 @@ describe("runCommand", () => {
     expect(result.stderr).toBe("uvw");
     expect(result.stdoutTruncated).toBe(true);
     expect(result.stderrTruncated).toBe(true);
+  });
+
+  it("rejects when truncated output is not allowed", async () => {
+    await expect(
+      runCommand(
+        process.execPath,
+        ["-e", "process.stdout.write('abcdef')"],
+        process.cwd(),
+        { maxBufferBytes: 3, rejectOnTruncatedOutput: true }
+      )
+    ).rejects.toThrow("Command output exceeded 3 bytes:");
   });
 
   it("returns raw bounded output without mutation when truncated", async () => {

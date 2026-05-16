@@ -22,6 +22,8 @@ Key exports: `analyzeProject`, `calculateCrapScore`, `formatAnalysisReport`, `fo
 
 `analyzeProject` accepts `threshold` to override the default CRAP threshold of `8.0`. Values below `4.0` emit a warning because they are likely too noisy; values above `8.0` emit a warning because they are too lenient even for hard gates.
 
+When the default command executor has to run a coverage command, it times out after 300 seconds. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout.
+
 `analyzeProject` also accepts `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, and `useDefaultExclusions`. These filters run after `explicitPaths` or `changedOnly` select candidate files and before parsing, coverage attribution, reporting, and threshold evaluation. Baseline analyzability exclusions always remain active for declarations, test/spec files, `__tests__/`, `dist/`, `coverage/`, and `node_modules/`; `useDefaultExclusions: false` only disables generated-code defaults.
 
 Generated-code defaults exclude directory segments containing `generated`, directory segments exactly named `gen`, common generated filename suffixes such as `*.generated.ts`, `*.gen.ts`, `*Generated.ts`, protobuf outputs, and Angular generated artifacts. Leading generated-header markers are matched only in comments before the first non-comment token.
