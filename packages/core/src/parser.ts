@@ -118,28 +118,28 @@ function descriptorFromFunctionDeclaration(node: ts.Node, sourceFile: ts.SourceF
   if (!functionName) {
     return null;
   }
-  return buildMethodDescriptor(functionName, findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor(functionName, findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromMethodDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
   if (!ts.isMethodDeclaration(node) || !node.body) {
     return null;
   }
-  return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromConstructorDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
   if (!ts.isConstructorDeclaration(node) || !node.body) {
     return null;
   }
-  return buildMethodDescriptor("constructor", findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor("constructor", findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromAccessorDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
   if (!(ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) || !node.body) {
     return null;
   }
-  return buildMethodDescriptor(accessorName(node), findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor(accessorName(node), findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromAssignedFunction(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
@@ -150,7 +150,7 @@ function descriptorFromAssignedFunction(node: ts.Node, sourceFile: ts.SourceFile
   if (!assignedName) {
     return null;
   }
-  return buildMethodDescriptor(assignedName.name, assignedName.containerName, node, sourceFile);
+  return buildMethodDescriptor(assignedName.name, assignedName.containerName, node, node.body, sourceFile);
 }
 
 function inferFunctionDeclarationName(node: ts.FunctionDeclaration): string | null {
@@ -164,10 +164,10 @@ function buildMethodDescriptor(
   functionName: string,
   containerName: string | null,
   node: ts.FunctionLikeDeclaration,
+  bodyNode: ts.ConciseBody,
   sourceFile: ts.SourceFile
 ): MethodDescriptor {
   const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-  const bodyNode = node.body!;
   const endLine = sourceFile.getLineAndCharacterOfPosition(Math.max(bodyNode.end - 1, bodyNode.getStart(sourceFile))).line + 1;
   return {
     functionName,
@@ -359,12 +359,45 @@ function assignmentFromIdentifier(node: ts.Expression): { name: string; containe
 
 function assignmentFromPropertyAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
   if (ts.isPropertyAccessExpression(node)) {
+    const containerName = dottedAccessName(node.expression);
+    if (!containerName) {
+      return null;
+    }
     return {
       name: node.name.text,
-      containerName: node.expression.getText()
+      containerName
     };
   }
   return null;
+}
+
+function dottedAccessName(node: ts.Expression): string | null {
+  const parts: string[] = [];
+  let current = node;
+  while (ts.isPropertyAccessExpression(current)) {
+    parts.unshift(current.name.text);
+    current = current.expression;
+  }
+  const rootName = dottedAccessRootName(current);
+  if (!rootName) {
+    return null;
+  }
+  parts.unshift(rootName);
+  return parts.join(".");
+}
+
+function dottedAccessRootName(node: ts.Expression): string | null {
+  if (ts.isIdentifier(node)) {
+    return node.text;
+  }
+  switch (node.kind) {
+    case ts.SyntaxKind.ThisKeyword:
+      return "this";
+    case ts.SyntaxKind.SuperKeyword:
+      return "super";
+    default:
+      return null;
+  }
 }
 
 function assignmentFromElementAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
@@ -469,6 +502,9 @@ function complexityContribution(node: ts.Node): number {
   if (COMPLEXITY_INCREMENT_KINDS.has(node.kind)) {
     return 1;
   }
+  if (hasOwnOptionalChainToken(node)) {
+    return 1;
+  }
   if (!ts.isBinaryExpression(node)) {
     return 0;
   }
@@ -479,7 +515,15 @@ function hasBranchSyntax(node: ts.Node): boolean {
   if (BRANCH_SYNTAX_KINDS.has(node.kind)) {
     return true;
   }
+  if (hasOwnOptionalChainToken(node)) {
+    return true;
+  }
   return ts.isBinaryExpression(node) && SHORT_CIRCUIT_KINDS.has(node.operatorToken.kind);
+}
+
+function hasOwnOptionalChainToken(node: ts.Node): boolean {
+  return (ts.isPropertyAccessChain(node) || ts.isElementAccessChain(node) || ts.isCallChain(node)) &&
+    node.questionDotToken !== undefined;
 }
 
 function isAssignmentExpression(node: ts.Node): node is ts.BinaryExpression {
