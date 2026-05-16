@@ -196,7 +196,14 @@ function resolveScriptExecutableName(tokens: string[]): string | null {
   if (commandIndex === null) {
     return null;
   }
-  return executableBaseName(tokens[runnerTokenIndex(tokens, commandIndex)]);
+  return executableNameFromRunnerToken(tokens[runnerTokenIndex(tokens, commandIndex)]);
+}
+
+function executableNameFromRunnerToken(token: string | undefined): string {
+  const commandToken = token?.includes(" ") === true
+    ? tokenizeShellWords(token)[0]
+    : token;
+  return executableBaseName(commandToken);
 }
 
 function runnerTokenIndex(tokens: string[], commandIndex: number): number {

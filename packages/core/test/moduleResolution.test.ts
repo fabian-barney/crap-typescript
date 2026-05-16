@@ -147,6 +147,7 @@ describe("resolveTestRunner", () => {
     const nodeLoaderDir = await createTempDir("crap-runner-");
     const quotedEnvDir = await createTempDir("crap-runner-");
     const crossEnvDir = await createTempDir("crap-runner-");
+    const crossEnvShellDir = await createTempDir("crap-runner-");
     const envCmdDir = await createTempDir("crap-runner-");
     const dotenvDir = await createTempDir("crap-runner-");
     tempDirs.push(
@@ -161,6 +162,7 @@ describe("resolveTestRunner", () => {
       nodeLoaderDir,
       quotedEnvDir,
       crossEnvDir,
+      crossEnvShellDir,
       envCmdDir,
       dotenvDir
     );
@@ -264,6 +266,15 @@ describe("resolveTestRunner", () => {
         }
       })
     });
+    await writeProjectFiles(crossEnvShellDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "cross-env-shell NODE_ENV=test \"vitest run\""
+        }
+      })
+    });
     await writeProjectFiles(envCmdDir, {
       "package.json": JSON.stringify({
         name: "fixture",
@@ -294,6 +305,7 @@ describe("resolveTestRunner", () => {
     await expect(resolveTestRunner("auto", nodeLoaderDir, nodeLoaderDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", quotedEnvDir, quotedEnvDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", crossEnvDir, crossEnvDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", crossEnvShellDir, crossEnvShellDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", envCmdDir, envCmdDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", dotenvDir, dotenvDir)).resolves.toBe("vitest");
   });
