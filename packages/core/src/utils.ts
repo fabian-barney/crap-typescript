@@ -3,6 +3,16 @@ import { spawn } from "node:child_process";
 
 import type { CoverageCommand, Writer } from "./types.js";
 
+const DEFAULT_COMMAND_TIMEOUT_MS = 300_000;
+const DEFAULT_COMMAND_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
+
+export interface RunCommandOptions {
+  /** Defaults to 300 seconds. */
+  timeoutMs?: number;
+  /** Defaults to 10 MiB per stream. */
+  maxBufferBytes?: number;
+}
+
 export function writeLine(writer: Writer | undefined, message: string): void {
   writer?.write(`${message}\n`);
 }
@@ -27,31 +37,79 @@ export function toRelativePath(projectRoot: string, filePath: string): string {
 export async function runCommand(
   command: string,
   args: string[],
-  cwd: string
+  cwd: string,
+  options: RunCommandOptions = {}
 ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
+    const timeoutMs = options.timeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS;
+    const maxBufferBytes = options.maxBufferBytes ?? DEFAULT_COMMAND_MAX_BUFFER_BYTES;
     const child = spawn(command, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"]
     });
-    let stdout = "";
-    let stderr = "";
+    const stdout = createBoundedOutput(maxBufferBytes);
+    const stderr = createBoundedOutput(maxBufferBytes);
+    let timedOut = false;
+    let settled = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, timeoutMs);
 
     child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      stdout.append(chunk);
     });
     child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+      stderr.append(chunk);
     });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    });
     child.on("close", (exitCode) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      if (timedOut) {
+        reject(new Error(`Command timed out after ${timeoutMs}ms: ${command} ${args.join(" ")}`));
+        return;
+      }
       resolve({
         exitCode: exitCode ?? 1,
-        stdout,
-        stderr
+        stdout: stdout.toString(),
+        stderr: stderr.toString()
       });
     });
   });
+}
+
+function createBoundedOutput(maxBufferBytes: number): { append(chunk: Buffer): void; toString(): string } {
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  let truncated = false;
+  const limit = Math.max(0, maxBufferBytes);
+
+  return {
+    append(chunk) {
+      const remainingBytes = limit - totalBytes;
+      if (remainingBytes > 0) {
+        const retained = chunk.byteLength > remainingBytes ? chunk.subarray(0, remainingBytes) : chunk;
+        chunks.push(retained);
+        totalBytes += retained.byteLength;
+      }
+      truncated ||= chunk.byteLength > remainingBytes;
+    },
+    toString() {
+      const output = Buffer.concat(chunks, totalBytes).toString();
+      return truncated ? `${output}\n[output truncated after ${limit} bytes]` : output;
+    }
+  };
 }
 
 export function formatNumber(value: number): string {
