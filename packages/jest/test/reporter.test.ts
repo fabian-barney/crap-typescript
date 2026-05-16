@@ -7,8 +7,10 @@ import {
   StringWriter,
   createTempDir,
   disposeTempDir,
+  initGitRepository,
   mixedCoverageProjectFiles,
   readText,
+  runProcess,
   writeProjectFiles
 } from "../../core/test/testUtils";
 import CrapTypescriptJestReporter, { type CrapTypescriptJestOptions } from "../src/reporter";
@@ -118,6 +120,173 @@ describe("CrapTypescriptJestReporter", () => {
 
     expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
+  });
+
+  it("reports a clear error when the coverage report wait times out", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+
+    const { stdout, stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      coverageReportWaitMs: 0
+    });
+
+    expect(stdout.toString()).toBe("");
+    expect(stderr.toString()).toContain("Timed out after 0ms waiting for Jest coverage report at");
+    expect(stderr.toString()).toContain(path.join(projectRoot, "coverage", "coverage-final.json"));
+    expect(reporter.getLastError()?.message).toContain("Timed out after 0ms waiting for Jest coverage report at");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("waits until the coverage report appears before the deadline", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+    const delayedCoverage = setTimeout(() => {
+      void writeProjectFiles(projectRoot, {
+        "coverage/coverage-final.json": "{}"
+      });
+    }, 20);
+
+    try {
+      const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+        coverageReportWaitMs: 1_000
+      });
+
+      expect(stderr.toString()).toBe("");
+      expect(reporter.getLastError()).toBeUndefined();
+      expect(process.exitCode).toBe(originalExitCode);
+    } finally {
+      clearTimeout(delayedCoverage);
+    }
+  });
+
+  it("accepts coverage reports written under explicit package roots", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/src/sample.ts": "export function safe(): number { return 1; }\n",
+      "packages/demo/coverage/coverage-final.json": "{}"
+    });
+
+    const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      paths: ["packages/demo/src"],
+      coverageReportWaitMs: 0
+    });
+
+    expect(stderr.toString()).not.toContain("Timed out after 0ms");
+    expect(reporter.getLastError()).toBeUndefined();
+  });
+
+  it("waits for every selected package coverage report when no project report exists", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/a/package.json": '{"name":"a","private":true}',
+      "packages/a/src/sample.ts": "export function safe(): number { return 1; }\n",
+      "packages/a/coverage/coverage-final.json": "{}",
+      "packages/b/package.json": '{"name":"b","private":true}',
+      "packages/b/src/sample.ts": "export function safe(): number { return 1; }\n"
+    });
+    const delayedCoverage = setTimeout(() => {
+      void writeProjectFiles(projectRoot, {
+        "packages/b/coverage/coverage-final.json": "{}"
+      });
+    }, 200);
+
+    try {
+      const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+        paths: ["packages/a/src", "packages/b/src"],
+        coverageReportWaitMs: 1_000
+      });
+
+      expect(stderr.toString()).not.toContain("Coverage report not found");
+      expect(reporter.getLastError()).toBeUndefined();
+    } finally {
+      clearTimeout(delayedCoverage);
+    }
+  });
+
+  it("accepts nested package coverage reports during the default full scan", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/src/sample.ts": "export function safe(): number { return 1; }\n",
+      "packages/demo/coverage/coverage-final.json": "{}"
+    });
+
+    const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      coverageReportWaitMs: 0
+    });
+
+    expect(stderr.toString()).not.toContain("Timed out after 0ms");
+    expect(reporter.getLastError()).toBeUndefined();
+  });
+
+  it("accepts nested package coverage reports when changedOnly selects package files", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await initGitRepository(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/src/sample.ts": "export function safe(): number { return 1; }\n"
+    });
+    await runProcess("git", ["add", "."], projectRoot);
+    await runProcess("git", ["commit", "-m", "initial"], projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "packages/demo/src/sample.ts": "export function safe(): number { return 2; }\n",
+      "packages/demo/coverage/coverage-final.json": "{}"
+    });
+
+    const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      changedOnly: true,
+      coverageReportWaitMs: 0
+    });
+
+    expect(stderr.toString()).not.toContain("Timed out after 0ms");
+    expect(reporter.getLastError()).toBeUndefined();
+  });
+
+  it("accepts explicit package directory paths that contain dots", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/foo.bar/package.json": '{"name":"foo.bar","private":true}',
+      "packages/foo.bar/src/sample.ts": "export function safe(): number { return 1; }\n",
+      "packages/foo.bar/coverage/coverage-final.json": "{}"
+    });
+
+    const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      paths: ["packages/foo.bar"],
+      coverageReportWaitMs: 0
+    });
+
+    expect(stderr.toString()).not.toContain("Timed out after 0ms");
+    expect(reporter.getLastError()).toBeUndefined();
+  });
+
+  it("rejects invalid coverage report wait options", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+
+    const { stderr, reporter } = await finalizeWithOptions(projectRoot, {
+      coverageReportWaitMs: -1
+    });
+
+    expect(stderr.toString()).toContain("coverageReportWaitMs must be a non-negative finite number");
+    expect(reporter.getLastError()?.message).toContain("coverageReportWaitMs must be a non-negative finite number");
+    expect(process.exitCode).toBe(1);
   });
 
   it("writes renamed output and JUnit report options with the default empty primary report", async () => {

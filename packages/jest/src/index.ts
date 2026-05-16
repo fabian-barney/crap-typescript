@@ -12,6 +12,7 @@ export interface CrapTypescriptJestOptions {
   paths?: string[];
   packageManager?: PackageManagerSelection;
   coverageReportPath?: string;
+  coverageReportWaitMs?: number;
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
