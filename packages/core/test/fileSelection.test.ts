@@ -159,6 +159,9 @@ describe("file selection", () => {
     expect(isAnalyzableFile("C:/repo/dist/app.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/coverage/app.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/node_modules/pkg/index.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/dist/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/coverage/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/node_modules/pkg/index.ts")).toBe(false);
   });
 
   it("ignores deleted and non-source changes and reports git errors clearly", async () => {

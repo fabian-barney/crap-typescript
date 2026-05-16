@@ -57,7 +57,7 @@ export function isAnalyzableFile(filePath: string): boolean {
   if (containsAny(baseName, TEST_FILE_MARKERS)) {
     return false;
   }
-  if (containsAny(normalized, EXCLUDED_PATH_SEGMENTS)) {
+  if (containsAny(`/${normalized}`, EXCLUDED_PATH_SEGMENTS)) {
     return false;
   }
   return true;
