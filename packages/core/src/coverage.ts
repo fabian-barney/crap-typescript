@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants.js";
 import { locateCoverageReport, resolvePackageManager, resolveTestRunner } from "./moduleResolution.js";
-import { isAbsolutePath } from "./utils.js";
+import { formatCommandForMessage, isAbsolutePath } from "./utils.js";
 import type { CommandExecutor, CoverageMode, CoverageCommand, PackageManager, TestRunner } from "./types.js";
 
 export async function ensureCoverageReport(
@@ -79,14 +79,7 @@ async function executeCoverageCommand(command: CoverageCommand, executor: Comman
 }
 
 function formatCoverageCommand(command: CoverageCommand): string {
-  return [command.command, ...command.args].map(quoteCommandArgument).join(" ");
-}
-
-function quoteCommandArgument(argument: string): string {
-  if (/^[A-Za-z0-9_./:=@+-]+$/.test(argument)) {
-    return argument;
-  }
-  return `"${argument.replace(/["\\$`]/g, "\\$&")}"`;
+  return formatCommandForMessage(command.command, command.args);
 }
 
 function attachCoverageCommand(

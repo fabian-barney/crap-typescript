@@ -161,7 +161,7 @@ function createBoundedOutput(maxBufferBytes: number): {
   };
 }
 
-function formatCommandForMessage(command: string, args: string[]): string {
+export function formatCommandForMessage(command: string, args: string[]): string {
   return [command, ...args].map(quoteCommandArgument).join(" ");
 }
 
