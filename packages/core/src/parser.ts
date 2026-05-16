@@ -248,23 +248,37 @@ function assignedNameFromBinaryExpression(
 }
 
 function findContainerName(node: ts.Node): string | null {
-  let current: ts.Node | undefined = node.parent;
+  return containerNameFromAncestors(node.parent);
+}
+
+function inferObjectContainerName(node: ts.ObjectLiteralExpression): string | null {
+  return containerNameFromAncestors(node);
+}
+
+function containerNameFromAncestors(start: ts.Node | undefined): string | null {
+  const segments: string[] = [];
+  let current = start;
   while (current) {
-    if ((ts.isClassDeclaration(current) || ts.isClassExpression(current)) && current.name) {
-      return current.name.text;
-    }
-    if (ts.isObjectLiteralExpression(current)) {
-      const inferred = inferObjectContainerName(current);
-      if (inferred) {
-        return inferred;
-      }
+    const segment = containerSegment(current);
+    if (segment) {
+      segments.unshift(segment);
     }
     current = current.parent;
+  }
+  return segments.length > 0 ? segments.join(".") : null;
+}
+
+function containerSegment(node: ts.Node): string | null {
+  if ((ts.isClassDeclaration(node) || ts.isClassExpression(node)) && node.name) {
+    return node.name.text;
+  }
+  if (ts.isObjectLiteralExpression(node)) {
+    return localObjectContainerName(node);
   }
   return null;
 }
 
-function inferObjectContainerName(node: ts.ObjectLiteralExpression): string | null {
+function localObjectContainerName(node: ts.ObjectLiteralExpression): string | null {
   for (const resolver of OBJECT_CONTAINER_RESOLVERS) {
     const containerName = resolver(node.parent);
     if (containerName) {

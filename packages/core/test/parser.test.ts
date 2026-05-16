@@ -541,10 +541,10 @@ class Example {
         displayName: "registry.render.nested"
       },
       {
-        displayName: "child.leaf"
+        displayName: "root.child.leaf"
       },
       {
-        displayName: "helper.format"
+        displayName: "Example.helper.format"
       }
     ]);
   });
