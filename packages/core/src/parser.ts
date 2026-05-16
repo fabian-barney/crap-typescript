@@ -4,6 +4,20 @@ import ts from "typescript";
 import { resolveScriptKind } from "./utils.js";
 import type { MethodDescriptor, SourceSpan } from "./types.js";
 
+type SourceFileWithParseDiagnostics = ts.SourceFile & {
+  parseDiagnostics?: readonly ts.Diagnostic[];
+};
+
+export class ParseError extends Error {
+  readonly diagnostics: readonly ts.Diagnostic[];
+
+  constructor(filePath: string, diagnostics: readonly ts.Diagnostic[]) {
+    super(`Unable to parse TypeScript source ${filePath}: ${diagnostics.map(formatDiagnostic).join("; ")}`);
+    this.name = "ParseError";
+    this.diagnostics = diagnostics;
+  }
+}
+
 const COMPLEXITY_INCREMENT_KINDS = new Set([
   ts.SyntaxKind.IfStatement,
   ts.SyntaxKind.ForStatement,
@@ -40,6 +54,7 @@ export async function parseFileMethods(filePath: string): Promise<MethodDescript
   const sourceText = await readFile(filePath, "utf8");
   const scriptKind = resolveScriptKind(filePath) === "tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
   const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, scriptKind);
+  throwIfParseDiagnostics(sourceFile);
   const methods: MethodDescriptor[] = [];
 
   const visit = (node: ts.Node): void => {
@@ -52,6 +67,25 @@ export async function parseFileMethods(filePath: string): Promise<MethodDescript
 
   visit(sourceFile);
   return methods;
+}
+
+function throwIfParseDiagnostics(sourceFile: ts.SourceFile): void {
+  const diagnostics = (sourceFile as SourceFileWithParseDiagnostics).parseDiagnostics ?? [];
+  if (diagnostics.length > 0) {
+    throw new ParseError(sourceFile.fileName, diagnostics);
+  }
+}
+
+function formatDiagnostic(diagnostic: ts.Diagnostic): string {
+  return `${formatDiagnosticLocation(diagnostic)}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`;
+}
+
+function formatDiagnosticLocation(diagnostic: ts.Diagnostic): string {
+  if (!diagnostic.file || diagnostic.start === undefined) {
+    return "unknown location";
+  }
+  const location = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
+  return `line ${location.line + 1}, column ${location.character + 1}`;
 }
 
 function toMethodDescriptor(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {

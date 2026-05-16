@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { parseFileMethods } from "../src/parser";
+import { ParseError, parseFileMethods } from "../src/parser";
 import { createTempDir, disposeTempDir } from "./testUtils";
 
 const tempDirs: string[] = [];
@@ -143,6 +143,26 @@ const arrow = (items: number[]) => {
     await writeFile(filePath, "export declare function missing(): void;", "utf8");
 
     expect(await parseFileMethods(filePath)).toEqual([]);
+  });
+
+  it("fails on parse diagnostics instead of returning partial methods", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "broken.ts");
+    await writeFile(
+      filePath,
+      `export function partial(flag: boolean): number {
+  if (flag) {
+    return 1;
+}
+`,
+      "utf8"
+    );
+
+    await expect(parseFileMethods(filePath)).rejects.toThrow(ParseError);
+    await expect(parseFileMethods(filePath)).rejects.toThrow(
+      new RegExp(`Unable to parse TypeScript source .*broken\\.ts: line \\d+, column \\d+:`)
+    );
   });
 
   it("includes anonymous default-exported function declarations", async () => {

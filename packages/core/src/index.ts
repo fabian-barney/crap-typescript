@@ -4,7 +4,7 @@ export { calculateCrapScore, maxCrap } from "./crapScore.js";
 export { buildCoverageCommand } from "./coverage.js";
 export { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots, isAnalyzableFile } from "./fileSelection.js";
 export { coverageForMethods, parseCoverageReport } from "./istanbul.js";
-export { parseFileMethods } from "./parser.js";
+export { ParseError, parseFileMethods } from "./parser.js";
 export { filterSourceFiles } from "./sourceExclusions.js";
 export {
   buildAgentAnalysisReport,
