@@ -79,7 +79,14 @@ async function executeCoverageCommand(command: CoverageCommand, executor: Comman
 }
 
 function formatCoverageCommand(command: CoverageCommand): string {
-  return [command.command, ...command.args].join(" ");
+  return [command.command, ...command.args].map(quoteCommandArgument).join(" ");
+}
+
+function quoteCommandArgument(argument: string): string {
+  if (/^[A-Za-z0-9_./:=@+-]+$/.test(argument)) {
+    return argument;
+  }
+  return `"${argument.replace(/["\\$`]/g, "\\$&")}"`;
 }
 
 function attachCoverageCommand(
