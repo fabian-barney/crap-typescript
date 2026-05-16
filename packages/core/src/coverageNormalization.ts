@@ -62,7 +62,7 @@ function toBranchCoverageMetric(
 
 function combineCoverageMetrics(statementCoverage: CoverageMetric, branchCoverage: CoverageMetric): CoverageMetric {
   if (statementCoverage.status === "unknown" && branchCoverage.status === "unknown") {
-    return unknownCoverageMetric(statementCoverage.unknownReason ?? branchCoverage.unknownReason!);
+    return unknownCoverageMetric(requiredUnknownReason(statementCoverage, branchCoverage));
   }
   return combinedKnownCoverage(statementCoverage, branchCoverage);
 }
@@ -83,7 +83,15 @@ function combinedKnownCoverage(statementCoverage: CoverageMetric, branchCoverage
     };
   }
 
-  return unknownCoverageMetric(statementCoverage.unknownReason ?? branchCoverage.unknownReason!);
+  return unknownCoverageMetric(requiredUnknownReason(statementCoverage, branchCoverage));
+}
+
+function requiredUnknownReason(...metrics: CoverageMetric[]): CoverageUnknownReason {
+  const reason = metrics.find((metric) => metric.status === "unknown")?.unknownReason;
+  if (reason) {
+    return reason;
+  }
+  throw new Error("Expected unknown coverage metric to carry an unknown reason");
 }
 
 function measuredCoverageMetric(percent: number): CoverageMetric {
