@@ -136,6 +136,58 @@ const arrow = (items: number[]) => {
     ]);
   });
 
+  it("extracts constructor bodies and excludes nested functions from constructor complexity", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "constructor.ts");
+    await writeFile(
+      filePath,
+      `class Example {
+  constructor(flag: boolean) {
+    const inner = () => {
+      if (flag) {
+        return 1;
+      }
+      return 0;
+    };
+    if (flag) {
+      this.value = inner();
+    }
+  }
+
+  value = 0;
+}
+`,
+      "utf8"
+    );
+
+    const methods = await parseFileMethods(filePath);
+    const byName = new Map(methods.map((method) => [method.displayName, method]));
+
+    expect(methods.map((method) => method.displayName)).toEqual([
+      "Example.constructor",
+      "Example.inner"
+    ]);
+    expect(byName.get("Example.constructor")).toMatchObject({
+      functionName: "constructor",
+      containerName: "Example",
+      startLine: 2,
+      endLine: 12,
+      complexity: 2,
+      bodySpan: {
+        startLine: 2,
+        endLine: 12
+      },
+      expectsStatementCoverage: true,
+      expectsBranchCoverage: true
+    });
+    expect(byName.get("Example.inner")).toMatchObject({
+      functionName: "inner",
+      containerName: "Example",
+      complexity: 2
+    });
+  });
+
   it("ignores declaration files", async () => {
     const tempDir = await createTempDir("crap-parser-");
     tempDirs.push(tempDir);
