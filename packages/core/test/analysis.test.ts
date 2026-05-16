@@ -169,6 +169,36 @@ describe("analyzeProject", () => {
     expect(result.metrics[0]?.coverage.unknownReason).toBe("unparseable_report");
   });
 
+  it("skips files that fail parsing and keeps analyzing sibling files", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    const warnings: string[] = [];
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/good.ts": `export function good(): number {
+  return 1;
+}
+`,
+      "src/bad.ts": "export function bad( {\n",
+      "coverage/coverage-final.json": "{}"
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      coverageMode: "existing-only",
+      stderr: {
+        write(chunk: string) {
+          warnings.push(chunk);
+        }
+      }
+    });
+
+    expect(result.metrics.map((metric) => metric.displayName)).toEqual(["good"]);
+    expect(result.warnings).toHaveLength(1);
+    expect(warnings.join("")).toContain("Could not parse src/bad.ts");
+    expect(warnings.join("")).toContain("Skipping file");
+  });
+
   it("reports file-unmatched coverage diagnostics when the report does not contain the analyzed file", async () => {
     const projectRoot = await createTempDir("crap-analysis-");
     tempDirs.push(projectRoot);

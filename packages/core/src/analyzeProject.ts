@@ -203,8 +203,19 @@ async function analyzeFile(
   loadedCoverage: LoadedCoverage,
   context: AnalyzeContext
 ): Promise<FileAnalysisResult> {
-  const descriptors = await parseFileMethods(filePath);
   const relativePath = toRelativePath(context.projectRoot, filePath);
+  let descriptors: MethodDescriptor[];
+  try {
+    descriptors = await parseFileMethods(filePath);
+  } catch (error) {
+    return {
+      metrics: [],
+      warnings: [emitWarning(
+        context.stderr,
+        `Warning: Could not parse ${relativePath}: ${(error as Error).message}. Skipping file.`
+      )]
+    };
+  }
   const fileCoverage = resolveFileCoverage(loadedCoverage.coverageByFile, filePath, relativePath, loadedCoverage.unknownReason);
   const methodCoverage = coverageForMethods(descriptors, fileCoverage.coverage, fileCoverage.unknownReason ?? undefined);
   const warnings: string[] = [];
