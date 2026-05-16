@@ -345,12 +345,45 @@ function assignmentFromIdentifier(node: ts.Expression): { name: string; containe
 
 function assignmentFromPropertyAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
   if (ts.isPropertyAccessExpression(node)) {
+    const containerName = dottedAccessName(node.expression);
+    if (!containerName) {
+      return null;
+    }
     return {
       name: node.name.text,
-      containerName: node.expression.getText()
+      containerName
     };
   }
   return null;
+}
+
+function dottedAccessName(node: ts.Expression): string | null {
+  const parts: string[] = [];
+  let current = node;
+  while (ts.isPropertyAccessExpression(current)) {
+    parts.unshift(current.name.text);
+    current = current.expression;
+  }
+  const rootName = dottedAccessRootName(current);
+  if (!rootName) {
+    return null;
+  }
+  parts.unshift(rootName);
+  return parts.join(".");
+}
+
+function dottedAccessRootName(node: ts.Expression): string | null {
+  if (ts.isIdentifier(node)) {
+    return node.text;
+  }
+  switch (node.kind) {
+    case ts.SyntaxKind.ThisKeyword:
+      return "this";
+    case ts.SyntaxKind.SuperKeyword:
+      return "super";
+    default:
+      return null;
+  }
 }
 
 function assignmentFromElementAccess(node: ts.Expression): { name: string; containerName: string | null } | null {

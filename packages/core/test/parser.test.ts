@@ -566,11 +566,19 @@ registry.format = function (value: string): string {
   return value.toUpperCase();
 };
 
+registry /* comment */ .nested.format = function (value: string): string {
+  return value.trim();
+};
+
 registry["upper"] = function (value: string): string {
   return value ? value.toUpperCase() : value;
 };
 
 (registry as Record<string, unknown>) = function (value: string): string {
+  return value;
+};
+
+(direct + direct).method = function (value: string): string {
   return value;
 };
 
@@ -585,12 +593,17 @@ export function createHandlers() {
       "utf8"
     );
 
-    expect(await parseFileMethods(filePath)).toEqual(expect.arrayContaining([
+    const methods = await parseFileMethods(filePath);
+
+    expect(methods).toEqual(expect.arrayContaining([
       expect.objectContaining({
         displayName: "direct"
       }),
       expect.objectContaining({
         displayName: "registry.format"
+      }),
+      expect.objectContaining({
+        displayName: "registry.nested.format"
       }),
       expect.objectContaining({
         displayName: "registry[\"upper\"]"
@@ -602,5 +615,6 @@ export function createHandlers() {
         displayName: "returned"
       })
     ]));
+    expect(methods.filter((method) => method.displayName === "<assigned>")).toHaveLength(2);
   });
 });
