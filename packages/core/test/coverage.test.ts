@@ -3,7 +3,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildCoverageCommand } from "../src/coverage";
-import { coverageForMethods, parseCoverageReport } from "../src/istanbul";
+import { CoverageReportParseError, coverageForMethods, parseCoverageReport } from "../src/istanbul";
 import { parseFileMethods } from "../src/parser";
 import { createTempDir, disposeTempDir, writeProjectFiles } from "./testUtils";
 
@@ -57,6 +57,20 @@ describe("coverage helpers", () => {
     );
     expect(buildCoverageCommand("pnpm", "jest", "C:/tmp", "custom-coverage/coverage-final.json").args).toContain(
       "--coverageDirectory=custom-coverage"
+    );
+  });
+
+  it("throws a path-aware error for malformed coverage JSON", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    const reportPath = path.join(projectRoot, "coverage", "coverage-final.json");
+    await writeProjectFiles(projectRoot, {
+      "coverage/coverage-final.json": "{not-json"
+    });
+
+    await expect(parseCoverageReport(reportPath, projectRoot)).rejects.toThrow(CoverageReportParseError);
+    await expect(parseCoverageReport(reportPath, projectRoot)).rejects.toThrow(
+      `Coverage report at ${reportPath} could not be parsed:`
     );
   });
 

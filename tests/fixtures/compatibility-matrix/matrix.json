@@ -159,6 +159,10 @@
         {
           "name": "helper.score",
           "coverage": 100
+        },
+        {
+          "name": "Outer.Inner.value",
+          "coverage": 50
         }
       ]
     },

@@ -17,6 +17,14 @@
       "3": {
         "start": { "line": 15, "column": 8 },
         "end": { "line": 15, "column": 17 }
+      },
+      "4": {
+        "start": { "line": 25, "column": 8 },
+        "end": { "line": 25, "column": 17 }
+      },
+      "5": {
+        "start": { "line": 27, "column": 6 },
+        "end": { "line": 27, "column": 15 }
       }
     },
     "fnMap": {},
@@ -53,18 +61,36 @@
             "end": { "line": 15, "column": 17 }
           }
         ]
+      },
+      "2": {
+        "line": 24,
+        "type": "if",
+        "loc": {
+          "start": { "line": 24, "column": 6 },
+          "end": { "line": 26, "column": 7 }
+        },
+        "locations": [
+          {
+            "start": { "line": 24, "column": 6 },
+            "end": { "line": 26, "column": 7 }
+          },
+          {}
+        ]
       }
     },
     "s": {
       "0": 1,
       "1": 0,
       "2": 1,
-      "3": 1
+      "3": 1,
+      "4": 1,
+      "5": 0
     },
     "f": {},
     "b": {
       "0": [1, 0],
-      "1": [1, 1]
+      "1": [1, 1],
+      "2": [1, 0]
     }
   }
 }

@@ -62,7 +62,7 @@ function toBranchCoverageMetric(
 
 function combineCoverageMetrics(statementCoverage: CoverageMetric, branchCoverage: CoverageMetric): CoverageMetric {
   if (statementCoverage.status === "unknown" && branchCoverage.status === "unknown") {
-    return unknownCoverageMetric(statementCoverage.unknownReason ?? branchCoverage.unknownReason!);
+    return unknownCoverageMetric(requiredUnknownReason(statementCoverage, branchCoverage));
   }
   return combinedKnownCoverage(statementCoverage, branchCoverage);
 }
@@ -83,7 +83,31 @@ function combinedKnownCoverage(statementCoverage: CoverageMetric, branchCoverage
     };
   }
 
-  return unknownCoverageMetric(statementCoverage.unknownReason ?? branchCoverage.unknownReason!);
+  return unknownCoverageMetric(requiredUnknownReason(statementCoverage, branchCoverage));
+}
+
+function requiredUnknownReason(...metrics: CoverageMetric[]): CoverageUnknownReason {
+  const invalidMetric = metrics.find(isUnknownMetricWithoutReason);
+  if (invalidMetric !== undefined) {
+    throw new Error(`Expected unknown coverage metric to carry an unknown reason: ${formatMetric(invalidMetric)}`);
+  }
+  const reason = firstUnknownReason(metrics);
+  if (reason !== null) {
+    return reason;
+  }
+  throw new Error("Expected unknown coverage metric to carry an unknown reason");
+}
+
+function isUnknownMetricWithoutReason(metric: CoverageMetric): boolean {
+  return metric.status === "unknown" && metric.unknownReason === null;
+}
+
+function firstUnknownReason(metrics: CoverageMetric[]): CoverageUnknownReason | null {
+  return metrics.find((metric) => metric.status === "unknown")?.unknownReason ?? null;
+}
+
+function formatMetric(metric: CoverageMetric): string {
+  return `status=${metric.status}, percent=${metric.percent}, unknownReason=${metric.unknownReason}`;
 }
 
 function measuredCoverageMetric(percent: number): CoverageMetric {

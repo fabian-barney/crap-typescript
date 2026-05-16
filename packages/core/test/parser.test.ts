@@ -202,7 +202,7 @@ const arrow = (items: number[]) => {
 }
 
 export function oneCaseAndDefault(value: number): number {
-  switch (value) {
+    switch (value) {
     case 1:
       return 1;
     default:
@@ -221,6 +221,52 @@ export function oneCaseAndDefault(value: number): number {
       expectsBranchCoverage: true
     });
     expect(byName.get("oneCaseAndDefault")).toMatchObject({
+      complexity: 2,
+      expectsBranchCoverage: true
+    });
+  });
+
+  it("counts each optional chaining token as one branch and complexity contribution", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "optional-chain.ts");
+    await writeFile(
+      filePath,
+      `export function optionalProperties(value?: { first?: { second?: string } }): string | undefined {
+  return value?.first?.second;
+}
+
+export function optionalThenRegularAccess(value?: { first: { second?: string } }): string | undefined {
+  return value?.first.second;
+}
+
+export function regularThenOptionalCall(value: { first?: () => string }): string | undefined {
+  return value.first?.();
+}
+
+export function optionalPropertyThenRegularCall(value?: { first: () => string }): string | undefined {
+  return value?.first();
+}
+`,
+      "utf8"
+    );
+
+    const methods = await parseFileMethods(filePath);
+    const byName = new Map(methods.map((method) => [method.displayName, method]));
+
+    expect(byName.get("optionalProperties")).toMatchObject({
+      complexity: 3,
+      expectsBranchCoverage: true
+    });
+    expect(byName.get("optionalThenRegularAccess")).toMatchObject({
+      complexity: 2,
+      expectsBranchCoverage: true
+    });
+    expect(byName.get("regularThenOptionalCall")).toMatchObject({
+      complexity: 2,
+      expectsBranchCoverage: true
+    });
+    expect(byName.get("optionalPropertyThenRegularCall")).toMatchObject({
       complexity: 2,
       expectsBranchCoverage: true
     });
@@ -579,12 +625,67 @@ class Example {
         displayName: "registry.render.nested"
       },
       {
-        displayName: "child.leaf"
+        displayName: "root.child.leaf"
       },
       {
-        displayName: "helper.format"
+        displayName: "Example.helper.format"
       }
     ]);
+  });
+
+  it("keeps anchored assignment containers separate from enclosing classes", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "anchored-containers.ts");
+    await writeFile(
+      filePath,
+      `const obj: Record<string, unknown> = {};
+
+class Example {
+  build(): void {
+    obj.foo = {
+      bar(value: string): string {
+        return value.trim();
+      }
+    };
+  }
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        displayName: "Example.build"
+      }),
+      expect.objectContaining({
+        displayName: "obj.foo.bar"
+      })
+    ]));
+  });
+
+  it("composes nested class display names", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "nested-classes.ts");
+    await writeFile(
+      filePath,
+      `class Outer {
+  static Inner = class Inner {
+    value(flag: boolean): number {
+      return flag ? 1 : 0;
+    }
+  };
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        displayName: "Outer.Inner.value"
+      })
+    ]));
   });
 
   it("handles identifier, property, element, fallback, and unowned object-literal assignment targets", async () => {
@@ -604,11 +705,19 @@ registry.format = function (value: string): string {
   return value.toUpperCase();
 };
 
+registry /* comment */ .nested.format = function (value: string): string {
+  return value.trim();
+};
+
 registry["upper"] = function (value: string): string {
   return value ? value.toUpperCase() : value;
 };
 
 (registry as Record<string, unknown>) = function (value: string): string {
+  return value;
+};
+
+(direct + direct).method = function (value: string): string {
   return value;
 };
 
@@ -623,12 +732,17 @@ export function createHandlers() {
       "utf8"
     );
 
-    expect(await parseFileMethods(filePath)).toEqual(expect.arrayContaining([
+    const methods = await parseFileMethods(filePath);
+
+    expect(methods).toEqual(expect.arrayContaining([
       expect.objectContaining({
         displayName: "direct"
       }),
       expect.objectContaining({
         displayName: "registry.format"
+      }),
+      expect.objectContaining({
+        displayName: "registry.nested.format"
       }),
       expect.objectContaining({
         displayName: "registry[\"upper\"]"
@@ -640,5 +754,6 @@ export function createHandlers() {
         displayName: "returned"
       })
     ]));
+    expect(methods.filter((method) => method.displayName === "<assigned>")).toHaveLength(2);
   });
 });

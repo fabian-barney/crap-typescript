@@ -80,9 +80,16 @@ function attachCoverageCommand(
   coverageSource: { reportPath: string; sourceRoot: string } | null,
   command: CoverageCommand | null
 ): { coverageSourcePath: string | null; coverageSourceRoot: string | null; command: CoverageCommand | null } {
+  if (!coverageSource) {
+    return {
+      coverageSourcePath: null,
+      coverageSourceRoot: null,
+      command
+    };
+  }
   return {
-    coverageSourcePath: coverageSource?.reportPath ?? null,
-    coverageSourceRoot: coverageSource?.sourceRoot ?? null,
+    coverageSourcePath: coverageSource.reportPath,
+    coverageSourceRoot: coverageSource.sourceRoot,
     command
   };
 }
