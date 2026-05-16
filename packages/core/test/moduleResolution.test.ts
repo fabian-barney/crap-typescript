@@ -159,6 +159,18 @@ describe("resolveTestRunner", () => {
     );
   });
 
+  it("reports malformed package.json files with their path", async () => {
+    const tempDir = await createTempDir("crap-runner-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": "{not-json"
+    });
+
+    await expect(resolveTestRunner("auto", tempDir, tempDir)).rejects.toThrow(
+      `Package manifest at ${path.join(tempDir, "package.json")} could not be parsed:`
+    );
+  });
+
   it("prefers module scripts, detects runners from peer dependencies, and skips missing package.json files", async () => {
     const tempDir = await createTempDir("crap-runner-");
     tempDirs.push(tempDir);
