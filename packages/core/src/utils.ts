@@ -52,8 +52,8 @@ export async function runCommand(
   options: RunCommandOptions = {}
 ): Promise<RunCommandResult> {
   return new Promise((resolve, reject) => {
-    const timeoutMs = options.timeoutMs ?? defaultCommandTimeoutMs();
-    const maxBufferBytes = options.maxBufferBytes ?? DEFAULT_COMMAND_MAX_BUFFER_BYTES;
+    const timeoutMs = normalizeNonNegativeOption(options.timeoutMs, defaultCommandTimeoutMs());
+    const maxBufferBytes = normalizeNonNegativeOption(options.maxBufferBytes, DEFAULT_COMMAND_MAX_BUFFER_BYTES);
     const child = spawn(command, args, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"]
@@ -118,6 +118,13 @@ function defaultCommandTimeoutMs(): number {
   }
   const parsed = Number(configured);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_COMMAND_TIMEOUT_MS;
+}
+
+function normalizeNonNegativeOption(value: number | undefined, defaultValue: number): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return defaultValue;
+  }
+  return Math.max(0, value);
 }
 
 function clearCommandTimeout(timeout: ReturnType<typeof setTimeout> | undefined): void {

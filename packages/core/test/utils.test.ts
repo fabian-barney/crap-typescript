@@ -92,6 +92,17 @@ describe("runCommand", () => {
     ).rejects.toThrow("Command output exceeded 3 bytes:");
   });
 
+  it("normalizes negative command buffer limits before diagnostics", async () => {
+    await expect(
+      runCommand(
+        process.execPath,
+        ["-e", "process.stdout.write('x')"],
+        process.cwd(),
+        { maxBufferBytes: -1, rejectOnTruncatedOutput: true }
+      )
+    ).rejects.toThrow("Command output exceeded 0 bytes:");
+  });
+
   it("returns raw bounded output without mutation when truncated", async () => {
     const emptyResult = await runCommand(
       process.execPath,
