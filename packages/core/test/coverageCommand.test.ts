@@ -131,7 +131,9 @@ describe("ensureCoverageReport", () => {
       ensureCoverageReport(projectRoot, moduleRoot, "auto", "auto", "auto", undefined, {
         execute: vi.fn(async () => 3)
       })
-    ).rejects.toThrow("Coverage command failed with exit 3");
+    ).rejects.toThrow(
+      `Coverage command failed with exit 3 for yarn/jest in ${moduleRoot}: yarn jest --coverage --runInBand --coverageReporters=json --coverageReporters=text --coverageDirectory=coverage`
+    );
   });
 });
 
