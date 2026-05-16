@@ -118,28 +118,28 @@ function descriptorFromFunctionDeclaration(node: ts.Node, sourceFile: ts.SourceF
   if (!functionName) {
     return null;
   }
-  return buildMethodDescriptor(functionName, findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor(functionName, findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromMethodDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
   if (!ts.isMethodDeclaration(node) || !node.body) {
     return null;
   }
-  return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor(propertyName(node.name), findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromConstructorDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
   if (!ts.isConstructorDeclaration(node) || !node.body) {
     return null;
   }
-  return buildMethodDescriptor("constructor", findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor("constructor", findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromAccessorDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
   if (!(ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) || !node.body) {
     return null;
   }
-  return buildMethodDescriptor(accessorName(node), findContainerName(node), node, sourceFile);
+  return buildMethodDescriptor(accessorName(node), findContainerName(node), node, node.body, sourceFile);
 }
 
 function descriptorFromAssignedFunction(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
@@ -150,7 +150,7 @@ function descriptorFromAssignedFunction(node: ts.Node, sourceFile: ts.SourceFile
   if (!assignedName) {
     return null;
   }
-  return buildMethodDescriptor(assignedName.name, assignedName.containerName, node, sourceFile);
+  return buildMethodDescriptor(assignedName.name, assignedName.containerName, node, node.body, sourceFile);
 }
 
 function inferFunctionDeclarationName(node: ts.FunctionDeclaration): string | null {
@@ -164,10 +164,10 @@ function buildMethodDescriptor(
   functionName: string,
   containerName: string | null,
   node: ts.FunctionLikeDeclaration,
+  bodyNode: ts.ConciseBody,
   sourceFile: ts.SourceFile
 ): MethodDescriptor {
   const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-  const bodyNode = node.body!;
   const endLine = sourceFile.getLineAndCharacterOfPosition(Math.max(bodyNode.end - 1, bodyNode.getStart(sourceFile))).line + 1;
   return {
     functionName,
