@@ -13,6 +13,18 @@ afterEach(async () => {
 });
 
 describe("report path validation", () => {
+  it("falls back to platform defaults when the case-sensitivity probe directory cannot be created", async () => {
+    stubPlatform("win32");
+    const projectRoot = await createTempDir("crap-report-paths-");
+    tempDirs.push(projectRoot);
+    await mockCaseProbeDirectoryCreationFailure();
+    const { validateReportPathTargets } = await import("../src/reportPaths");
+
+    await expect(validateReportPathTargets(projectRoot, collidingReportTargets())).rejects.toThrow(
+      "--output and --junit-report must target different report files"
+    );
+  });
+
   it("falls back to platform defaults when the case-sensitivity probe fails unexpectedly", async () => {
     stubPlatform("win32");
     await mockCaseProbeAccessFailure("EACCES");
@@ -35,6 +47,19 @@ describe("report path validation", () => {
     await expect(validateReportPathTargets(projectRoot, collidingReportTargets())).resolves.toBeUndefined();
   });
 });
+
+async function mockCaseProbeDirectoryCreationFailure(): Promise<void> {
+  const fsPromises = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+  vi.doMock("node:fs/promises", () => ({
+    ...fsPromises,
+    mkdtemp: vi.fn(async (prefix: string) => {
+      if (prefix.includes(".crap-typescript-case-")) {
+        throw Object.assign(new Error("probe directory failed"), { code: "EACCES" });
+      }
+      return fsPromises.mkdtemp(prefix);
+    })
+  }));
+}
 
 async function mockCaseProbeAccessFailure(code: string): Promise<void> {
   const fsPromises = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
