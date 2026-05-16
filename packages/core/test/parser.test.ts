@@ -587,12 +587,67 @@ class Example {
         displayName: "registry.render.nested"
       },
       {
-        displayName: "child.leaf"
+        displayName: "root.child.leaf"
       },
       {
-        displayName: "helper.format"
+        displayName: "Example.helper.format"
       }
     ]);
+  });
+
+  it("keeps anchored assignment containers separate from enclosing classes", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "anchored-containers.ts");
+    await writeFile(
+      filePath,
+      `const obj: Record<string, unknown> = {};
+
+class Example {
+  build(): void {
+    obj.foo = {
+      bar(value: string): string {
+        return value.trim();
+      }
+    };
+  }
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        displayName: "Example.build"
+      }),
+      expect.objectContaining({
+        displayName: "obj.foo.bar"
+      })
+    ]));
+  });
+
+  it("composes nested class display names", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "nested-classes.ts");
+    await writeFile(
+      filePath,
+      `class Outer {
+  static Inner = class Inner {
+    value(flag: boolean): number {
+      return flag ? 1 : 0;
+    }
+  };
+}
+`,
+      "utf8"
+    );
+
+    expect(await parseFileMethods(filePath)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        displayName: "Outer.Inner.value"
+      })
+    ]));
   });
 
   it("handles identifier, property, element, fallback, and unowned object-literal assignment targets", async () => {
