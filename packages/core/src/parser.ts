@@ -455,6 +455,9 @@ function complexityContribution(node: ts.Node): number {
   if (COMPLEXITY_INCREMENT_KINDS.has(node.kind)) {
     return 1;
   }
+  if (hasOwnOptionalChainToken(node)) {
+    return 1;
+  }
   if (!ts.isBinaryExpression(node)) {
     return 0;
   }
@@ -465,7 +468,15 @@ function hasBranchSyntax(node: ts.Node): boolean {
   if (BRANCH_SYNTAX_KINDS.has(node.kind)) {
     return true;
   }
+  if (hasOwnOptionalChainToken(node)) {
+    return true;
+  }
   return ts.isBinaryExpression(node) && SHORT_CIRCUIT_KINDS.has(node.operatorToken.kind);
+}
+
+function hasOwnOptionalChainToken(node: ts.Node): boolean {
+  return (ts.isPropertyAccessChain(node) || ts.isElementAccessChain(node) || ts.isCallChain(node)) &&
+    node.questionDotToken !== undefined;
 }
 
 function isAssignmentExpression(node: ts.Node): node is ts.BinaryExpression {
