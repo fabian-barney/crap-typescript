@@ -107,9 +107,16 @@ function createBoundedOutput(maxBufferBytes: number): { append(chunk: Buffer): v
     },
     toString() {
       const output = Buffer.concat(chunks, totalBytes).toString();
-      return truncated ? `${output}\n[output truncated after ${limit} bytes]` : output;
+      return truncated ? appendTruncationMarker(output, limit) : output;
     }
   };
+}
+
+function appendTruncationMarker(output: string, limit: number): string {
+  const marker = `[output truncated after ${limit} bytes]`;
+  return output.length > 0 && !output.endsWith("\n")
+    ? `${output}\n${marker}`
+    : `${output}${marker}`;
 }
 
 export function formatNumber(value: number): string {

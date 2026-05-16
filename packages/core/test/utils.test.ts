@@ -52,4 +52,22 @@ describe("runCommand", () => {
     expect(result.stdout).toBe("abc\n[output truncated after 3 bytes]");
     expect(result.stderr).toBe("uvw\n[output truncated after 3 bytes]");
   });
+
+  it("formats truncation markers without extra blank lines", async () => {
+    const emptyResult = await runCommand(
+      process.execPath,
+      ["-e", "process.stdout.write('abc')"],
+      process.cwd(),
+      { maxBufferBytes: 0 }
+    );
+    const newlineResult = await runCommand(
+      process.execPath,
+      ["-e", "process.stdout.write('abc\\ndef')"],
+      process.cwd(),
+      { maxBufferBytes: 4 }
+    );
+
+    expect(emptyResult.stdout).toBe("[output truncated after 0 bytes]");
+    expect(newlineResult.stdout).toBe("abc\n[output truncated after 4 bytes]");
+  });
 });
