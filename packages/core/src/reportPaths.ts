@@ -149,7 +149,7 @@ function normalizeReportPathForCollision(filePath: string, caseInsensitiveFilesy
 async function isCaseInsensitiveFilesystem(projectRoot: string): Promise<boolean> {
   const probeDirectory = await createCaseProbeDirectory(projectRoot);
   if (probeDirectory === undefined) {
-    return process.platform === "win32";
+    return defaultCaseInsensitiveFilesystem();
   }
 
   try {
@@ -157,11 +157,15 @@ async function isCaseInsensitiveFilesystem(projectRoot: string): Promise<boolean
     await writeFile(probeFile, "");
     await access(path.join(probeDirectory, "CRAP-TYPESCRIPT-CASE-PROBE"));
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    return isMissingPathError(error) ? false : defaultCaseInsensitiveFilesystem();
   } finally {
     await rm(probeDirectory, { force: true, recursive: true });
   }
+}
+
+function defaultCaseInsensitiveFilesystem(): boolean {
+  return process.platform === "win32" || process.platform === "darwin";
 }
 
 async function createCaseProbeDirectory(projectRoot: string): Promise<string | undefined> {
