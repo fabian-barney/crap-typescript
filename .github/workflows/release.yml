@@ -46,20 +46,6 @@ jobs:
       - name: Run crap-typescript gate
         run: npm run crap-typescript-check
 
-      - name: Pack release tarballs
-        run: |
-          mkdir package-tarballs
-          npm pack --workspaces --pack-destination package-tarballs
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: release-artifacts
-          path: |
-            release-notes.md
-            package-tarballs/*.tgz
-          if-no-files-found: error
-
   publish:
     name: Publish Release
     runs-on: ubuntu-latest
@@ -69,33 +55,46 @@ jobs:
       id-token: write
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Set up Node 24
         uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          cache: npm
 
-      - name: Check npm version
-        run: npm --version
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1 --ignore-scripts
 
-      - name: Download release artifacts
-        uses: actions/download-artifact@v6
-        with:
-          name: release-artifacts
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Verify release versions
+        run: npm run verify-release-version
+
+      - name: Render release notes
+        run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
+
+      - name: Build publish artifacts
+        run: npm run build
 
       # Trusted Publishing uses the job OIDC token for auth and npm
       # automatically emits provenance for public packages from public repos.
       - name: Publish core
-        run: npm publish package-tarballs/barney-media-crap-typescript-core-*.tgz --access public
+        run: npm publish --workspace packages/core --access public
 
       - name: Publish CLI
-        run: npm publish package-tarballs/barney-media-crap-typescript-[0-9]*.tgz --access public
+        run: npm publish --workspace packages/cli --access public
 
       - name: Publish Vitest adapter
-        run: npm publish package-tarballs/barney-media-crap-typescript-vitest-*.tgz --access public
+        run: npm publish --workspace packages/vitest --access public
 
       - name: Publish Jest adapter
-        run: npm publish package-tarballs/barney-media-crap-typescript-jest-*.tgz --access public
+        run: npm publish --workspace packages/jest --access public
 
       - name: Create GitHub release
         env:
