@@ -17,3 +17,14 @@ export const helper = {
     }
   }
 };
+
+export class Outer {
+  static Inner = class Inner {
+    value(flag: boolean): number {
+      if (flag) {
+        return 1;
+      }
+      return 0;
+    }
+  };
+}
