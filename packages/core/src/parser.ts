@@ -27,6 +27,7 @@ const COMPLEXITY_INCREMENT_KINDS = new Set([
   ts.SyntaxKind.DoStatement,
   ts.SyntaxKind.CatchClause,
   ts.SyntaxKind.ConditionalExpression,
+  // Match ESLint classic complexity: case labels add paths; default is the existing fallthrough path.
   ts.SyntaxKind.CaseClause
 ]);
 const SHORT_CIRCUIT_KINDS = new Set([

@@ -188,6 +188,44 @@ const arrow = (items: number[]) => {
     });
   });
 
+  it("does not count switch default clauses as additional complexity", async () => {
+    const tempDir = await createTempDir("crap-parser-");
+    tempDirs.push(tempDir);
+    const filePath = path.join(tempDir, "switch-default.ts");
+    await writeFile(
+      filePath,
+      `export function fallbackOnly(value: number): number {
+  switch (value) {
+    default:
+      return 0;
+  }
+}
+
+export function oneCaseAndDefault(value: number): number {
+  switch (value) {
+    case 1:
+      return 1;
+    default:
+      return 0;
+  }
+}
+`,
+      "utf8"
+    );
+
+    const methods = await parseFileMethods(filePath);
+    const byName = new Map(methods.map((method) => [method.displayName, method]));
+
+    expect(byName.get("fallbackOnly")).toMatchObject({
+      complexity: 1,
+      expectsBranchCoverage: true
+    });
+    expect(byName.get("oneCaseAndDefault")).toMatchObject({
+      complexity: 2,
+      expectsBranchCoverage: true
+    });
+  });
+
   it("ignores declaration files", async () => {
     const tempDir = await createTempDir("crap-parser-");
     tempDirs.push(tempDir);
