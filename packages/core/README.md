@@ -22,7 +22,7 @@ Key exports: `analyzeProject`, `calculateCrapScore`, `formatAnalysisReport`, `fo
 
 `analyzeProject` accepts `threshold` to override the default CRAP threshold of `8.0`. Values below `4.0` emit a warning because they are likely too noisy; values above `8.0` emit a warning because they are too lenient even for hard gates.
 
-Commands run by the default command executor, including coverage commands and changed-file discovery, time out after 300 seconds. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout.
+Commands run by the default command executor, including coverage commands and changed-file discovery, time out after 300 seconds. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout. Captured stdout and stderr are capped at 10 MiB per stream. User-facing command failures may include truncated output, while internal commands that require complete output, such as `git status --porcelain -z`, fail if the cap is exceeded.
 
 `analyzeProject` also accepts `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, and `useDefaultExclusions`. These filters run after `explicitPaths` or `changedOnly` select candidate files and before parsing, coverage attribution, reporting, and threshold evaluation. Baseline analyzability exclusions always remain active for declarations, test/spec files, `__tests__/`, `dist/`, `coverage/`, and `node_modules/`; `useDefaultExclusions: false` only disables generated-code defaults.
 

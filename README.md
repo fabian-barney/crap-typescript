@@ -32,7 +32,7 @@ For each resolved module today:
 6. Use Istanbul `fnMap` as a validation and secondary matching aid when it is present.
 7. Derive function statement and branch coverage from the Istanbul coverage counters and use their minimum as CRAP coverage.
 
-Commands run by the built-in executor, including coverage commands and changed-file discovery, time out after 300 seconds by default. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout.
+Commands run by the built-in executor, including coverage commands and changed-file discovery, time out after 300 seconds by default. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout. Captured stdout and stderr are capped at 10 MiB per stream. User-facing command failures may include truncated output, while internal commands that require complete output, such as `git status --porcelain -z`, fail if the cap is exceeded.
 
 ## Compatibility Matrix
 

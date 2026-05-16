@@ -138,23 +138,23 @@ function createBoundedOutput(maxBufferBytes: number): {
   toResult(): { output: string; truncated: boolean };
 } {
   const limit = Math.max(0, maxBufferBytes);
-  const buffer = Buffer.allocUnsafe(limit);
-  let offset = 0;
+  const chunks: Buffer[] = [];
+  let byteLength = 0;
   let truncated = false;
 
   return {
     append(chunk) {
-      const remainingBytes = limit - offset;
+      const remainingBytes = limit - byteLength;
       if (remainingBytes > 0) {
         const bytesToCopy = Math.min(chunk.byteLength, remainingBytes);
-        chunk.copy(buffer, offset, 0, bytesToCopy);
-        offset += bytesToCopy;
+        chunks.push(Buffer.from(chunk.subarray(0, bytesToCopy)));
+        byteLength += bytesToCopy;
       }
       truncated ||= chunk.byteLength > remainingBytes;
     },
     toResult() {
       return {
-        output: buffer.toString("utf8", 0, offset),
+        output: chunks.length > 0 ? Buffer.concat(chunks, byteLength).toString("utf8") : "",
         truncated
       };
     }
