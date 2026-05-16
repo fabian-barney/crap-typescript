@@ -180,7 +180,7 @@ export default withCrapTypescriptJest({
 });
 ```
 
-The Jest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, `threshold`, `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, or `useDefaultExclusions` in the adapter options to customize analysis and reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
+The Jest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, `threshold`, `coverageReportWaitMs`, `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, or `useDefaultExclusions` in the adapter options to customize analysis and reporting. The Jest reporter waits up to 5000ms for the coverage JSON after Jest finishes; set `coverageReportWaitMs` to a non-negative millisecond value to override it. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
 ## Exit Codes
 
