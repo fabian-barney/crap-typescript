@@ -1,9 +1,13 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
   analyzeProject,
+  changedTypeScriptFilesUnderSourceRoots,
   COVERAGE_REPORT_RELATIVE_PATH,
+  expandExplicitPaths,
+  filterSourceFiles,
+  findAllTypeScriptFilesUnderSourceRoots,
   formatAnalysisReport,
   validateReportPathTargets
 } from "@barney-media/crap-typescript-core";
@@ -86,12 +90,7 @@ export default class CrapTypescriptJestReporter {
     try {
       const options = resolveReporterOptions(this.options);
       await validateReporterReportPaths(options);
-      await waitForCoverageReport(
-        options.projectRoot,
-        options.paths,
-        options.coverageReportPath,
-        options.coverageReportWaitMs
-      );
+      await waitForCoverageReport(options);
       const result = await analyzeProject({
         projectRoot: options.projectRoot,
         explicitPaths: options.paths,
@@ -127,60 +126,81 @@ export default class CrapTypescriptJestReporter {
   }
 }
 
-async function waitForCoverageReport(
-  projectRoot: string,
-  explicitPaths: string[],
-  coverageReportPath: string,
-  waitMs: number
-): Promise<void> {
-  const coveragePaths = await resolveCoverageWaitPaths(projectRoot, explicitPaths, coverageReportPath);
-  const deadline = Date.now() + waitMs;
+async function waitForCoverageReport(options: ResolvedReporterOptions): Promise<void> {
+  const coveragePaths = await resolveCoverageWaitPaths(options);
+  const deadline = Date.now() + options.coverageReportWaitMs;
   while (true) {
-    if (await anyCoveragePathExists(coveragePaths)) {
+    if (await coverageReportsReady(coveragePaths)) {
       return;
     }
     if (Date.now() >= deadline) {
-      throw new Error(`Timed out after ${waitMs}ms waiting for Jest coverage report at ${formatCoveragePaths(coveragePaths)}`);
+      throw new Error(
+        `Timed out after ${options.coverageReportWaitMs}ms waiting for Jest coverage report at ${formatCoveragePaths(coveragePaths.displayPaths)}`
+      );
     }
     await sleep(Math.min(COVERAGE_REPORT_POLL_INTERVAL_MS, Math.max(1, deadline - Date.now())));
   }
 }
 
-async function anyCoveragePathExists(coveragePaths: string[]): Promise<boolean> {
-  for (const coveragePath of coveragePaths) {
-    try {
-      await access(coveragePath);
-      return true;
-    } catch {
-      // Keep polling the remaining candidate paths until the deadline expires.
+interface CoverageWaitPaths {
+  projectReportPath: string;
+  moduleReportPaths: string[];
+  displayPaths: string[];
+}
+
+async function coverageReportsReady(coveragePaths: CoverageWaitPaths): Promise<boolean> {
+  if (await exists(coveragePaths.projectReportPath)) {
+    return true;
+  }
+  for (const coveragePath of coveragePaths.moduleReportPaths) {
+    if (!(await exists(coveragePath))) {
+      return false;
     }
   }
-  return false;
+  return coveragePaths.moduleReportPaths.length > 0;
 }
 
-async function resolveCoverageWaitPaths(
-  projectRoot: string,
-  explicitPaths: string[],
-  coverageReportPath: string
-): Promise<string[]> {
-  if (path.isAbsolute(coverageReportPath)) {
-    return [coverageReportPath];
+async function resolveCoverageWaitPaths(options: ResolvedReporterOptions): Promise<CoverageWaitPaths> {
+  if (path.isAbsolute(options.coverageReportPath)) {
+    return {
+      projectReportPath: options.coverageReportPath,
+      moduleReportPaths: [],
+      displayPaths: [options.coverageReportPath]
+    };
   }
-  const roots = await coverageWaitRoots(projectRoot, explicitPaths);
-  return roots.map((root) => path.join(root, coverageReportPath));
+  const projectReportPath = path.join(options.projectRoot, options.coverageReportPath);
+  const moduleReportPaths = (await coverageWaitRoots(options))
+    .map((root) => path.join(root, options.coverageReportPath));
+  return {
+    projectReportPath,
+    moduleReportPaths,
+    displayPaths: [...new Set([projectReportPath, ...moduleReportPaths])]
+  };
 }
 
-async function coverageWaitRoots(projectRoot: string, explicitPaths: string[]): Promise<string[]> {
-  const roots = [path.resolve(projectRoot)];
-  for (const explicitPath of explicitPaths) {
-    roots.push(await nearestPackageRoot(projectRoot, path.resolve(projectRoot, explicitPath)));
+async function coverageWaitRoots(options: ResolvedReporterOptions): Promise<string[]> {
+  const candidateFiles = await coverageWaitCandidateFiles(options);
+  const filteredFiles = (await filterSourceFiles(options.projectRoot, candidateFiles, options)).files;
+  const roots = filteredFiles.length === 0 ? [path.resolve(options.projectRoot)] : [];
+  for (const filePath of filteredFiles) {
+    roots.push(await nearestPackageRoot(options.projectRoot, filePath));
   }
   return [...new Set(roots)];
 }
 
+async function coverageWaitCandidateFiles(options: ResolvedReporterOptions): Promise<string[]> {
+  if (options.changedOnly) {
+    return changedTypeScriptFilesUnderSourceRoots(options.projectRoot);
+  }
+  if (options.paths.length > 0) {
+    return expandExplicitPaths(options.projectRoot, options.paths);
+  }
+  return findAllTypeScriptFilesUnderSourceRoots(options.projectRoot);
+}
+
 async function nearestPackageRoot(projectRoot: string, candidatePath: string): Promise<string> {
   const normalizedProjectRoot = path.resolve(projectRoot);
-  let current = path.extname(candidatePath) === "" ? candidatePath : path.dirname(candidatePath);
+  let current = await startDirectory(candidatePath);
   while (isWithinOrEqual(current, normalizedProjectRoot)) {
     if (await exists(path.join(current, "package.json"))) {
       return current;
@@ -193,12 +213,25 @@ async function nearestPackageRoot(projectRoot: string, candidatePath: string): P
   return normalizedProjectRoot;
 }
 
+async function startDirectory(candidatePath: string): Promise<string> {
+  const candidateStats = await statIfExists(candidatePath);
+  return candidateStats?.isDirectory() ? candidatePath : path.dirname(candidatePath);
+}
+
 async function exists(filePath: string): Promise<boolean> {
   try {
     await access(filePath);
     return true;
   } catch {
     return false;
+  }
+}
+
+async function statIfExists(filePath: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
+  try {
+    return await stat(filePath);
+  } catch {
+    return null;
   }
 }
 
