@@ -72,8 +72,21 @@ function emptyCoverageResolution(): { coverageSourcePath: null; coverageSourceRo
 async function executeCoverageCommand(command: CoverageCommand, executor: CommandExecutor): Promise<void> {
   const exitCode = await executor.execute(command);
   if (exitCode !== 0) {
-    throw new Error(`Coverage command failed with exit ${exitCode}`);
+    throw new Error(
+      `Coverage command failed with exit ${exitCode} for ${command.packageManager}/${command.testRunner} in ${command.cwd}: ${formatCoverageCommand(command)}`
+    );
   }
+}
+
+function formatCoverageCommand(command: CoverageCommand): string {
+  return [command.command, ...command.args].map(quoteCommandArgument).join(" ");
+}
+
+function quoteCommandArgument(argument: string): string {
+  if (/^[A-Za-z0-9_./:=@+-]+$/.test(argument)) {
+    return argument;
+  }
+  return `"${argument.replace(/["\\$`]/g, "\\$&")}"`;
 }
 
 function attachCoverageCommand(
