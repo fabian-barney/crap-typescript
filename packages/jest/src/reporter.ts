@@ -1,9 +1,13 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
   analyzeProject,
+  changedTypeScriptFilesUnderSourceRoots,
   COVERAGE_REPORT_RELATIVE_PATH,
+  expandExplicitPaths,
+  filterSourceFiles,
+  findAllTypeScriptFilesUnderSourceRoots,
   formatAnalysisReport,
   validateReportPathTargets
 } from "@barney-media/crap-typescript-core";
@@ -14,12 +18,16 @@ import type {
   Writer
 } from "@barney-media/crap-typescript-core";
 
+const DEFAULT_COVERAGE_REPORT_WAIT_MS = 5_000;
+const COVERAGE_REPORT_POLL_INTERVAL_MS = 100;
+
 export interface CrapTypescriptJestOptions {
   projectRoot?: string;
   changedOnly?: boolean;
   paths?: string[];
   packageManager?: PackageManagerSelection;
   coverageReportPath?: string;
+  coverageReportWaitMs?: number;
   threshold?: number;
   format?: ReportFormat;
   agent?: boolean;
@@ -42,6 +50,7 @@ interface ResolvedReporterOptions {
   changedOnly: boolean;
   packageManager: PackageManagerSelection;
   coverageReportPath: string;
+  coverageReportWaitMs: number;
   threshold: number | undefined;
   format: ReportFormat;
   agent: boolean;
@@ -78,10 +87,10 @@ export default class CrapTypescriptJestReporter {
   }
 
   private async finalize(): Promise<void> {
-    const options = resolveReporterOptions(this.options);
     try {
+      const options = resolveReporterOptions(this.options);
       await validateReporterReportPaths(options);
-      await waitForCoverageReport(options.projectRoot, options.coverageReportPath);
+      await waitForCoverageReport(options);
       const result = await analyzeProject({
         projectRoot: options.projectRoot,
         explicitPaths: options.paths,
@@ -107,7 +116,7 @@ export default class CrapTypescriptJestReporter {
       }
     } catch (error) {
       this.error = toError(error);
-      options.stderr.write(`${this.error.message}\n`);
+      (this.options.stderr ?? process.stderr).write(`${this.error.message}\n`);
       process.exitCode = 1;
     }
   }
@@ -117,24 +126,128 @@ export default class CrapTypescriptJestReporter {
   }
 }
 
-async function waitForCoverageReport(projectRoot: string, coverageReportPath: string): Promise<void> {
-  const coveragePath = resolveCoveragePath(projectRoot, coverageReportPath);
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    try {
-      await access(coveragePath);
+async function waitForCoverageReport(options: ResolvedReporterOptions): Promise<void> {
+  const coveragePaths = await resolveCoverageWaitPaths(options);
+  const deadline = Date.now() + options.coverageReportWaitMs;
+  while (true) {
+    if (await coverageReportsReady(coveragePaths)) {
       return;
-    } catch {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50);
-      });
     }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `Timed out after ${options.coverageReportWaitMs}ms waiting for Jest coverage report at ${formatCoveragePaths(coveragePaths.displayPaths)}`
+      );
+    }
+    await sleep(Math.min(COVERAGE_REPORT_POLL_INTERVAL_MS, Math.max(1, deadline - Date.now())));
   }
 }
 
-function resolveCoveragePath(projectRoot: string, coverageReportPath: string): string {
-  return path.isAbsolute(coverageReportPath)
-    ? coverageReportPath
-    : path.join(projectRoot, coverageReportPath);
+interface CoverageWaitPaths {
+  projectReportPath: string;
+  moduleReportPaths: string[];
+  displayPaths: string[];
+}
+
+async function coverageReportsReady(coveragePaths: CoverageWaitPaths): Promise<boolean> {
+  if (await exists(coveragePaths.projectReportPath)) {
+    return true;
+  }
+  for (const coveragePath of coveragePaths.moduleReportPaths) {
+    if (!(await exists(coveragePath))) {
+      return false;
+    }
+  }
+  return coveragePaths.moduleReportPaths.length > 0;
+}
+
+async function resolveCoverageWaitPaths(options: ResolvedReporterOptions): Promise<CoverageWaitPaths> {
+  if (path.isAbsolute(options.coverageReportPath)) {
+    return {
+      projectReportPath: options.coverageReportPath,
+      moduleReportPaths: [],
+      displayPaths: [options.coverageReportPath]
+    };
+  }
+  const projectReportPath = path.join(options.projectRoot, options.coverageReportPath);
+  const moduleReportPaths = (await coverageWaitRoots(options))
+    .map((root) => path.join(root, options.coverageReportPath));
+  return {
+    projectReportPath,
+    moduleReportPaths,
+    displayPaths: [...new Set([projectReportPath, ...moduleReportPaths])]
+  };
+}
+
+async function coverageWaitRoots(options: ResolvedReporterOptions): Promise<string[]> {
+  const candidateFiles = await coverageWaitCandidateFiles(options);
+  const filteredFiles = (await filterSourceFiles(options.projectRoot, candidateFiles, options)).files;
+  const roots = filteredFiles.length === 0 ? [path.resolve(options.projectRoot)] : [];
+  for (const filePath of filteredFiles) {
+    roots.push(await nearestPackageRoot(options.projectRoot, filePath));
+  }
+  return [...new Set(roots)];
+}
+
+async function coverageWaitCandidateFiles(options: ResolvedReporterOptions): Promise<string[]> {
+  if (options.changedOnly) {
+    return changedTypeScriptFilesUnderSourceRoots(options.projectRoot);
+  }
+  if (options.paths.length > 0) {
+    return expandExplicitPaths(options.projectRoot, options.paths);
+  }
+  return findAllTypeScriptFilesUnderSourceRoots(options.projectRoot);
+}
+
+async function nearestPackageRoot(projectRoot: string, candidatePath: string): Promise<string> {
+  const normalizedProjectRoot = path.resolve(projectRoot);
+  let current = await startDirectory(candidatePath);
+  while (isWithinOrEqual(current, normalizedProjectRoot)) {
+    if (await exists(path.join(current, "package.json"))) {
+      return current;
+    }
+    if (current === normalizedProjectRoot) {
+      break;
+    }
+    current = path.dirname(current);
+  }
+  return normalizedProjectRoot;
+}
+
+async function startDirectory(candidatePath: string): Promise<string> {
+  const candidateStats = await statIfExists(candidatePath);
+  return candidateStats?.isDirectory() ? candidatePath : path.dirname(candidatePath);
+}
+
+async function exists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function statIfExists(filePath: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
+  try {
+    return await stat(filePath);
+  } catch {
+    return null;
+  }
+}
+
+function isWithinOrEqual(candidatePath: string, parentPath: string): boolean {
+  const relative = path.relative(parentPath, candidatePath);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function formatCoveragePaths(coveragePaths: string[]): string {
+  return coveragePaths.join(" or ");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function resolveReporterOptions(options: CrapTypescriptJestOptions): ResolvedReporterOptions {
@@ -162,6 +275,7 @@ function resolveAnalysisOptions(
     changedOnly: resolveChangedOnly(options),
     packageManager: resolvePackageManager(options),
     coverageReportPath,
+    coverageReportWaitMs: resolveCoverageReportWaitMs(options),
     threshold: options.threshold,
     format: resolveFormat(options),
     agent: resolveAgent(options),
@@ -195,6 +309,14 @@ function resolvePackageManager(options: CrapTypescriptJestOptions): PackageManag
 
 function resolveCoverageReportPathOption(options: CrapTypescriptJestOptions): string {
   return options.coverageReportPath ?? COVERAGE_REPORT_RELATIVE_PATH;
+}
+
+function resolveCoverageReportWaitMs(options: CrapTypescriptJestOptions): number {
+  const waitMs = options.coverageReportWaitMs ?? DEFAULT_COVERAGE_REPORT_WAIT_MS;
+  if (!Number.isFinite(waitMs) || waitMs < 0) {
+    throw new Error("coverageReportWaitMs must be a non-negative finite number");
+  }
+  return waitMs;
 }
 
 function resolveFormat(options: CrapTypescriptJestOptions): ReportFormat {
