@@ -97,6 +97,8 @@ const PACKAGE_MANAGER_LOCKFILES: [PackageManager, string[]][] = [
   ["yarn", ["yarn.lock"]],
   ["npm", ["package-lock.json", "npm-shrinkwrap.json"]]
 ];
+const VITEST_SCRIPT_COMMAND = /(?:^|[\s;&|()])vitest(?=$|[\s;&|()])/;
+const JEST_SCRIPT_COMMAND = /(?:^|[\s;&|()])jest(?=$|[\s;&|()])/;
 
 async function detectTestRunnerAtRoot(root: string): Promise<TestRunner | null> {
   const packageJson = await readPackageJson(root);
@@ -116,24 +118,36 @@ interface PackageJsonShape {
 }
 
 function detectRunnerFromScripts(scripts: Record<string, string>): TestRunner | null {
-  return detectSingleRunner(Object.values(scripts).join("\n"));
+  return detectSingleRunner(Object.values(scripts), matchesScriptRunner);
 }
 
 function detectRunnerFromDependencies(packageJson: PackageJsonShape): TestRunner | null {
   const dependencyFields = [packageJson.dependencies, packageJson.devDependencies, packageJson.peerDependencies];
-  const dependencyNames = dependencyFields
-    .flatMap((field) => field ? Object.keys(field) : [])
-    .join("\n");
-  return detectSingleRunner(dependencyNames);
+  return detectSingleRunner(
+    dependencyFields.flatMap((field) => field ? Object.keys(field) : []),
+    matchesDependencyRunner
+  );
 }
 
-function detectSingleRunner(text: string): TestRunner | null {
-  const hasVitest = /\bvitest\b/.test(text);
-  const hasJest = /\bjest\b/.test(text) || /\bts-jest\b/.test(text);
+function detectSingleRunner(candidates: string[], matcher: (candidate: string, runner: TestRunner) => boolean): TestRunner | null {
+  const hasVitest = candidates.some((candidate) => matcher(candidate, "vitest"));
+  const hasJest = candidates.some((candidate) => matcher(candidate, "jest"));
   if (hasVitest === hasJest) {
     return null;
   }
   return hasVitest ? "vitest" : "jest";
+}
+
+function matchesScriptRunner(script: string, runner: TestRunner): boolean {
+  return runner === "vitest"
+    ? VITEST_SCRIPT_COMMAND.test(script)
+    : JEST_SCRIPT_COMMAND.test(script);
+}
+
+function matchesDependencyRunner(dependencyName: string, runner: TestRunner): boolean {
+  return runner === "vitest"
+    ? dependencyName === "vitest"
+    : dependencyName === "jest" || dependencyName === "ts-jest";
 }
 
 async function readPackageJson(root: string): Promise<PackageJsonShape | null> {

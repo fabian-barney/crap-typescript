@@ -215,4 +215,25 @@ describe("resolveTestRunner", () => {
       resolveTestRunner("auto", missingModulePackageDir, `${missingModulePackageDir}/packages/demo`)
     ).resolves.toBe("vitest");
   });
+
+  it("does not detect runners from plugin package names or non-command script text", async () => {
+    const tempDir = await createTempDir("crap-runner-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        devDependencies: {
+          "vitest-coverage-istanbul": "^4.0.0",
+          "eslint-plugin-jest": "^29.0.0",
+          "ts-jest-mock-extended": "^1.0.0"
+        },
+        scripts: {
+          test: "echo vitest-coverage-istanbul && echo eslint-plugin-jest"
+        }
+      })
+    });
+
+    await expect(resolveTestRunner("auto", tempDir, tempDir)).rejects.toThrow("Unable to detect a test runner");
+  });
 });
