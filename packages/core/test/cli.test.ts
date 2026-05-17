@@ -173,6 +173,8 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--use-default-exclusions=maybe"])).toThrow(
       "--use-default-exclusions requires true or false when a value is provided"
     );
+    expect(() => parseCliArguments(["--changed=true"])).toThrow("Unknown option: --changed=true");
+    expect(() => parseCliArguments(["--agent=false"])).toThrow("Unknown option: --agent=false");
     expect(() => parseCliArguments(["--unknown"])).toThrow("Unknown option: --unknown");
   });
 
@@ -180,6 +182,34 @@ describe("cli", () => {
     expect(parseCliArguments(["--threshold", "6", "--changed"])).toMatchObject({
       mode: "changed",
       threshold: 6
+    });
+  });
+
+  it("parses inline values for value options without consuming following file arguments", () => {
+    expect(parseCliArguments([
+      "--package-manager=pnpm",
+      "--test-runner=jest",
+      "--format=json",
+      "--threshold=6",
+      "--output=reports/crap.json",
+      "--junit-report=reports/crap.xml",
+      "--exclude=**/*.pb.ts",
+      "--exclude-path-regex=^src/generated/",
+      "--exclude-generated-marker=DO NOT EDIT",
+      "src/app.ts"
+    ])).toMatchObject({
+      mode: "explicit",
+      fileArgs: ["src/app.ts"],
+      packageManager: "pnpm",
+      testRunner: "jest",
+      format: "json",
+      threshold: 6,
+      output: "reports/crap.json",
+      junit: true,
+      junitReport: "reports/crap.xml",
+      excludes: ["**/*.pb.ts"],
+      excludePathRegexes: ["^src/generated/"],
+      excludeGeneratedMarkers: ["DO NOT EDIT"]
     });
   });
 

@@ -175,6 +175,17 @@ const INLINE_BOOLEAN_OPTION_HANDLERS: Record<string, InlineBooleanOptionHandler>
   "--omit-redundancy": parseOmitRedundancy,
   "--use-default-exclusions": parseUseDefaultExclusions
 };
+const INLINE_VALUE_OPTIONS = new Set([
+  "--package-manager",
+  "--test-runner",
+  "--format",
+  "--threshold",
+  "--output",
+  "--junit-report",
+  "--exclude",
+  "--exclude-path-regex",
+  "--exclude-generated-marker"
+]);
 
 function createParseState(): ParseState {
   return {
@@ -209,18 +220,41 @@ function createParseState(): ParseState {
 }
 
 function consumeOption(state: ParseState, args: string[], index: number): number {
-  const [option, value] = splitInlineBooleanOption(args[index]);
+  const [option, value] = splitInlineOption(args[index]);
   const inlineBooleanHandler = INLINE_BOOLEAN_OPTION_HANDLERS[option];
   if (inlineBooleanHandler) {
     inlineBooleanHandler(state, value);
     return index;
   }
 
-  const handler = OPTION_HANDLERS[args[index]];
+  const handler = requiredOptionHandler(option, args[index]);
+  if (value === undefined) {
+    return handler(state, args, index);
+  }
+  return consumeInlineValueOption(state, args, index, option, value, handler);
+}
+
+function requiredOptionHandler(option: string, rawArg: string): OptionHandler {
+  const handler = OPTION_HANDLERS[option];
   if (!handler) {
+    throw new Error(`Unknown option: ${rawArg}`);
+  }
+  return handler;
+}
+
+function consumeInlineValueOption(
+  state: ParseState,
+  args: string[],
+  index: number,
+  option: string,
+  value: string,
+  handler: OptionHandler
+): number {
+  if (!INLINE_VALUE_OPTIONS.has(option)) {
     throw new Error(`Unknown option: ${args[index]}`);
   }
-  return handler(state, args, index);
+  handler(state, inlineValueArgs(args, index, option, value), index);
+  return index;
 }
 
 function ensureOptionIsUnique(seen: boolean, option: string): void {
@@ -327,9 +361,16 @@ function parseThreshold(value: string | undefined): number {
   }
 }
 
-function splitInlineBooleanOption(arg: string): [string, string | undefined] {
+function splitInlineOption(arg: string): [string, string | undefined] {
   const [option, ...values] = arg.split("=");
   return [option, values.length === 0 ? undefined : values.join("=")];
+}
+
+function inlineValueArgs(args: string[], index: number, option: string, value: string): string[] {
+  const normalized = [...args];
+  normalized[index] = option;
+  normalized[index + 1] = value;
+  return normalized;
 }
 
 function parseFailuresOnly(state: ParseState, value: string | undefined): void {
