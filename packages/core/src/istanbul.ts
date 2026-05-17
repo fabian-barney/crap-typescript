@@ -376,7 +376,7 @@ function selectCanonicalFunctionEntry(entries: FunctionCoverageUnit[]): Function
     }
   }
 
-  return [...uniqueBySpan.values()].sort(compareFunctionSpecificity)[0];
+  return [...uniqueBySpan.values()].sort(compareFunctionSpecificity)[0]!;
 }
 
 function compareFunctionSpecificity(left: FunctionCoverageUnit, right: FunctionCoverageUnit): number {
@@ -421,7 +421,7 @@ function comparePosition(
 function mergeBranchHits(existingHits: number[], nextHits: number[]): number[] {
   const mergedHits = nextHits.map((hits, index) => Math.max(hits, existingHits[index] ?? 0));
   for (let index = mergedHits.length; index < existingHits.length; index += 1) {
-    mergedHits.push(existingHits[index]);
+    mergedHits.push(existingHits[index]!);
   }
   return mergedHits;
 }

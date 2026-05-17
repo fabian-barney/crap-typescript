@@ -93,7 +93,7 @@ function collectChangedFile(projectRoot: string, entry: GitStatusEntry, files: S
 function collectChangedFilesFromStatus(projectRoot: string, entries: string[]): Set<string> {
   const files = new Set<string>();
   for (let index = 0; index < entries.length; index += 1) {
-    const entry = parseGitStatusEntry(entries[index]);
+    const entry = parseGitStatusEntry(entries[index]!);
     if (!entry) {
       continue;
     }
