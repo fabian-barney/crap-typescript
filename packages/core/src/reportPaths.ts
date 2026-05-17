@@ -34,8 +34,9 @@ export async function validateReportPathTargets(
   );
 
   for (let leftIndex = 0; leftIndex < resolvedTargets.length; leftIndex += 1) {
+    const leftTarget = resolvedTargets[leftIndex]!;
     for (let rightIndex = leftIndex + 1; rightIndex < resolvedTargets.length; rightIndex += 1) {
-      ensureDistinctReportPaths(resolvedTargets[leftIndex], resolvedTargets[rightIndex]);
+      ensureDistinctReportPaths(leftTarget, resolvedTargets[rightIndex]!);
     }
   }
 }

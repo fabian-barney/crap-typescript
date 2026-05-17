@@ -201,9 +201,9 @@ export function formatTextReport(report: SerializableReport, agent = false): str
     ? report.methods.map((method) => METHOD_COLUMNS.map((column) => formatTextValue(column, method[column])))
     : (report as AgentAnalysisReport).methods.map((method) =>
       AGENT_METHOD_COLUMNS.map((column) => formatTextValue(column, method[column]))
-    );
+  );
   const widths = columns.map((column, index) =>
-    rows.reduce((max, row) => Math.max(max, row[index].length), column.length)
+    rows.reduce((max, row) => Math.max(max, row[index]?.length ?? 0), column.length)
   );
   const headerLine = formatTextRow([...columns], widths, columns);
   const separator = formatTextSeparator(widths);
@@ -297,10 +297,10 @@ function formatTextRow(
   widths: number[],
   columns: readonly (MethodColumn | AgentMethodColumn)[] = METHOD_COLUMNS
 ): string {
-  return `| ${values.map((value, index) => formatTextCell(value, widths[index], columns[index])).join(" | ")} |`;
+  return `| ${values.map((value, index) => formatTextCell(value, widths[index] ?? value.length, columns[index])).join(" | ")} |`;
 }
 
-function formatTextCell(value: string, width: number, column: MethodColumn | AgentMethodColumn): string {
+function formatTextCell(value: string, width: number, column: MethodColumn | AgentMethodColumn | undefined): string {
   return RIGHT_ALIGNED_TEXT_COLUMNS.has(column as MethodColumn) ? value.padStart(width) : value.padEnd(width);
 }
 

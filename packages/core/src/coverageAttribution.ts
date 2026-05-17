@@ -31,21 +31,21 @@ export function coverageForMethods(
   for (const statement of fileCoverage.statements) {
     const owner = findOwningMethodIndex(attributableMethods, statement.span);
     if (owner !== null) {
-      attributed[owner].statements.push(statement);
+      attributed[owner]!.statements.push(statement);
     }
   }
 
   for (const branch of fileCoverage.branches) {
     const owner = findOwningMethodIndex(attributableMethods, branch.span);
     if (owner !== null) {
-      attributed[owner].branches.push(branch);
+      attributed[owner]!.branches.push(branch);
     }
   }
 
   return methods.map((method, index) =>
-    attributableMethods[index].fnMapConflict
+    attributableMethods[index]!.fnMapConflict
       ? unavailableMethodCoverage(method, "fnmap_conflict")
-      : computeMethodCoverage(method, attributed[index].statements, attributed[index].branches)
+      : computeMethodCoverage(method, attributed[index]!.statements, attributed[index]!.branches)
   );
 }
 
@@ -140,14 +140,14 @@ function findOwningMethodIndex(methods: AttributableMethod[], span: SourceSpan):
   let bestMatch: number | null = null;
 
   for (let index = 0; index < methods.length; index += 1) {
-    const method = methods[index];
+    const method = methods[index]!;
     if (method.fnMapConflict) {
       continue;
     }
     if (!spanContains(method.span, span) && !spanContainsPosition(method.span, span.startLine, span.startColumn)) {
       continue;
     }
-    if (bestMatch === null || spanContains(methods[bestMatch].span, method.span)) {
+    if (bestMatch === null || spanContains(methods[bestMatch]!.span, method.span)) {
       bestMatch = index;
     }
   }
@@ -209,7 +209,7 @@ function matchesMethodDeclaration(entry: FunctionCoverageUnit, method: MethodDes
 
 function resolveUniqueMatch(matches: FunctionCoverageUnit[]): FunctionCoverageUnit | typeof AMBIGUOUS_MATCH | null {
   if (matches.length === 1) {
-    return matches[0];
+    return matches[0] ?? null;
   }
   if (matches.length > 1) {
     return AMBIGUOUS_MATCH;

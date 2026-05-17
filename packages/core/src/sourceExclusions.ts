@@ -315,7 +315,7 @@ function readBlockComment(sourceText: string, index: number, finalChunk: boolean
 
 function skipWhitespace(sourceText: string, startIndex: number): number {
   let index = startIndex;
-  while (index < sourceText.length && /\s/.test(sourceText[index])) {
+  while (index < sourceText.length && /\s/.test(sourceText.charAt(index))) {
     index += 1;
   }
   return index;
@@ -356,7 +356,7 @@ function globToRegex(glob: string): RegExp {
   const normalizedGlob = normalizeGlob(glob);
   let pattern = "^";
   for (let index = 0; index < normalizedGlob.length; index += 1) {
-    const char = normalizedGlob[index];
+    const char = normalizedGlob.charAt(index);
     if (char === "*") {
       const nextChar = normalizedGlob[index + 1];
       if (nextChar === "*") {

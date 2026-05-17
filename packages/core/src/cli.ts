@@ -60,12 +60,12 @@ export function parseCliArguments(args: string[]): CliArguments {
   const state = createParseState();
 
   for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
+    const arg = args[index]!;
     if (!arg.startsWith("--")) {
       state.fileArgs.push(arg);
       continue;
     }
-    index = consumeOption(state, args, index);
+    index = consumeOption(state, args, index, arg);
   }
 
   return finalizeCliArguments(state);
@@ -219,19 +219,19 @@ function createParseState(): ParseState {
   };
 }
 
-function consumeOption(state: ParseState, args: string[], index: number): number {
-  const [option, value] = splitInlineOption(args[index]);
+function consumeOption(state: ParseState, args: string[], index: number, arg: string): number {
+  const [option, value] = splitInlineOption(arg);
   const inlineBooleanHandler = INLINE_BOOLEAN_OPTION_HANDLERS[option];
   if (inlineBooleanHandler) {
     inlineBooleanHandler(state, value);
     return index;
   }
 
-  const handler = requiredOptionHandler(option, args[index]);
+  const handler = requiredOptionHandler(option, arg);
   if (value === undefined) {
     return handler(state, args, index);
   }
-  return consumeInlineValueOption(state, args, index, option, value, handler);
+  return consumeInlineValueOption(state, args, index, option, value, handler, arg);
 }
 
 function requiredOptionHandler(option: string, rawArg: string): OptionHandler {
@@ -248,10 +248,11 @@ function consumeInlineValueOption(
   index: number,
   option: string,
   value: string,
-  handler: OptionHandler
+  handler: OptionHandler,
+  rawArg: string
 ): number {
   if (!INLINE_VALUE_OPTIONS.has(option)) {
-    throw new Error(`Unknown option: ${args[index]}`);
+    throw new Error(`Unknown option: ${rawArg}`);
   }
   handler(state, inlineValueArgs(args, index, option, value), index);
   return index;
@@ -362,8 +363,10 @@ function parseThreshold(value: string | undefined): number {
 }
 
 function splitInlineOption(arg: string): [string, string | undefined] {
-  const [option, ...values] = arg.split("=");
-  return [option, values.length === 0 ? undefined : values.join("=")];
+  const separatorIndex = arg.indexOf("=");
+  return separatorIndex === -1
+    ? [arg, undefined]
+    : [arg.slice(0, separatorIndex), arg.slice(separatorIndex + 1)];
 }
 
 function inlineValueArgs(args: string[], index: number, option: string, value: string): string[] {

@@ -245,8 +245,10 @@ function environmentWrapperRunnerTokenIndex(tokens: string[], commandIndex: numb
 
 function skipEnvironmentWrapperOptions(tokens: string[], startIndex: number): number {
   let index = startIndex;
-  while (isSkippableWrapperToken(tokens[index])) {
-    index += environmentWrapperOptionWidth(tokens[index]);
+  let token = tokens[index];
+  while (isSkippableWrapperToken(token)) {
+    index += environmentWrapperOptionWidth(token);
+    token = tokens[index];
   }
   return index;
 }
@@ -280,8 +282,10 @@ function packageManagerRunnerTokenIndex(tokens: string[], commandIndex: number):
 
 function skipWrapperOptions(tokens: string[], startIndex: number): number {
   let index = startIndex;
-  while (isSkippableWrapperToken(tokens[index])) {
-    index += optionWidth(tokens[index]);
+  let token = tokens[index];
+  while (isSkippableWrapperToken(token)) {
+    index += optionWidth(token);
+    token = tokens[index];
   }
   return index;
 }

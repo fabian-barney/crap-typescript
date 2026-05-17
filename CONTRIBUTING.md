@@ -11,3 +11,7 @@ All changes in this repository are expected to be issue-linked.
 5. Keep the pull request green, reply to review comments, and resolve threads only after the fix or an explicit invalidation response.
 6. Merge only after the latest review is newer than the latest push and all required checks are green.
 
+## TypeScript
+
+The shared TypeScript configuration enables `strict` and `noUncheckedIndexedAccess`.
+Handle indexed array and object access explicitly with a fallback, guard, or narrow non-null assertion.

@@ -223,7 +223,7 @@ async function analyzeFile(
   const methodCoverage = coverageForMethods(descriptors, fileCoverage.coverage, fileCoverage.unknownReason ?? undefined);
   const warnings: string[] = [];
   const metrics = descriptors.map((descriptor, index) =>
-    toMetric(descriptor, methodCoverage[index], filePath, relativePath, moduleRoot, context.stderr, warnings)
+    toMetric(descriptor, methodCoverage[index]!, filePath, relativePath, moduleRoot, context.stderr, warnings)
   );
 
   return { metrics, warnings };
