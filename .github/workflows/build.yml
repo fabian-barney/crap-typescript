@@ -96,3 +96,18 @@ jobs:
 
       - name: Run crap-typescript gate
         run: npm run crap-typescript-check
+
+  crap-typescript-gate-required:
+    name: crap-typescript Gate
+    runs-on: ubuntu-latest
+    needs: [crap-typescript-gate]
+    if: ${{ always() }}
+
+    steps:
+      - name: Require the matrix CRAP gate to pass
+        shell: bash
+        run: |
+          if [ "${{ needs.crap-typescript-gate.result }}" != "success" ]; then
+            echo "The matrix crap-typescript gate did not complete successfully." >&2
+            exit 1
+          fi
