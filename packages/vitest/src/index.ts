@@ -311,5 +311,5 @@ function buildJunitReportFromCoverage(coverageReportPath: string | undefined): s
 }
 
 function elapsedSecondsSince(startedAt: number): number {
-  return Math.max(0, (performance.now() - startedAt) / 1000);
+  return Math.max(0.001, (performance.now() - startedAt) / 1000);
 }
