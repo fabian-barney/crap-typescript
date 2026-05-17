@@ -91,21 +91,30 @@ describe("resolvePackageManager", () => {
         private: true,
         packageManager: "bun@1.2.0"
       }),
-      "packages/demo/package.json": '{"name":"demo","private":true}',
-      "packages/demo/bun.lock": ""
+      "packages/demo/package.json": '{"name":"demo","private":true}'
     });
 
     await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("bun");
 
-    const lockfileDir = await createTempDir("crap-package-manager-");
-    tempDirs.push(lockfileDir);
-    await writeProjectFiles(lockfileDir, {
+    const bunLockDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(bunLockDir);
+    await writeProjectFiles(bunLockDir, {
+      "package.json": '{"name":"root","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/bun.lock": ""
+    });
+
+    await expect(resolvePackageManager("auto", bunLockDir, `${bunLockDir}/packages/demo`)).resolves.toBe("bun");
+
+    const bunLockbDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(bunLockbDir);
+    await writeProjectFiles(bunLockbDir, {
       "package.json": '{"name":"root","private":true}',
       "packages/demo/package.json": '{"name":"demo","private":true}',
       "packages/demo/bun.lockb": ""
     });
 
-    await expect(resolvePackageManager("auto", lockfileDir, `${lockfileDir}/packages/demo`)).resolves.toBe("bun");
+    await expect(resolvePackageManager("auto", bunLockbDir, `${bunLockbDir}/packages/demo`)).resolves.toBe("bun");
   });
 
   it("prefers packageManager fields over lockfiles", async () => {
