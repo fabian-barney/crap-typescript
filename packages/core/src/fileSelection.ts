@@ -2,10 +2,11 @@ import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { IGNORED_DIRECTORIES, IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES } from "./constants.js";
-import { runCommand, toRelativePath } from "./utils.js";
+import { normalizeSlashes, runCommand, toRelativePath } from "./utils.js";
 
 const ANALYZABLE_EXTENSIONS = [".ts", ".tsx"];
 const TEST_FILE_MARKERS = [".test.", ".spec."];
+const BUILD_OUTPUT_SOURCE_ROOT_SEGMENTS = new Set(["build", "out", "target"]);
 const EXCLUDED_PATH_SEGMENTS = [
   "/__tests__/",
   "/.next/",
@@ -67,6 +68,9 @@ export function isAnalyzableFile(filePath: string): boolean {
     return false;
   }
   if (containsAny(baseName, TEST_FILE_MARKERS)) {
+    return false;
+  }
+  if (isGeneratedSourceRootPath(normalized)) {
     return false;
   }
   if (containsAny(`/${normalized}`, EXCLUDED_PATH_SEGMENTS)) {
@@ -139,6 +143,32 @@ function hasAnySuffix(value: string, suffixes: string[]): boolean {
   return suffixes.some((suffix) => value.endsWith(suffix));
 }
 
+function isGeneratedSourceRootPath(normalizedPath: string): boolean {
+  const segments = normalizedPath.split("/").filter(Boolean);
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    if (BUILD_OUTPUT_SOURCE_ROOT_SEGMENTS.has(segments[index]!) && segments[index + 1] === "src") {
+      return true;
+    }
+  }
+  return false;
+}
+
+function shouldSkipSourceRootDiscoveryDirectory(directoryPath: string): boolean {
+  const baseName = path.basename(directoryPath).toLowerCase();
+  if (!IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(baseName)) {
+    return false;
+  }
+  if (!BUILD_OUTPUT_SOURCE_ROOT_SEGMENTS.has(baseName)) {
+    return true;
+  }
+  return !hasSourceAncestor(directoryPath);
+}
+
+function hasSourceAncestor(directoryPath: string): boolean {
+  const normalized = normalizeSlashes(path.resolve(directoryPath)).toLowerCase();
+  return normalized.split("/").filter(Boolean).slice(0, -1).includes("src");
+}
+
 async function walkForSourceRoots(
   currentDir: string,
   onSourceRoot: (sourceRoot: string) => Promise<void>
@@ -148,10 +178,10 @@ async function walkForSourceRoots(
     if (!entry.isDirectory()) {
       continue;
     }
-    if (IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(entry.name)) {
+    const absolutePath = path.join(currentDir, entry.name);
+    if (shouldSkipSourceRootDiscoveryDirectory(absolutePath)) {
       continue;
     }
-    const absolutePath = path.join(currentDir, entry.name);
     if (entry.name === "src") {
       await onSourceRoot(absolutePath);
       continue;
@@ -181,11 +211,11 @@ async function walkSourceTree(
 }
 
 async function expandDirectoryPath(directoryPath: string, files: Set<string>): Promise<void> {
-  if (IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(path.basename(directoryPath))) {
+  if (shouldSkipSourceRootDiscoveryDirectory(directoryPath)) {
     return;
   }
 
-  if (path.basename(directoryPath).toLowerCase() === "src") {
+  if (path.basename(directoryPath).toLowerCase() === "src" || hasSourceAncestor(directoryPath)) {
     await walkSourceTree(directoryPath, async (filePath) => {
       files.add(path.resolve(filePath));
     });

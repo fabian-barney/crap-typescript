@@ -213,11 +213,36 @@ describe("file selection", () => {
     tempDirs.push(tempDir);
     await writeProjectFiles(tempDir, {
       "package.json": '{"name":"fixture","private":true}',
+      "src/build/handwritten.ts": "export const handwritten = 1;",
       "packages/demo/build/src/generated.ts": "export const generated = 1;",
       "packages/demo/out/src/generated.ts": "export const generated = 1;"
     });
 
     await expect(expandExplicitPaths(tempDir, ["packages/demo/build", "packages/demo/out"])).resolves.toEqual([]);
+    await expect(expandExplicitPaths(tempDir, ["src/build"])).resolves.toEqual([
+      path.join(tempDir, "src", "build", "handwritten.ts")
+    ]);
+  });
+
+  it("ignores changed files under generated build-output src roots while keeping src/build files", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await initGitRepository(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/build/handwritten.ts": "export const handwritten = 1;\n",
+      "packages/demo/build/src/generated.ts": "export const generated = 1;\n"
+    });
+    await runProcess("git", ["add", "."], tempDir);
+    await runProcess("git", ["commit", "-m", "initial"], tempDir);
+
+    await writeFile(path.join(tempDir, "src", "build", "handwritten.ts"), "export const handwritten = 2;\n", "utf8");
+    await writeFile(path.join(tempDir, "packages", "demo", "build", "src", "generated.ts"), "export const generated = 2;\n", "utf8");
+
+    const files = await changedTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/build/handwritten.ts"
+    ]);
   });
 
   it("ignores deleted and non-source changes and reports git errors clearly", async () => {
