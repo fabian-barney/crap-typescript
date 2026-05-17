@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants.js";
-import { isAbsolutePath } from "./utils.js";
+import { isAbsolutePath, isWithinOrEqual } from "./utils.js";
 import type { PackageManager, PackageManagerSelection, TestRunner, TestRunnerSelection } from "./types.js";
 
 export interface CoverageSource {
@@ -325,11 +325,6 @@ async function anyExists(root: string, fileNames: string[]): Promise<boolean> {
     }
   }
   return false;
-}
-
-function isWithinOrEqual(candidate: string, root: string): boolean {
-  const relative = path.relative(root, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 function resolveCoveragePath(root: string, coverageReportPath: string): string {
