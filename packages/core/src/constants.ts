@@ -1,5 +1,4 @@
 export const CRAP_THRESHOLD = 8.0;
-const TOO_LENIENT_THRESHOLD = 8.0;
 export const COVERAGE_REPORT_RELATIVE_PATH = "coverage/coverage-final.json";
 export const NO_FILES_MESSAGE = "No TypeScript files to analyze.";
 export const NO_ANALYZABLE_FUNCTIONS_MESSAGE = "No analyzable functions found.";
@@ -15,14 +14,15 @@ export function thresholdWarning(value: number): string {
   if (value < 4.0) {
     return `Warning: CRAP threshold below 4.0 is likely too noisy. ${thresholdRecommendation()}`;
   }
-  if (value > TOO_LENIENT_THRESHOLD) {
-    return `Warning: CRAP threshold above ${TOO_LENIENT_THRESHOLD.toFixed(1)} is too lenient even for hard gates. ${thresholdRecommendation()}`;
+  if (value > CRAP_THRESHOLD) {
+    return `Warning: CRAP threshold above ${CRAP_THRESHOLD.toFixed(1)} is too lenient even for hard gates. ${thresholdRecommendation()}`;
   }
   return "";
 }
 
 function thresholdRecommendation(): string {
-  return "Use 8.0 for hard gates, target 6.0 during implementation, and use the 8.0 default when in doubt.";
+  const defaultThreshold = CRAP_THRESHOLD.toFixed(1);
+  return `Use ${defaultThreshold} for hard gates, target 6.0 during implementation, and use the ${defaultThreshold} default when in doubt.`;
 }
 
 export const IGNORED_DIRECTORIES = new Set([
