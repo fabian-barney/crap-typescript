@@ -1000,6 +1000,108 @@ export function enumDeclOnly(): void {
     ]);
   });
 
+  it("rejects non-integer source positions while preserving finite hit counts", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 2, column: 2 },
+              end: { line: 2, column: 19 }
+            },
+            "1": {
+              start: { line: 3.5, column: 2 },
+              end: { line: 3, column: 19 }
+            },
+            "2": {
+              start: { line: 4, column: -1 },
+              end: { line: 4, column: 19 }
+            }
+          },
+          branchMap: {
+            "0": {
+              line: 6,
+              locations: [
+                {
+                  start: { line: 6, column: 2 },
+                  end: { line: 8, column: 3 }
+                }
+              ]
+            },
+            "1": {
+              line: 6.5
+            }
+          },
+          fnMap: {
+            "0": {
+              line: 1
+            },
+            "1": {
+              line: -1
+            },
+            "2": {
+              decl: {
+                start: { line: 1, column: -1 },
+                end: { line: 6, column: 1 }
+              }
+            }
+          },
+          s: {
+            "0": 1.5,
+            "1": 2,
+            "2": 3
+          },
+          b: {
+            "0": [1, 0.5],
+            "1": [2]
+          },
+          f: {}
+        }
+      })
+    });
+
+    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+
+    expect(fileCoverage.statements).toEqual([
+      {
+        span: {
+          startLine: 2,
+          startColumn: 2,
+          endLine: 2,
+          endColumn: 19
+        },
+        hits: 1.5
+      }
+    ]);
+    expect(fileCoverage.branches).toEqual([
+      {
+        span: {
+          startLine: 6,
+          startColumn: 2,
+          endLine: 8,
+          endColumn: 3
+        },
+        hits: [1, 0.5]
+      }
+    ]);
+    expect(fileCoverage.functions).toEqual([
+      {
+        declarationStart: undefined,
+        span: {
+          startLine: 1,
+          startColumn: 0,
+          endLine: 1,
+          endColumn: Number.MAX_SAFE_INTEGER
+        },
+        spanSource: "line"
+      }
+    ]);
+  });
+
   it("prefers the most specific loc span when duplicate fnMap entries share an identity", async () => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);
