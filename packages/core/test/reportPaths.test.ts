@@ -1,3 +1,5 @@
+import type * as FsPromisesModule from "node:fs/promises";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createTempDir, disposeTempDir } from "./testUtils";
@@ -49,7 +51,7 @@ describe("report path validation", () => {
 });
 
 async function mockCaseProbeDirectoryCreationFailure(): Promise<void> {
-  const fsPromises = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+  const fsPromises = await vi.importActual<typeof FsPromisesModule>("node:fs/promises");
   vi.doMock("node:fs/promises", () => ({
     ...fsPromises,
     mkdtemp: vi.fn(async (prefix: string) => {
@@ -62,7 +64,7 @@ async function mockCaseProbeDirectoryCreationFailure(): Promise<void> {
 }
 
 async function mockCaseProbeAccessFailure(code: string): Promise<void> {
-  const fsPromises = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+  const fsPromises = await vi.importActual<typeof FsPromisesModule>("node:fs/promises");
   vi.doMock("node:fs/promises", () => ({
     ...fsPromises,
     access: vi.fn(async (filePath: string | Buffer | URL, mode?: number) => {
