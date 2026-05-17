@@ -667,6 +667,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(junit).toContain('name="safe:1"');
     expect(junit).toContain('name="risky:5"');
     expect(junit).toContain('name="sourceExclusions.candidateFiles" value="2"');
+    expect(Number.parseFloat(junit.match(/<testsuites [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
 
     const overrideStdout = new StringWriter();

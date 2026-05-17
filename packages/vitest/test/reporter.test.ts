@@ -430,7 +430,8 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await expect(reporter.onFinishedReportCoverage()).resolves.toBeUndefined();
 
-    expect(stdout.toString()).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0" time="0">');
+    expect(stdout.toString()).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0"');
+    expect(Number.parseFloat(stdout.toString().match(/<testsuite [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stdout.toString()).not.toContain('<property name="status"');
     expect(stderr.toString()).toBe("");
     expect(process.exitCode).toBe(originalExitCode);

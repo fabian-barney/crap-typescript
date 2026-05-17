@@ -555,6 +555,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(junit).toContain('name="risky:5"');
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(junit).toContain('<property name="status" value="failed"/>');
+    expect(Number.parseFloat(junit.match(/<testsuite [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
     expect(process.exitCode).toBe(2);
   });
