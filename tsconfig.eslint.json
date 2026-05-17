@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/test/**/*.ts",
+    "*.config.ts"
+  ]
+}
