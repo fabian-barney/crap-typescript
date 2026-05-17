@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { COVERAGE_REPORT_RELATIVE_PATH } from "./constants.js";
-import { isAbsolutePath } from "./utils.js";
+import { isAbsolutePath, isWithinOrEqual } from "./utils.js";
 import type { PackageManager, PackageManagerSelection, TestRunner, TestRunnerSelection } from "./types.js";
 
 export interface CoverageSource {
@@ -60,8 +60,10 @@ export async function resolvePackageManager(
   if (selection !== "auto") {
     return selection;
   }
-  return await detectPackageManagerAtRoot(moduleRoot) ??
-    await detectPackageManagerAtRoot(projectRoot) ??
+  return await detectPackageManagerFieldAtRoot(moduleRoot) ??
+    await detectPackageManagerFieldAtRoot(projectRoot) ??
+    await detectPackageManagerLockfileAtRoot(moduleRoot) ??
+    await detectPackageManagerLockfileAtRoot(projectRoot) ??
     "npm";
 }
 
@@ -83,7 +85,12 @@ export async function resolveTestRunner(
   throw new Error(`Unable to detect a test runner from ${path.join(moduleRoot, "package.json")}`);
 }
 
-async function detectPackageManagerAtRoot(root: string): Promise<PackageManager | null> {
+async function detectPackageManagerFieldAtRoot(root: string): Promise<PackageManager | null> {
+  const packageJson = await readPackageJson(root);
+  return packageJson ? packageManagerFromPackageJson(packageJson) : null;
+}
+
+async function detectPackageManagerLockfileAtRoot(root: string): Promise<PackageManager | null> {
   for (const [packageManager, lockfiles] of PACKAGE_MANAGER_LOCKFILES) {
     if (await anyExists(root, lockfiles)) {
       return packageManager;
@@ -134,8 +141,17 @@ async function detectTestRunnerAtRoot(root: string): Promise<TestRunner | null> 
 interface PackageJsonShape {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  packageManager?: unknown;
   peerDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
+}
+
+function packageManagerFromPackageJson(packageJson: PackageJsonShape): PackageManager | null {
+  if (typeof packageJson.packageManager !== "string") {
+    return null;
+  }
+  const match = /^(npm|pnpm|yarn)@/.exec(packageJson.packageManager);
+  return match ? match[1] as PackageManager : null;
 }
 
 function detectRunnerFromScripts(scripts: Record<string, string>): TestRunner | null {
@@ -325,11 +341,6 @@ async function anyExists(root: string, fileNames: string[]): Promise<boolean> {
     }
   }
   return false;
-}
-
-function isWithinOrEqual(candidate: string, root: string): boolean {
-  const relative = path.relative(root, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 function resolveCoveragePath(root: string, coverageReportPath: string): string {

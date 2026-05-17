@@ -721,6 +721,10 @@ registry["upper"] = function (value: string): string {
   return value;
 };
 
+(direct + direct)["element"] = function (value: string): string {
+  return value;
+};
+
 export function createHandlers() {
   return {
     returned(value: number): number {
@@ -754,6 +758,6 @@ export function createHandlers() {
         displayName: "returned"
       })
     ]));
-    expect(methods.filter((method) => method.displayName === "<assigned>")).toHaveLength(2);
+    expect(methods.filter((method) => method.displayName === "<assigned>")).toHaveLength(3);
   });
 });
