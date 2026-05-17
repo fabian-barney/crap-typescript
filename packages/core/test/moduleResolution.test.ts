@@ -82,6 +82,43 @@ describe("resolvePackageManager", () => {
     await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("yarn");
   });
 
+  it("prefers packageManager fields over lockfiles", async () => {
+    const tempDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": JSON.stringify({
+        name: "root",
+        private: true,
+        packageManager: "pnpm@9.15.0"
+      }),
+      "package-lock.json": "{}",
+      "packages/demo/package.json": JSON.stringify({
+        name: "demo",
+        private: true,
+        packageManager: "yarn@4.5.0"
+      }),
+      "packages/demo/pnpm-lock.yaml": "lockfileVersion: 9.0\n"
+    });
+
+    await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("yarn");
+  });
+
+  it("falls back from module packageManager fields to project packageManager fields before lockfiles", async () => {
+    const tempDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": JSON.stringify({
+        name: "root",
+        private: true,
+        packageManager: "pnpm@9.15.0"
+      }),
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/yarn.lock": ""
+    });
+
+    await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("pnpm");
+  });
+
   it("falls back to project-level lockfiles and then to npm defaults", async () => {
     const tempDir = await createTempDir("crap-package-manager-");
     tempDirs.push(tempDir);
