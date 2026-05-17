@@ -15,6 +15,7 @@ import type {
 const METHOD_COLUMNS = ["status", "crap", "cc", "cov", "covKind", "method", "src", "lineStart", "lineEnd"] as const;
 const AGENT_METHOD_COLUMNS = ["crap", "cc", "cov", "covKind", "method", "src", "lineStart", "lineEnd"] as const;
 const RIGHT_ALIGNED_TEXT_COLUMNS = new Set<MethodColumn>(["crap", "cc", "cov", "lineStart", "lineEnd"]);
+const REPORT_SORT_COLLATOR = new Intl.Collator("en");
 
 export interface MethodReportEntry {
   status: MethodReportStatus;
@@ -76,20 +77,38 @@ const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
 
 export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
   return [...metrics].sort((left, right) => {
-    if (left.crapScore === null && right.crapScore !== null) {
-      return 1;
-    }
-    if (left.crapScore !== null && right.crapScore === null) {
-      return -1;
-    }
-    if (left.crapScore !== null && right.crapScore !== null && left.crapScore !== right.crapScore) {
-      return right.crapScore - left.crapScore;
-    }
-    if (left.relativePath !== right.relativePath) {
-      return left.relativePath.localeCompare(right.relativePath);
-    }
-    return left.startLine - right.startLine;
+    return compareCrapScores(left.crapScore, right.crapScore)
+      || compareReportText(left.relativePath, right.relativePath)
+      || compareNumber(left.startLine, right.startLine)
+      || compareReportText(left.displayName, right.displayName)
+      || compareNumber(left.bodySpan.startColumn, right.bodySpan.startColumn)
+      || compareNumber(left.endLine, right.endLine)
+      || compareNumber(left.bodySpan.endLine, right.bodySpan.endLine)
+      || compareNumber(left.bodySpan.endColumn, right.bodySpan.endColumn)
+      || compareReportText(left.containerName ?? "", right.containerName ?? "")
+      || compareReportText(left.functionName, right.functionName);
   });
+}
+
+function compareCrapScores(left: number | null, right: number | null): number {
+  if (left === null && right !== null) {
+    return 1;
+  }
+  if (left !== null && right === null) {
+    return -1;
+  }
+  if (left !== null && right !== null) {
+    return right - left;
+  }
+  return 0;
+}
+
+function compareReportText(left: string, right: string): number {
+  return REPORT_SORT_COLLATOR.compare(left, right);
+}
+
+function compareNumber(left: number, right: number): number {
+  return left - right;
 }
 
 export function buildAnalysisReport(
