@@ -2,21 +2,14 @@
 
 ## Supported Versions
 
-Security fixes are provided for the latest published minor version of the 0.x release line.
-
-| Version | Supported |
-| --- | --- |
-| Latest 0.x minor | Yes |
-| Older 0.x minors | No |
+Security fixes are provided for the most recent published release only. Please upgrade to the latest release before reporting an issue that may already be fixed.
 
 ## Reporting a Vulnerability
 
-Please do not file public GitHub issues for suspected vulnerabilities.
+Report suspected vulnerabilities privately through GitHub Security Advisories:
 
-Report vulnerabilities through GitHub private vulnerability reporting:
+https://github.com/fabian-barney/crap-typescript/security/advisories/new
 
-<https://github.com/fabian-barney/crap-typescript/security/advisories/new>
+Do not open a public issue for suspected vulnerabilities.
 
-Include the affected package, version, reproduction steps, impact, and any relevant logs or proof of concept. We will acknowledge reports within 7 days and follow up with the expected remediation plan or additional questions.
-
-This project does not currently run a paid bug bounty program.
+Reports are handled on a best-effort basis. You can generally expect an acknowledgement and preliminary severity assessment within 14 days when the report includes enough information to reproduce or reason about the issue. This project does not currently run a paid bug bounty program.
