@@ -45,6 +45,11 @@ Behavior:
   (no args)                  Analyze all TypeScript files under any nested src/ tree
   <file ...>                 Analyze explicit TypeScript files
   <directory ...>            Analyze TypeScript files under each directory's nested src/ tree
+
+Exit codes:
+  0                          Pass; no methods exceed the threshold
+  1                          Error; invalid arguments, IO failure, parse failure, or report write failure
+  2                          Threshold exceeded; at least one method has CRAP greater than the threshold
 `;
 
 export function usage(): string {
