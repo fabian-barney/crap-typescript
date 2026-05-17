@@ -9,6 +9,7 @@ import {
   findAllTypeScriptFilesUnderSourceRoots,
   isAnalyzableFile
 } from "../src/fileSelection";
+import type * as UtilsModule from "../src/utils";
 import { createTempDir, disposeTempDir, initGitRepository, runProcess, writeProjectFiles } from "./testUtils";
 
 const tempDirs: string[] = [];
@@ -204,7 +205,7 @@ describe("file selection", () => {
       throw new Error("Command output exceeded 1 bytes: git status --porcelain -z");
     });
     vi.doMock("../src/utils", async () => {
-      const actual = await vi.importActual<typeof import("../src/utils")>("../src/utils");
+      const actual = await vi.importActual<typeof UtilsModule>("../src/utils");
       return {
         ...actual,
         runCommand
