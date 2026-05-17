@@ -90,10 +90,13 @@ export function withCrapTypescriptVitest(
 ): VitestConfig {
   const testConfig = config.test ?? {};
   const coverage = testConfig.coverage ?? {};
+  const coverageEnabled = coverage.enabled ?? true;
   const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "json", "text");
   const reporters = ensureDefaultReporter(asArray(testConfig.reporters));
   const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory);
-  reporters.push(new CrapTypescriptVitestReporter(reporterOptions(options, coverageReportPath)));
+  if (coverageEnabled) {
+    reporters.push(new CrapTypescriptVitestReporter(reporterOptions(options, coverageReportPath)));
+  }
 
   return {
     ...config,
@@ -101,7 +104,7 @@ export function withCrapTypescriptVitest(
       ...testConfig,
       coverage: {
         ...coverage,
-        enabled: true,
+        enabled: coverageEnabled,
         provider: coverage.provider ?? "v8",
         reporter: coverageReporters,
         reportsDirectory: coverage.reportsDirectory ?? "coverage"
