@@ -112,7 +112,7 @@ export default class CrapTypescriptJestReporter {
       if (result.thresholdExceeded) {
         this.error = createThresholdExceededError(result.maxCrap, result.threshold);
         options.stderr.write(`${this.error.message}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     } catch (error) {
       this.error = toError(error);

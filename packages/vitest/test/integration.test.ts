@@ -39,7 +39,7 @@ export default withCrapTypescriptVitest(
       projectRoot
     );
 
-    expect(result.exitCode).not.toBe(0);
+    expect(result.exitCode).toBe(2);
     await expect(access(path.join(projectRoot, "coverage", "coverage-final.json"))).resolves.toBeUndefined();
     expect(`${result.stdout}\n${result.stderr}`).toContain("CRAP threshold exceeded");
   });
@@ -73,7 +73,7 @@ export default withCrapTypescriptVitest(
       projectRoot
     );
 
-    expect(result.exitCode).not.toBe(0);
+    expect(result.exitCode).toBe(2);
     await expect(access(path.join(projectRoot, "custom-coverage", "coverage-final.json"))).resolves.toBeUndefined();
     expect(`${result.stdout}\n${result.stderr}`).toContain("CRAP threshold exceeded");
     expect(`${result.stdout}\n${result.stderr}`).not.toContain("Coverage will be N/A");
