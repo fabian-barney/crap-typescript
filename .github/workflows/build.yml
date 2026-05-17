@@ -10,21 +10,22 @@ permissions:
 
 jobs:
   build:
-    name: Build and Test (${{ matrix.os }})
+    name: Build and Test (Node ${{ matrix.node-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ["20.19.0", "22.12.0", "24.0.0"]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node 24
+      - name: Set up Node ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -43,17 +44,21 @@ jobs:
         run: npm pack --workspaces
 
   cognitive-typescript-gate:
-    name: cognitive-typescript Gate
+    name: cognitive-typescript Gate (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20.19.0", "22.12.0", "24.0.0"]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node 24
+      - name: Set up Node ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -66,17 +71,21 @@ jobs:
         run: npm run cognitive-typescript-check
 
   crap-typescript-gate:
-    name: crap-typescript Gate
+    name: crap-typescript Gate (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20.19.0", "22.12.0", "24.0.0"]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node 24
+      - name: Set up Node ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Set up npm 11.14.1
