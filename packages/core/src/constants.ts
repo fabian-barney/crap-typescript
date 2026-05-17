@@ -25,8 +25,28 @@ function thresholdRecommendation(): string {
   return "Use 8.0 for hard gates, target 6.0 during implementation, and use the 8.0 default when in doubt.";
 }
 
+export const IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES = new Set([
+  ".git",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".turbo",
+  ".vite",
+  "build",
+  "coverage",
+  "dist",
+  "node_modules",
+  "out",
+  "target"
+]);
+
 export const IGNORED_DIRECTORIES = new Set([
   ".git",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".turbo",
+  ".vite",
   "coverage",
   "dist",
   "node_modules"

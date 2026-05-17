@@ -1,12 +1,22 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { IGNORED_DIRECTORIES } from "./constants.js";
+import { IGNORED_DIRECTORIES, IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES } from "./constants.js";
 import { runCommand, toRelativePath } from "./utils.js";
 
 const ANALYZABLE_EXTENSIONS = [".ts", ".tsx"];
 const TEST_FILE_MARKERS = [".test.", ".spec."];
-const EXCLUDED_PATH_SEGMENTS = ["/__tests__/", "/dist/", "/coverage/", "/node_modules/"];
+const EXCLUDED_PATH_SEGMENTS = [
+  "/__tests__/",
+  "/.next/",
+  "/.nuxt/",
+  "/.svelte-kit/",
+  "/.turbo/",
+  "/.vite/",
+  "/dist/",
+  "/coverage/",
+  "/node_modules/"
+];
 
 export async function findAllTypeScriptFilesUnderSourceRoots(projectRoot: string): Promise<string[]> {
   const files = new Set<string>();
@@ -138,7 +148,7 @@ async function walkForSourceRoots(
     if (!entry.isDirectory()) {
       continue;
     }
-    if (IGNORED_DIRECTORIES.has(entry.name)) {
+    if (IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(entry.name)) {
       continue;
     }
     const absolutePath = path.join(currentDir, entry.name);
@@ -171,6 +181,10 @@ async function walkSourceTree(
 }
 
 async function expandDirectoryPath(directoryPath: string, files: Set<string>): Promise<void> {
+  if (IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES.has(path.basename(directoryPath))) {
+    return;
+  }
+
   if (path.basename(directoryPath).toLowerCase() === "src") {
     await walkSourceTree(directoryPath, async (filePath) => {
       files.add(path.resolve(filePath));
