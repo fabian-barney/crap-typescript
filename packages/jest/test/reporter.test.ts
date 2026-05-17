@@ -510,7 +510,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
     expect(reporter.getLastError()).toBeInstanceOf(Error);
     expect(reporter.getLastError()?.message).toContain("CRAP threshold exceeded");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(2);
   });
 
   it("applies primary report controls without reducing the JUnit sidecar", async () => {
@@ -556,7 +556,7 @@ describe("CrapTypescriptJestReporter", () => {
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(junit).toContain('<property name="status" value="failed"/>');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(2);
   });
 
   it("supports agent defaults and disabled JUnit output", async () => {

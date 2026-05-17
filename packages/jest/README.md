@@ -28,6 +28,8 @@ Baseline analyzability exclusions always skip declarations, test/spec files, `__
 
 The default threshold is `8.0`; values below `4.0` or above `8.0` print the same threshold guidance warnings as the CLI.
 
+Exit code `2` means the CRAP threshold was exceeded. Reporter errors such as invalid options, missing coverage, or report-write failures use exit code `1`.
+
 The reporter is also available as a standalone export at `@barney-media/crap-typescript-jest/reporter` for direct configuration.
 
 See the [main documentation](https://github.com/fabian-barney/crap-typescript) for full details.
