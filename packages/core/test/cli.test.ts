@@ -360,13 +360,12 @@ describe("cli", () => {
     const exitCode = await runCli(["--help"], process.cwd(), stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toContain("Usage:");
-    expect(stdout.toString()).toContain("Exit codes:");
-    expect(stdout.toString()).toContain("0                          Pass; no methods exceed the threshold");
-    expect(stdout.toString()).toContain("1                          Error; invalid arguments, IO failure, parse failure, or report write failure");
-    expect(stdout.toString()).toContain(
-      "2                          Threshold exceeded; at least one method has CRAP greater than the threshold"
-    );
+    const help = stdout.toString();
+    expect(help).toContain("Usage:");
+    expect(help).toContain("Exit codes:");
+    expect(help).toMatch(/0\s+Success; help requested or analysis completed without threshold failures/);
+    expect(help).toMatch(/1\s+Error; invalid arguments, IO failure, parse failure, or report write failure/);
+    expect(help).toMatch(/2\s+Threshold exceeded; at least one method has CRAP greater than the threshold/);
     expect(stderr.toString()).toBe("");
   });
 

@@ -47,7 +47,7 @@ Behavior:
   <directory ...>            Analyze TypeScript files under each directory's nested src/ tree
 
 Exit codes:
-  0                          Pass; no methods exceed the threshold
+  0                          Success; help requested or analysis completed without threshold failures
   1                          Error; invalid arguments, IO failure, parse failure, or report write failure
   2                          Threshold exceeded; at least one method has CRAP greater than the threshold
 `;
