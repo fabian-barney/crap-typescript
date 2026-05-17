@@ -419,9 +419,13 @@ function dottedAccessRootName(node: ts.Expression): string | null {
 
 function assignmentFromElementAccess(node: ts.Expression): { name: string; containerName: string | null } | null {
   if (ts.isElementAccessExpression(node)) {
+    const containerName = dottedAccessName(node.expression);
+    if (!containerName) {
+      return null;
+    }
     return {
-      name: `[${node.argumentExpression?.getText() ?? ""}]`,
-      containerName: node.expression.getText()
+      name: `[${node.argumentExpression.getText()}]`,
+      containerName
     };
   }
   return null;
