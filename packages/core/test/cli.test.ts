@@ -295,7 +295,7 @@ describe("cli", () => {
       expect(result.stderr).toContain("--output and --junit-report must target different report files");
     });
 
-    it("rejects case-insensitive absolute report path collisions outside the project root on Windows", async () => {
+    it("rejects absolute report paths outside the project root on Windows", async () => {
       const projectRoot = await createTempDir("crap-cli-");
       const reportRoot = await createTempDir("crap-reports-");
       tempDirs.push(projectRoot, reportRoot);
@@ -305,11 +305,11 @@ describe("cli", () => {
         "--output",
         path.join(reportRoot, "CRAP.xml"),
         "--junit-report",
-        path.join(reportRoot, "crap.xml")
+        "reports/crap.xml"
       ], projectRoot);
 
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain("--output and --junit-report must target different report files");
+      expect(result.stderr).toContain("--output must target a report file inside the project root");
     });
   }
 
@@ -390,7 +390,12 @@ describe("cli", () => {
     const exitCode = await runCli(["--help"], process.cwd(), stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toContain("Usage:");
+    const help = stdout.toString();
+    expect(help).toContain("Usage:");
+    expect(help).toContain("Exit codes:");
+    expect(help).toMatch(/0\s+Success; help requested or analysis completed without threshold failures/);
+    expect(help).toMatch(/1\s+Error; invalid arguments, IO failure, parse failure, or report write failure/);
+    expect(help).toMatch(/2\s+Threshold exceeded; at least one method has CRAP greater than the threshold/);
     expect(stderr.toString()).toBe("");
   });
 

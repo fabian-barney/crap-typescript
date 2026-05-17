@@ -1,6 +1,8 @@
 import { access, mkdtemp, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { isWithinOrEqual } from "./utils.js";
+
 export interface ReportPathTarget {
   label: string;
   path: string | undefined;
@@ -24,9 +26,10 @@ export async function validateReportPathTargets(
   ));
   const shouldCheckCaseCollisions = reportTargets.length > 1;
   const filesystemCaseCache: FilesystemCaseCache = new Map();
+  const canonicalProjectRoot = await realpath(projectRoot);
   const resolvedTargets = await Promise.all(
     reportTargets.map((target) => (
-      resolveReportPathTarget(projectRoot, target, shouldCheckCaseCollisions, filesystemCaseCache)
+      resolveReportPathTarget(projectRoot, canonicalProjectRoot, target, shouldCheckCaseCollisions, filesystemCaseCache)
     ))
   );
 
@@ -39,6 +42,7 @@ export async function validateReportPathTargets(
 
 async function resolveReportPathTarget(
   projectRoot: string,
+  canonicalProjectRoot: string,
   target: { label: string; path: string },
   shouldCheckCaseCollisions: boolean,
   filesystemCaseCache: FilesystemCaseCache
@@ -54,6 +58,7 @@ async function resolveReportPathTarget(
   }
 
   const canonicalPath = await canonicalizeReportPath(absolutePath);
+  ensureReportPathInsideProjectRoot(target.label, canonicalPath, canonicalProjectRoot);
   const caseInsensitiveFilesystem = shouldCheckCaseCollisions
     ? await caseInsensitiveFilesystemForTarget(absolutePath, filesystemCaseCache)
     : false;
@@ -64,6 +69,13 @@ async function resolveReportPathTarget(
     absolutePath,
     collisionPath: normalizeReportPathForCollision(canonicalPath, caseInsensitiveFilesystem)
   };
+}
+
+function ensureReportPathInsideProjectRoot(label: string, filePath: string, projectRoot: string): void {
+  if (isWithinOrEqual(filePath, projectRoot)) {
+    return;
+  }
+  throw new Error(`${label} must target a report file inside the project root`);
 }
 
 async function caseInsensitiveFilesystemForTarget(
