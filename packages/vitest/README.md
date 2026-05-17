@@ -22,6 +22,8 @@ export default withCrapTypescriptVitest({
 
 `withCrapTypescriptVitest` wraps your Vitest config to enable coverage collection and register the CRAP reporter. The test run fails when any function exceeds the CRAP threshold.
 
+If `test.coverage.enabled` is explicitly `false`, the helper preserves that value and does not register the CRAP reporter. Coverage provider, reporter, and directory settings are still normalized, but threshold enforcement resumes only when coverage is enabled again.
+
 The reporter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, `threshold`, `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, or `useDefaultExclusions` in the adapter options to customize analysis and reporting. Set `junit: false` to disable the JUnit artifact.
 
 `agent: true` defaults primary output to `format: "toon"`, `failuresOnly: true`, and `omitRedundancy: true`. Explicit `format`, `failuresOnly: false`, or `omitRedundancy: false` options override those defaults. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
@@ -29,6 +31,8 @@ The reporter defaults primary `format` to `none`, so it emits no primary stdout 
 Baseline analyzability exclusions always skip declarations, test/spec files, `__tests__/`, `dist/`, `coverage/`, and `node_modules/`. Generated-code defaults exclude generated directory segments, exact `gen` directory segments, common generated filename suffixes, protobuf outputs, Angular generated artifacts, and leading generated-header markers. User exclusions compose with defaults unless `useDefaultExclusions: false`; full reports and JUnit sidecars include exclusion audit counts when files were excluded.
 
 The default threshold is `8.0`; values below `4.0` or above `8.0` print the same threshold guidance warnings as the CLI.
+
+Exit code `2` means the CRAP threshold was exceeded. Reporter errors such as invalid options, missing coverage, or report-write failures use exit code `1`.
 
 See the [main documentation](https://github.com/fabian-barney/crap-typescript) for full details.
 
