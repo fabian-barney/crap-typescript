@@ -22,6 +22,8 @@ export default withCrapTypescriptVitest({
 
 `withCrapTypescriptVitest` wraps your Vitest config to enable coverage collection and register the CRAP reporter. The test run fails when any function exceeds the CRAP threshold.
 
+If `test.coverage.enabled` is explicitly `false`, the helper preserves that value and does not register the CRAP reporter. Coverage provider, reporter, and directory settings are still normalized, but threshold enforcement resumes only when coverage is enabled again.
+
 The reporter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, `threshold`, `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, or `useDefaultExclusions` in the adapter options to customize analysis and reporting. Set `junit: false` to disable the JUnit artifact.
 
 `agent: true` defaults primary output to `format: "toon"`, `failuresOnly: true`, and `omitRedundancy: true`. Explicit `format`, `failuresOnly: false`, or `omitRedundancy: false` options override those defaults. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
