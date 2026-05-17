@@ -75,7 +75,7 @@ export class CrapTypescriptVitestReporter {
       if (result.thresholdExceeded) {
         const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${result.threshold.toFixed(1)}`;
         options.stderr.write(`${error}\n`);
-        process.exitCode = 1;
+        process.exitCode = 2;
       }
     } catch (error) {
       options.stderr.write(`${toError(error).message}\n`);
