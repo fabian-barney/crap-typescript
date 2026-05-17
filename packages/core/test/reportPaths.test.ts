@@ -1,3 +1,6 @@
+import { mkdir, symlink } from "node:fs/promises";
+import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createTempDir, disposeTempDir } from "./testUtils";
@@ -45,6 +48,45 @@ describe("report path validation", () => {
     tempDirs.push(projectRoot);
 
     await expect(validateReportPathTargets(projectRoot, collidingReportTargets())).resolves.toBeUndefined();
+  });
+
+  it("rejects report paths outside the project root", async () => {
+    const projectRoot = await createTempDir("crap-report-paths-");
+    const outsideDir = await createTempDir("crap-report-paths-outside-");
+    tempDirs.push(projectRoot, outsideDir);
+    const { validateReportPathTargets } = await import("../src/reportPaths");
+
+    await expect(validateReportPathTargets(projectRoot, [
+      { label: "--output", path: "../outside-report.xml" }
+    ])).rejects.toThrow("--output must target a report file inside the project root");
+
+    await expect(validateReportPathTargets(projectRoot, [
+      { label: "--output", path: path.join(outsideDir, "report.xml") }
+    ])).rejects.toThrow("--output must target a report file inside the project root");
+  });
+
+  it("rejects report paths whose existing parent resolves outside the project root", async () => {
+    const projectRoot = await createTempDir("crap-report-paths-");
+    const outsideDir = await createTempDir("crap-report-paths-outside-");
+    tempDirs.push(projectRoot, outsideDir);
+    await mkdir(path.join(outsideDir, "reports"));
+    await symlink(path.join(outsideDir, "reports"), path.join(projectRoot, "linked-reports"), "junction");
+    const { validateReportPathTargets } = await import("../src/reportPaths");
+
+    await expect(validateReportPathTargets(projectRoot, [
+      { label: "--output", path: "linked-reports/report.xml" }
+    ])).rejects.toThrow("--output must target a report file inside the project root");
+  });
+
+  it("accepts report paths below project directories whose names start with two dots", async () => {
+    const projectRoot = await createTempDir("crap-report-paths-");
+    tempDirs.push(projectRoot);
+    await mkdir(path.join(projectRoot, "..reports"));
+    const { validateReportPathTargets } = await import("../src/reportPaths");
+
+    await expect(validateReportPathTargets(projectRoot, [
+      { label: "--output", path: "..reports/crap.xml" }
+    ])).resolves.toBeUndefined();
   });
 });
 
