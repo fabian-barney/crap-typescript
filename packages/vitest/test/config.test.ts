@@ -87,6 +87,25 @@ describe("withCrapTypescriptVitest", () => {
     ]);
   });
 
+  it("preserves explicitly disabled coverage without registering the CRAP reporter", () => {
+    const config = withCrapTypescriptVitest({
+      test: {
+        reporters: ["default"],
+        coverage: {
+          enabled: false,
+          reporter: "json",
+          reportsDirectory: "custom-coverage"
+        }
+      }
+    });
+
+    expect(config.test?.coverage?.enabled).toBe(false);
+    expect(config.test?.coverage?.provider).toBe("v8");
+    expect(config.test?.coverage?.reporter).toEqual(["json", "text"]);
+    expect(config.test?.coverage?.reportsDirectory).toBe("custom-coverage");
+    expect(config.test?.reporters).toEqual(["default"]);
+  });
+
   it("derives the default JUnit report from an overridden coverage report", () => {
     const config = withCrapTypescriptVitest({}, {
       coverageReportPath: "custom-coverage/results/coverage-final.json"
