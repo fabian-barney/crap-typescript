@@ -46,6 +46,20 @@ jobs:
       - name: Run crap-typescript gate
         run: npm run crap-typescript-check
 
+      - name: Build publish artifacts
+        run: |
+          mkdir -p release-artifacts
+          npm run build
+          npm pack --workspaces --pack-destination release-artifacts
+          cp release-notes.md release-artifacts/release-notes.md
+
+      - name: Upload publish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: release-artifacts/
+          if-no-files-found: error
+
   publish:
     name: Publish Release
     runs-on: ubuntu-latest
@@ -55,46 +69,26 @@ jobs:
       id-token: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
       - name: Set up Node 24
         uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-          cache: npm
 
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1 --ignore-scripts
+      - name: Download publish artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: release-artifacts
 
-      - name: Install dependencies without lifecycle scripts
-        run: npm ci --ignore-scripts
-
-      - name: Verify release versions
-        run: npm run verify-release-version
-
-      - name: Render release notes
-        run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
-
-      - name: Build publish artifacts
-        run: npm run build
-
-      # Trusted Publishing uses the job OIDC token for auth and npm
-      # automatically emits provenance for public packages from public repos.
-      - name: Publish core
-        run: npm publish --workspace packages/core --access public
-
-      - name: Publish CLI
-        run: npm publish --workspace packages/cli --access public
-
-      - name: Publish Vitest adapter
-        run: npm publish --workspace packages/vitest --access public
-
-      - name: Publish Jest adapter
-        run: npm publish --workspace packages/jest --access public
+      - name: Publish packages
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          npm publish "release-artifacts/barney-media-crap-typescript-core-${version}.tgz" --access public
+          npm publish "release-artifacts/barney-media-crap-typescript-${version}.tgz" --access public
+          npm publish "release-artifacts/barney-media-crap-typescript-vitest-${version}.tgz" --access public
+          npm publish "release-artifacts/barney-media-crap-typescript-jest-${version}.tgz" --access public
 
       - name: Create GitHub release
         env:
@@ -102,7 +96,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md
+            gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-artifacts/release-notes.md
           else
-            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md
+            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-artifacts/release-notes.md
           fi
