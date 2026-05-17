@@ -4,6 +4,7 @@ import { XMLBuilder } from "fast-xml-parser";
 import { CRAP_THRESHOLD, validateThreshold } from "./constants.js";
 import { formatNumber } from "./utils.js";
 import type {
+  CoverageMetric,
   CoverageKind,
   MethodMetrics,
   MethodReportStatus,
@@ -15,6 +16,10 @@ import type {
 const METHOD_COLUMNS = ["status", "crap", "cc", "cov", "covKind", "method", "src", "lineStart", "lineEnd"] as const;
 const AGENT_METHOD_COLUMNS = ["crap", "cc", "cov", "covKind", "method", "src", "lineStart", "lineEnd"] as const;
 const RIGHT_ALIGNED_TEXT_COLUMNS = new Set<MethodColumn>(["crap", "cc", "cov", "lineStart", "lineEnd"]);
+const NON_MEASURED_COVERAGE_KINDS = {
+  structural_na: "N/A",
+  unknown: "N/A"
+} as const satisfies Record<Exclude<CoverageMetric["status"], "measured">, CoverageKind>;
 
 export interface MethodReportEntry {
   status: MethodReportStatus;
@@ -251,16 +256,20 @@ function methodStatus(metric: MethodMetrics, threshold: number): MethodReportSta
 }
 
 function coverageKind(metric: MethodMetrics): CoverageKind {
-  if (metric.coverage.status === "unknown") {
-    return "N/A";
+  if (metric.coverage.status !== "measured") {
+    return NON_MEASURED_COVERAGE_KINDS[metric.coverage.status];
   }
-  if (metric.statementCoverage.status === "measured" && metric.branchCoverage.status === "measured") {
-    return metric.branchCoverage.percent! < metric.statementCoverage.percent! ? "branch" : "stmt";
+  return measuredCoverageKind(metric.statementCoverage, metric.branchCoverage);
+}
+
+function measuredCoverageKind(statementCoverage: CoverageMetric, branchCoverage: CoverageMetric): CoverageKind {
+  if (statementCoverage.status === "measured" && branchCoverage.status === "measured") {
+    return branchCoverage.percent! < statementCoverage.percent! ? "branch" : "stmt";
   }
-  if (metric.statementCoverage.status === "measured") {
+  if (statementCoverage.status === "measured") {
     return "stmt";
   }
-  if (metric.branchCoverage.status === "measured") {
+  if (branchCoverage.status === "measured") {
     return "branch";
   }
   return "stmt";

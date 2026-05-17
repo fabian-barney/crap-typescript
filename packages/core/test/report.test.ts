@@ -138,6 +138,29 @@ describe("report formatting", () => {
     });
   });
 
+  it("reports N/A coverage kind when coverage is structurally not applicable", () => {
+    const report = buildAnalysisReport([
+      metric({
+        expectsStatementCoverage: false,
+        expectsBranchCoverage: false,
+        coverage: {
+          percent: 100,
+          status: "structural_na",
+          unknownReason: null
+        },
+        statementCoverage: structuralNa(),
+        branchCoverage: structuralNa(),
+        coveragePercent: 100,
+        crapScore: null
+      })
+    ]);
+
+    expect(report.methods[0]).toMatchObject({
+      status: "skipped",
+      covKind: "N/A"
+    });
+  });
+
   it("reports statement coverage kind when it is the only measured component", () => {
     const report = buildAnalysisReport([
       metric({
