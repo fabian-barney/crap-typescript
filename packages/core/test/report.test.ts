@@ -7,7 +7,8 @@ import {
   formatAnalysisReport,
   formatJunitReport,
   formatTextReport,
-  formatToonReport
+  formatToonReport,
+  sortMetrics
 } from "../src/report";
 import type { CoverageMetric, MethodMetrics } from "../src/types";
 import type { SourceExclusionAudit } from "../src/types";
@@ -119,6 +120,57 @@ describe("report formatting", () => {
         covKind: "N/A"
       }
     ]);
+  });
+
+  it("uses display names as a deterministic tie-breaker for same-line methods", () => {
+    const report = buildAnalysisReport([
+      metric({
+        displayName: "zeta",
+        startLine: 10,
+        endLine: 10
+      }),
+      metric({
+        displayName: "alpha",
+        startLine: 10,
+        endLine: 10
+      }),
+      metric({
+        displayName: "earlier",
+        startLine: 9,
+        endLine: 9
+      })
+    ]);
+
+    expect(report.methods.map((method) => method.method)).toEqual(["earlier", "alpha", "zeta"]);
+  });
+
+  it("uses source spans as deterministic tie-breakers for duplicate same-line display names", () => {
+    const sorted = sortMetrics([
+      metric({
+        displayName: "same",
+        startLine: 10,
+        endLine: 10,
+        bodySpan: {
+          startLine: 10,
+          startColumn: 7,
+          endLine: 10,
+          endColumn: 8
+        }
+      }),
+      metric({
+        displayName: "same",
+        startLine: 10,
+        endLine: 10,
+        bodySpan: {
+          startLine: 10,
+          startColumn: 3,
+          endLine: 10,
+          endColumn: 4
+        }
+      })
+    ]);
+
+    expect(sorted.map((item) => item.bodySpan.startColumn)).toEqual([3, 7]);
   });
 
   it("reports N/A coverage kind when score coverage is unavailable", () => {

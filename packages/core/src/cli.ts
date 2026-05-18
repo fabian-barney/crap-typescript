@@ -11,6 +11,9 @@ import type { CliArguments, PackageManagerSelection, ReportFormat, TestRunnerSel
 const REPORT_FORMATS = ["toon", "json", "text", "junit", "none"] as const;
 const REPORT_FORMAT_LIST = REPORT_FORMATS.join(", ");
 const REPORT_FORMAT_ERROR = `--format requires one of: ${REPORT_FORMAT_LIST}`;
+const PACKAGE_MANAGERS = ["auto", "npm", "pnpm", "yarn", "bun"] as const;
+const PACKAGE_MANAGER_LIST = PACKAGE_MANAGERS.join(", ");
+const PACKAGE_MANAGER_ERROR = `--package-manager requires one of: ${PACKAGE_MANAGER_LIST}`;
 
 const HELP_TEXT = `crap-typescript
 
@@ -29,7 +32,7 @@ Options:
                              Exclude files with a leading generated-header marker; repeatable
   --use-default-exclusions[=true|false]
                              Enable generated-code defaults (default: true)
-  --package-manager <tool>   Force auto, npm, pnpm, or yarn
+  --package-manager <tool>   Force ${PACKAGE_MANAGER_LIST}
   --test-runner <runner>     Force auto, vitest, or jest
   --format <format>          Emit ${REPORT_FORMAT_LIST} (default: toon)
   --agent                    Default primary output to --format toon --failures-only --omit-redundancy
@@ -322,12 +325,12 @@ function optionalPath<K extends "output" | "junitReport">(key: K, value: string 
 
 function parsePackageManagerSelection(value: string | undefined): PackageManagerSelection {
   if (!value) {
-    throw new Error("--package-manager requires one of: auto, npm, pnpm, yarn");
+    throw new Error(PACKAGE_MANAGER_ERROR);
   }
-  if (value === "auto" || value === "npm" || value === "pnpm" || value === "yarn") {
-    return value;
+  if ((PACKAGE_MANAGERS as readonly string[]).includes(value)) {
+    return value as PackageManagerSelection;
   }
-  throw new Error("--package-manager requires one of: auto, npm, pnpm, yarn");
+  throw new Error(PACKAGE_MANAGER_ERROR);
 }
 
 function parseTestRunnerSelection(value: string | undefined): TestRunnerSelection {
