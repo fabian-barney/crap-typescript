@@ -68,7 +68,7 @@ function parseStatements(statementMapValue: unknown, hitsValue: unknown): Statem
 
   const statements: StatementCoverageUnit[] = [];
   for (const [key, locationValue] of Object.entries(statementMapValue)) {
-    const hits = parseInteger(hitsValue[key]);
+    const hits = parseFiniteNumber(hitsValue[key]);
     const span = parseSpan(locationValue);
     if (hits === null || span === null) {
       continue;
@@ -169,7 +169,7 @@ function parseFirstLocation(value: unknown): SourceSpan | null {
 }
 
 function parseLineSpan(value: unknown): SourceSpan | null {
-  const line = parseInteger(value);
+  const line = parseLineNumber(value);
   if (line === null) {
     return null;
   }
@@ -206,14 +206,14 @@ function parsePosition(value: unknown): { line: number; column: number } | null 
     return null;
   }
 
-  const line = parseInteger(value.line);
+  const line = parseLineNumber(value.line);
   if (line === null) {
     return null;
   }
 
   const column = value.column === null || value.column === undefined
     ? MAX_COLUMN
-    : parseInteger(value.column);
+    : parseColumnNumber(value.column);
   if (column === null) {
     return null;
   }
@@ -227,12 +227,26 @@ function parseHitArray(value: unknown): number[] {
   }
 
   return value
-    .map((entry) => parseInteger(entry))
+    .map((entry) => parseFiniteNumber(entry))
     .filter((entry): entry is number => entry !== null);
 }
 
-function parseInteger(value: unknown): number | null {
+function parseFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function parseLineNumber(value: unknown): number | null {
+  const parsed = parseInteger(value);
+  return parsed !== null && parsed >= 1 ? parsed : null;
+}
+
+function parseColumnNumber(value: unknown): number | null {
+  const parsed = parseInteger(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
+}
+
+function parseInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) ? value : null;
 }
 
 function deduplicateStatements(statements: StatementCoverageUnit[]): StatementCoverageUnit[] {
