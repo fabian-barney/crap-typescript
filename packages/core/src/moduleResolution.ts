@@ -102,10 +102,11 @@ async function detectPackageManagerLockfileAtRoot(root: string): Promise<Package
 const PACKAGE_MANAGER_LOCKFILES: [PackageManager, string[]][] = [
   ["pnpm", ["pnpm-lock.yaml"]],
   ["yarn", ["yarn.lock"]],
+  ["bun", ["bun.lock", "bun.lockb"]],
   ["npm", ["package-lock.json", "npm-shrinkwrap.json"]]
 ];
 const ENVIRONMENT_COMMAND_WRAPPERS = new Set(["cross-env", "cross-env-shell", "dotenv", "env-cmd"]);
-const SCRIPT_COMMAND_WRAPPERS = new Set(["npx", "pnpm", "yarn", "bun", "node"]);
+const SCRIPT_COMMAND_WRAPPERS = new Set(["npx", "pnpm", "yarn", "bun", "bunx", "node"]);
 const PACKAGE_MANAGER_RUN_SUBCOMMANDS = new Set(["exec", "run"]);
 const NPM_RUN_SUBCOMMANDS = new Set(["exec", "x"]);
 const ENVIRONMENT_WRAPPER_OPTIONS_WITH_VALUE = new Set(["-e", "-f", "--environments", "--file"]);
@@ -127,6 +128,12 @@ const WRAPPER_OPTIONS_WITH_VALUE = new Set([
 ]);
 const SHELL_TOKEN_PATTERN = /(?:[^\s'"]+|"[^"]*"|'[^']*')+/g;
 const QUOTED_SHELL_TOKEN_PART_PATTERN = /"([^"]*)"|'([^']*)'/g;
+const RUNNER_TOKEN_RESOLVERS: Record<string, (tokens: string[], commandIndex: number) => number> = {
+  npm: npmRunnerTokenIndex,
+  pnpm: packageManagerRunnerTokenIndex,
+  yarn: packageManagerRunnerTokenIndex,
+  bun: bunRunnerTokenIndex
+};
 
 async function detectTestRunnerAtRoot(root: string): Promise<TestRunner | null> {
   const packageJson = await readPackageJson(root);
@@ -150,7 +157,7 @@ function packageManagerFromPackageJson(packageJson: PackageJsonShape): PackageMa
   if (typeof packageJson.packageManager !== "string") {
     return null;
   }
-  const match = /^(npm|pnpm|yarn)@/.exec(packageJson.packageManager);
+  const match = /^(npm|pnpm|yarn|bun)@/.exec(packageJson.packageManager);
   return match ? match[1] as PackageManager : null;
 }
 
@@ -227,12 +234,13 @@ function runnerTokenIndex(tokens: string[], commandIndex: number): number {
   if (ENVIRONMENT_COMMAND_WRAPPERS.has(commandName)) {
     return environmentWrapperRunnerTokenIndex(tokens, commandIndex);
   }
-  if (commandName === "npm") {
-    return npmRunnerTokenIndex(tokens, commandIndex);
-  }
-  if (commandName === "pnpm" || commandName === "yarn") {
-    return packageManagerRunnerTokenIndex(tokens, commandIndex);
-  }
+  const resolveRunnerToken = RUNNER_TOKEN_RESOLVERS[commandName];
+  return resolveRunnerToken
+    ? resolveRunnerToken(tokens, commandIndex)
+    : nonPackageManagerRunnerTokenIndex(tokens, commandIndex, commandName);
+}
+
+function nonPackageManagerRunnerTokenIndex(tokens: string[], commandIndex: number, commandName: string): number {
   return SCRIPT_COMMAND_WRAPPERS.has(commandName)
     ? skipWrapperOptions(tokens, commandIndex + 1)
     : commandIndex;
@@ -276,6 +284,14 @@ function packageManagerRunnerTokenIndex(tokens: string[], commandIndex: number):
   const runnerIndex = skipWrapperOptions(tokens, commandIndex + 1);
   const subcommand = tokens[runnerIndex] ?? "";
   return PACKAGE_MANAGER_RUN_SUBCOMMANDS.has(subcommand)
+    ? skipWrapperOptions(tokens, runnerIndex + 1)
+    : runnerIndex;
+}
+
+function bunRunnerTokenIndex(tokens: string[], commandIndex: number): number {
+  const runnerIndex = skipWrapperOptions(tokens, commandIndex + 1);
+  const subcommand = tokens[runnerIndex] ?? "";
+  return subcommand === "x" || subcommand === "run"
     ? skipWrapperOptions(tokens, runnerIndex + 1)
     : runnerIndex;
 }

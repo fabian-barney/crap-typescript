@@ -1,5 +1,5 @@
 export type CliMode = "all" | "changed" | "explicit" | "help";
-export type PackageManager = "npm" | "pnpm" | "yarn";
+export type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 export type PackageManagerSelection = PackageManager | "auto";
 export type TestRunner = "vitest" | "jest";
 export type TestRunnerSelection = TestRunner | "auto";

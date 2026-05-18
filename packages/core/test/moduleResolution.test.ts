@@ -82,6 +82,41 @@ describe("resolvePackageManager", () => {
     await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("yarn");
   });
 
+  it("detects bun from packageManager fields and lockfiles", async () => {
+    const tempDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": JSON.stringify({
+        name: "root",
+        private: true,
+        packageManager: "bun@1.2.0"
+      }),
+      "packages/demo/package.json": '{"name":"demo","private":true}'
+    });
+
+    await expect(resolvePackageManager("auto", tempDir, `${tempDir}/packages/demo`)).resolves.toBe("bun");
+
+    const bunLockDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(bunLockDir);
+    await writeProjectFiles(bunLockDir, {
+      "package.json": '{"name":"root","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/bun.lock": ""
+    });
+
+    await expect(resolvePackageManager("auto", bunLockDir, `${bunLockDir}/packages/demo`)).resolves.toBe("bun");
+
+    const bunLockbDir = await createTempDir("crap-package-manager-");
+    tempDirs.push(bunLockbDir);
+    await writeProjectFiles(bunLockbDir, {
+      "package.json": '{"name":"root","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/bun.lockb": ""
+    });
+
+    await expect(resolvePackageManager("auto", bunLockbDir, `${bunLockbDir}/packages/demo`)).resolves.toBe("bun");
+  });
+
   it("prefers packageManager fields over lockfiles", async () => {
     const tempDir = await createTempDir("crap-package-manager-");
     tempDirs.push(tempDir);
@@ -179,6 +214,10 @@ describe("resolveTestRunner", () => {
     const npxFlagDir = await createTempDir("crap-runner-");
     const yarnRunDir = await createTempDir("crap-runner-");
     const pnpmExecDir = await createTempDir("crap-runner-");
+    const bunXDir = await createTempDir("crap-runner-");
+    const bunRunDir = await createTempDir("crap-runner-");
+    const bunOptionDir = await createTempDir("crap-runner-");
+    const bunxDir = await createTempDir("crap-runner-");
     const nodeBinDir = await createTempDir("crap-runner-");
     const nodeRequireDir = await createTempDir("crap-runner-");
     const nodeLoaderDir = await createTempDir("crap-runner-");
@@ -194,6 +233,10 @@ describe("resolveTestRunner", () => {
       npxFlagDir,
       yarnRunDir,
       pnpmExecDir,
+      bunXDir,
+      bunRunDir,
+      bunOptionDir,
+      bunxDir,
       nodeBinDir,
       nodeRequireDir,
       nodeLoaderDir,
@@ -255,6 +298,42 @@ describe("resolveTestRunner", () => {
         private: true,
         scripts: {
           test: "pnpm exec vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(bunXDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "bun x vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(bunRunDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "bun run jest --runInBand"
+        }
+      })
+    });
+    await writeProjectFiles(bunOptionDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "bun --cwd packages/demo x vitest run"
+        }
+      })
+    });
+    await writeProjectFiles(bunxDir, {
+      "package.json": JSON.stringify({
+        name: "fixture",
+        private: true,
+        scripts: {
+          test: "bunx jest --runInBand"
         }
       })
     });
@@ -337,6 +416,10 @@ describe("resolveTestRunner", () => {
     await expect(resolveTestRunner("auto", npxFlagDir, npxFlagDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", yarnRunDir, yarnRunDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", pnpmExecDir, pnpmExecDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", bunXDir, bunXDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", bunRunDir, bunRunDir)).resolves.toBe("jest");
+    await expect(resolveTestRunner("auto", bunOptionDir, bunOptionDir)).resolves.toBe("vitest");
+    await expect(resolveTestRunner("auto", bunxDir, bunxDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", nodeBinDir, nodeBinDir)).resolves.toBe("vitest");
     await expect(resolveTestRunner("auto", nodeRequireDir, nodeRequireDir)).resolves.toBe("jest");
     await expect(resolveTestRunner("auto", nodeLoaderDir, nodeLoaderDir)).resolves.toBe("vitest");
