@@ -51,6 +51,33 @@ describe("coverage helpers", () => {
     });
   });
 
+  it("builds bun coverage commands through bun x", () => {
+    expect(buildCoverageCommand("bun", "vitest", "C:/tmp")).toEqual({
+      command: "bun",
+      args: [
+        "x",
+        "vitest",
+        "run",
+        "--coverage.enabled=true",
+        "--coverage.reporter=json",
+        "--coverage.reporter=text",
+        "--coverage.reportsDirectory=coverage"
+      ],
+      cwd: "C:/tmp",
+      packageManager: "bun",
+      testRunner: "vitest"
+    });
+    expect(buildCoverageCommand("bun", "jest", "C:/tmp").args).toEqual([
+      "x",
+      "jest",
+      "--coverage",
+      "--runInBand",
+      "--coverageReporters=json",
+      "--coverageReporters=text",
+      "--coverageDirectory=coverage"
+    ]);
+  });
+
   it("builds custom coverage directory arguments from the expected report path", () => {
     expect(buildCoverageCommand("pnpm", "vitest", "C:/tmp", "custom-coverage/coverage-final.json").args).toContain(
       "--coverage.reportsDirectory=custom-coverage"

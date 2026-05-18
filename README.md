@@ -88,7 +88,7 @@ npx crap-typescript
 --exclude-path-regex <regex> Exclude source paths by normalized relative regex; repeatable
 --exclude-generated-marker <marker> Exclude leading generated-header markers; repeatable
 --use-default-exclusions[=true|false] Enable generated-code defaults (`true` by default)
---package-manager <tool>     Force auto, npm, pnpm, or yarn
+--package-manager <tool>     Force auto, npm, pnpm, yarn, or bun
 --test-runner <runner>       Force auto, vitest, or jest
 --format <format>            Emit toon, json, text, junit, or none (default: toon)
 --agent                      Default primary output to toon, failures-only, omit-redundancy

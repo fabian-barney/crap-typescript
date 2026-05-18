@@ -134,6 +134,16 @@ function vitestArguments(packageManager: PackageManager, coverageReportPath: str
         "--coverage.reporter=text",
         `--coverage.reportsDirectory=${reportsDirectory}`
       ];
+    case "bun":
+      return [
+        "x",
+        "vitest",
+        "run",
+        "--coverage.enabled=true",
+        "--coverage.reporter=json",
+        "--coverage.reporter=text",
+        `--coverage.reportsDirectory=${reportsDirectory}`
+      ];
   }
 }
 
@@ -164,6 +174,16 @@ function jestArguments(packageManager: PackageManager, coverageReportPath: strin
       ];
     case "yarn":
       return [
+        "jest",
+        "--coverage",
+        "--runInBand",
+        "--coverageReporters=json",
+        "--coverageReporters=text",
+        `--coverageDirectory=${coverageDirectory}`
+      ];
+    case "bun":
+      return [
+        "x",
         "jest",
         "--coverage",
         "--runInBand",
