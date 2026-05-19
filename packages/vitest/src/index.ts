@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -53,6 +54,7 @@ export class CrapTypescriptVitestReporter {
   async onFinishedReportCoverage(): Promise<void> {
     const options = resolveReporterOptions(this.options);
     try {
+      const startedAt = performance.now();
       await validateReporterReportPaths(options);
       const result = await analyzeProject({
         projectRoot: options.projectRoot,
@@ -71,7 +73,12 @@ export class CrapTypescriptVitestReporter {
         stderr: options.stderr
       });
 
-      await writeReporterReports(result.metrics, result.sourceExclusionAudit, options);
+      await writeReporterReports(
+        result.metrics,
+        result.sourceExclusionAudit,
+        options,
+        elapsedSecondsSince(startedAt)
+      );
       if (result.thresholdExceeded) {
         const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${result.threshold.toFixed(1)}`;
         options.stderr.write(`${error}\n`);
@@ -258,7 +265,8 @@ function resolveJunitReport(options: CrapTypescriptVitestOptions): string {
 async function writeReporterReports(
   metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"],
   sourceExclusionAudit: SourceExclusionAudit,
-  options: ResolvedReporterOptions
+  options: ResolvedReporterOptions,
+  elapsedSeconds: number
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(metrics, {
     format: options.format,
@@ -266,6 +274,7 @@ async function writeReporterReports(
     threshold: options.threshold,
     failuresOnly: options.failuresOnly,
     omitRedundancy: options.omitRedundancy,
+    elapsedSeconds,
     sourceExclusionAudit
   });
   if (options.output) {
@@ -278,6 +287,7 @@ async function writeReporterReports(
     await writeReportFile(options.projectRoot, options.junitReport, formatAnalysisReport(metrics, {
       format: "junit",
       threshold: options.threshold,
+      elapsedSeconds,
       sourceExclusionAudit
     }));
   }
@@ -298,4 +308,8 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
 
 function buildJunitReportFromCoverage(coverageReportPath: string | undefined): string {
   return `${path.dirname(coverageReportPath ?? "coverage/coverage-final.json").replace(/\\/g, "/")}/crap-typescript-junit.xml`;
+}
+
+function elapsedSecondsSince(startedAt: number): number {
+  return Math.max(0.001, (performance.now() - startedAt) / 1000);
 }

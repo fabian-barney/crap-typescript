@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { access, mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -89,6 +90,7 @@ export default class CrapTypescriptJestReporter {
   private async finalize(): Promise<void> {
     try {
       const options = resolveReporterOptions(this.options);
+      const startedAt = performance.now();
       await validateReporterReportPaths(options);
       await waitForCoverageReport(options);
       const result = await analyzeProject({
@@ -108,7 +110,12 @@ export default class CrapTypescriptJestReporter {
         stderr: options.stderr
       });
 
-      await writeReporterReports(result.metrics, result.sourceExclusionAudit, options);
+      await writeReporterReports(
+        result.metrics,
+        result.sourceExclusionAudit,
+        options,
+        elapsedSecondsSince(startedAt)
+      );
       if (result.thresholdExceeded) {
         this.error = createThresholdExceededError(result.maxCrap, result.threshold);
         options.stderr.write(`${this.error.message}\n`);
@@ -349,7 +356,8 @@ function resolveOutputWriters(
 async function writeReporterReports(
   metrics: Awaited<ReturnType<typeof analyzeProject>>["metrics"],
   sourceExclusionAudit: SourceExclusionAudit,
-  options: ResolvedReporterOptions
+  options: ResolvedReporterOptions,
+  elapsedSeconds: number
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(metrics, {
     format: options.format,
@@ -357,6 +365,7 @@ async function writeReporterReports(
     threshold: options.threshold,
     failuresOnly: options.failuresOnly,
     omitRedundancy: options.omitRedundancy,
+    elapsedSeconds,
     sourceExclusionAudit
   });
   if (options.output) {
@@ -369,6 +378,7 @@ async function writeReporterReports(
     await writeReportFile(options.projectRoot, options.junitReport, formatAnalysisReport(metrics, {
       format: "junit",
       threshold: options.threshold,
+      elapsedSeconds,
       sourceExclusionAudit
     }));
   }
@@ -389,4 +399,8 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
 
 function buildJunitReportFromCoverage(coverageReportPath: string): string {
   return `${path.dirname(coverageReportPath).replace(/\\/g, "/")}/crap-typescript-junit.xml`;
+}
+
+function elapsedSecondsSince(startedAt: number): number {
+  return Math.max(0.001, (performance.now() - startedAt) / 1000);
 }

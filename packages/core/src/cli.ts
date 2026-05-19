@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -458,7 +459,15 @@ export async function runCli(
     return 1;
   }
 
-  return handleCliResult(await analyzeCliProject(parsed, projectRoot, stdout, stderr), parsed, projectRoot, stdout, stderr);
+  const startedAt = performance.now();
+  return handleCliResult(
+    await analyzeCliProject(parsed, projectRoot, stdout, stderr),
+    parsed,
+    projectRoot,
+    stdout,
+    stderr,
+    elapsedSecondsSince(startedAt)
+  );
 }
 
 function parseCliInputs(args: string[], stdout: Writer, stderr: Writer): CliArguments | number {
@@ -503,14 +512,15 @@ async function handleCliResult(
   parsed: CliArguments,
   projectRoot: string,
   stdout: Writer,
-  stderr: Writer
+  stderr: Writer,
+  elapsedSeconds: number
 ): Promise<number> {
   if (!result) {
     return 1;
   }
 
   try {
-    await writeCliReports(result, parsed, projectRoot, stdout);
+    await writeCliReports(result, parsed, projectRoot, stdout, elapsedSeconds);
   } catch (error) {
     writeLine(stderr, (error as Error).message);
     return 1;
@@ -523,7 +533,8 @@ async function writeCliReports(
   result: Awaited<ReturnType<typeof analyzeProject>>,
   parsed: CliArguments,
   projectRoot: string,
-  stdout: Writer
+  stdout: Writer,
+  elapsedSeconds: number
 ): Promise<void> {
   const primaryReport = formatAnalysisReport(result.metrics, {
     format: parsed.format,
@@ -531,6 +542,7 @@ async function writeCliReports(
     threshold: result.threshold,
     failuresOnly: parsed.failuresOnly,
     omitRedundancy: parsed.omitRedundancy,
+    elapsedSeconds,
     sourceExclusionAudit: result.sourceExclusionAudit
   });
   if (parsed.output) {
@@ -543,6 +555,7 @@ async function writeCliReports(
     await writeReportFile(projectRoot, parsed.junitReport, formatAnalysisReport(result.metrics, {
       format: "junit",
       threshold: result.threshold,
+      elapsedSeconds,
       sourceExclusionAudit: result.sourceExclusionAudit
     }));
   }
@@ -570,4 +583,8 @@ function writeCliThresholdStatus(
   }
   writeLine(stderr, `CRAP threshold exceeded: ${formatNumber(result.maxCrap)} > ${formatNumber(result.threshold)}`);
   return 2;
+}
+
+function elapsedSecondsSince(startedAt: number): number {
+  return Math.max(0.001, (performance.now() - startedAt) / 1000);
 }

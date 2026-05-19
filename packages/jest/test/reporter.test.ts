@@ -555,8 +555,25 @@ describe("CrapTypescriptJestReporter", () => {
     expect(junit).toContain('name="risky:5"');
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(junit).toContain('<property name="status" value="failed"/>');
+    expect(Number.parseFloat(junit.match(/<testsuite [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
     expect(process.exitCode).toBe(2);
+  });
+
+  it("writes a minimum non-zero JUnit suite time when finalize completes within one clock tick", async () => {
+    const projectRoot = await createTempDir("crap-jest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": "{}"
+    });
+    vi.spyOn(performance, "now").mockReturnValue(1_000);
+
+    const { reporter } = await finalizeWithOptions(projectRoot, {});
+    const junit = await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`);
+
+    expect(junit).toContain('time="0.001"');
+    expect(reporter.getLastError()).toBeUndefined();
   });
 
   it("supports agent defaults and disabled JUnit output", async () => {

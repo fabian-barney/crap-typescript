@@ -692,6 +692,14 @@ describe("report formatting", () => {
     expect(output).toContain("Source: src/sample.ts:1-3");
   });
 
+  it("formats JUnit suite times from elapsed seconds without changing testcase times", () => {
+    const output = formatJunitReport(buildAnalysisReport([metric()]), false, 1.2345);
+
+    expect(output).toContain('<testsuites name="crap-typescript" tests="1" failures="0" skipped="0" errors="0" time="1.234">');
+    expect(output).toContain('<testsuite name="crap-typescript" status="passed" tests="1" failures="0" skipped="0" errors="0" time="1.234">');
+    expect(output).toContain('<testcase classname="src/sample.ts" name="safe:1" file="src/sample.ts" time="0" line="1">');
+  });
+
   it("formats empty JUnit reports without testcase elements", () => {
     const output = formatJunitReport(buildAnalysisReport([]));
 

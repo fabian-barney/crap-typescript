@@ -51,6 +51,7 @@ export interface FormatAnalysisReportOptions {
   threshold?: number;
   failuresOnly?: boolean;
   omitRedundancy?: boolean;
+  elapsedSeconds?: number;
   sourceExclusionAudit?: SourceExclusionAudit;
   includeExclusionAudit?: boolean;
 }
@@ -152,6 +153,9 @@ export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAn
 
   const resolvedOptions = resolveFormatOptions(options);
   const report = buildPrimaryAnalysisReport(metrics, threshold, options.format, resolvedOptions);
+  if (options.format === "junit") {
+    return formatJunitReport(report as AnalysisReport, resolvedOptions.omitRedundancy, options.elapsedSeconds);
+  }
   return REPORT_FORMATTERS[options.format](
     report,
     resolvedOptions.omitRedundancy
@@ -231,8 +235,8 @@ export function formatTextReport(report: SerializableReport, agent = false): str
   return [...summary, ...sourceExclusionLines, "", headerLine, separator, ...body].join("\n") + "\n";
 }
 
-export function formatJunitReport(report: AnalysisReport, omitRedundancy = false): string {
-  return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report, omitRedundancy)).trimEnd()}\n`;
+export function formatJunitReport(report: AnalysisReport, omitRedundancy = false, elapsedSeconds = 0): string {
+  return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report, omitRedundancy, elapsedSeconds)).trimEnd()}\n`;
 }
 
 function toMethodReportEntry(metric: MethodMetrics, threshold: number): MethodReportEntry {
@@ -354,8 +358,9 @@ function createXmlBuilder(): XMLBuilder {
   });
 }
 
-function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
+function toJunitXml(report: AnalysisReport, omitRedundancy: boolean, elapsedSeconds: number): XmlNode {
   const counts = countJunitMethodStatuses(report.methods);
+  const suiteTime = formatElapsedSeconds(elapsedSeconds);
   const testsuite: XmlNode = {
     "@_name": "crap-typescript",
     "@_status": report.status,
@@ -363,7 +368,7 @@ function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
     "@_failures": counts.failures,
     "@_skipped": counts.skipped,
     "@_errors": 0,
-    "@_time": 0,
+    "@_time": suiteTime,
     properties: {
       property: [
         toXmlProperty("threshold", formatNumber(report.threshold)),
@@ -383,10 +388,17 @@ function toJunitXml(report: AnalysisReport, omitRedundancy: boolean): XmlNode {
       "@_failures": counts.failures,
       "@_skipped": counts.skipped,
       "@_errors": 0,
-      "@_time": 0,
+      "@_time": suiteTime,
       testsuite
     }
   };
+}
+
+function formatElapsedSeconds(elapsedSeconds: number): string | number {
+  if (!(elapsedSeconds > 0)) {
+    return 0;
+  }
+  return Math.max(elapsedSeconds, 0.001).toFixed(3);
 }
 
 function optionalSourceExclusions(sourceExclusionAudit: SourceExclusionAudit | undefined): {

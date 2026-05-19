@@ -1,7 +1,7 @@
 import { mkdir, symlink } from "node:fs/promises";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseCliArguments, runCli } from "../src/cli";
 import { createTempDir, disposeTempDir, readText, StringWriter, writeProjectFiles } from "./testUtils";
@@ -9,6 +9,7 @@ import { createTempDir, disposeTempDir, readText, StringWriter, writeProjectFile
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
 });
 
@@ -671,6 +672,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(junit).toContain('name="safe:1"');
     expect(junit).toContain('name="risky:5"');
     expect(junit).toContain('name="sourceExclusions.candidateFiles" value="2"');
+    expect(Number.parseFloat(junit.match(/<testsuites [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
 
     const overrideStdout = new StringWriter();
@@ -818,6 +820,27 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(junit).toContain('name="safe:1"');
     expect(junit).toContain('name="risky:5"');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
+  });
+
+  it("writes a minimum non-zero JUnit suite time when the analysis completes within one clock tick", async () => {
+    const projectRoot = await createTempDir("crap-cli-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": "{}"
+    });
+    vi.spyOn(performance, "now").mockReturnValue(1_000);
+
+    const exitCode = await runCli(
+      ["--format", "none", "--junit-report", "reports/crap.xml"],
+      projectRoot,
+      new StringWriter(),
+      new StringWriter()
+    );
+    const junit = await readText(`${projectRoot}/reports/crap.xml`);
+
+    expect(exitCode).toBe(0);
+    expect(junit).toContain('time="0.001"');
   });
 
   it("omits redundant primary status fields and writes full JUnit sidecars", async () => {

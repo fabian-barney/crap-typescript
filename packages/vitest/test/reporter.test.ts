@@ -1,7 +1,7 @@
 import { mkdir, symlink } from "node:fs/promises";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   StringWriter,
@@ -21,6 +21,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   process.exitCode = originalExitCode;
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
 });
@@ -430,8 +431,25 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await expect(reporter.onFinishedReportCoverage()).resolves.toBeUndefined();
 
-    expect(stdout.toString()).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0" time="0">');
+    expect(stdout.toString()).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0"');
+    expect(Number.parseFloat(stdout.toString().match(/<testsuite [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stdout.toString()).not.toContain('<property name="status"');
+    expect(stderr.toString()).toBe("");
+    expect(process.exitCode).toBe(originalExitCode);
+  });
+
+  it("writes a minimum non-zero JUnit suite time when reporting completes within one clock tick", async () => {
+    const projectRoot = await createTempDir("crap-vitest-reporter-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}'
+    });
+    vi.spyOn(performance, "now").mockReturnValue(1_000);
+
+    const { stderr } = await finishWithOptions(projectRoot, {});
+    const junit = await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`);
+
+    expect(junit).toContain('time="0.001"');
     expect(stderr.toString()).toBe("");
     expect(process.exitCode).toBe(originalExitCode);
   });
