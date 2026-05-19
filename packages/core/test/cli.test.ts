@@ -143,7 +143,7 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--use-default-exclusions", "--use-default-exclusions=false"])).toThrow(
       "--use-default-exclusions can only be provided once"
     );
-    expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn");
+    expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn, bun");
     expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest");
     expect(() => parseCliArguments(["--format"])).toThrow("--format requires one of: toon, json, text, junit, none");
     expect(() => parseCliArguments(["--threshold"])).toThrow("--threshold requires a finite number greater than 0");
@@ -152,8 +152,8 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--exclude"])).toThrow("--exclude requires a path");
     expect(() => parseCliArguments(["--exclude-path-regex"])).toThrow("--exclude-path-regex requires a regex");
     expect(() => parseCliArguments(["--exclude-generated-marker"])).toThrow("--exclude-generated-marker requires a marker");
-    expect(() => parseCliArguments(["--package-manager", "bun"])).toThrow(
-      "--package-manager requires one of: auto, npm, pnpm, yarn"
+    expect(() => parseCliArguments(["--package-manager", "pip"])).toThrow(
+      "--package-manager requires one of: auto, npm, pnpm, yarn, bun"
     );
     expect(() => parseCliArguments(["--test-runner", "mocha"])).toThrow(
       "--test-runner requires one of: auto, vitest, jest"
@@ -184,6 +184,10 @@ describe("cli", () => {
       mode: "changed",
       threshold: 6
     });
+  });
+
+  it("accepts bun as an explicit package manager", () => {
+    expect(parseCliArguments(["--package-manager", "bun"]).packageManager).toBe("bun");
   });
 
   it("parses inline values for value options without consuming following file arguments", () => {

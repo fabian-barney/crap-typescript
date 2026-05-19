@@ -43,7 +43,7 @@ The tool shall support these forms:
 
 It shall also accept optional overrides:
 
-- `--package-manager auto|npm|pnpm|yarn`
+- `--package-manager auto|npm|pnpm|yarn|bun`
 - `--test-runner auto|vitest|jest`
 - `--threshold <finite-positive-number>`
 - `--format toon|json|text|junit|none`
