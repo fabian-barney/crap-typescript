@@ -202,13 +202,12 @@ describe("report formatting", () => {
         },
         statementCoverage: structuralNa(),
         branchCoverage: structuralNa(),
-        coveragePercent: 100,
-        crapScore: null
+        coveragePercent: 100
       })
     ]);
 
     expect(report.methods[0]).toMatchObject({
-      status: "skipped",
+      status: "passed",
       covKind: "N/A"
     });
   });
