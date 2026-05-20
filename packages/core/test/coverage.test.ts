@@ -1129,6 +1129,54 @@ export function enumDeclOnly(): void {
     ]);
   });
 
+  it("rejects reversed source spans instead of preserving silently unattributable coverage", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {
+            "0": {
+              start: { line: 4, column: 6 },
+              end: { line: 4, column: 5 }
+            }
+          },
+          branchMap: {
+            "0": {
+              loc: {
+                start: { line: 6, column: 4 },
+                end: { line: 5, column: 8 }
+              }
+            }
+          },
+          fnMap: {
+            "0": {
+              loc: {
+                start: { line: 8, column: 2 },
+                end: { line: 7, column: 9 }
+              }
+            }
+          },
+          s: {
+            "0": 1
+          },
+          b: {
+            "0": [1]
+          },
+          f: {}
+        }
+      })
+    });
+
+    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+
+    expect(fileCoverage.statements).toEqual([]);
+    expect(fileCoverage.branches).toEqual([]);
+    expect(fileCoverage.functions).toEqual([]);
+  });
+
   it("prefers the most specific loc span when duplicate fnMap entries share an identity", async () => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);

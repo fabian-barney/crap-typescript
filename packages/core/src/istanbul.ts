@@ -192,6 +192,9 @@ function parseSpan(value: unknown): SourceSpan | null {
   if (start === null || end === null) {
     return null;
   }
+  if (comparePosition(start.line, start.column, end.line, end.column) > 0) {
+    return null;
+  }
 
   return {
     startLine: start.line,
