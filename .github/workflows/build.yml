@@ -146,7 +146,7 @@ jobs:
           path: .
 
       - name: Run crap-typescript gate
-        run: npx --no-install vitest run --config vitest.crap.config.ts
+        run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
 
   crap-typescript-gate-required:
     name: crap-typescript Gate
