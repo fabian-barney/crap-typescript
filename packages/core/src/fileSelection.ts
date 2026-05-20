@@ -146,7 +146,11 @@ function hasAnySuffix(value: string, suffixes: string[]): boolean {
 function isGeneratedSourceRootPath(normalizedPath: string): boolean {
   const segments = normalizedPath.split("/").filter(Boolean);
   for (let index = 0; index < segments.length - 1; index += 1) {
-    if (BUILD_OUTPUT_SOURCE_ROOT_SEGMENTS.has(segments[index]!) && segments[index + 1] === "src") {
+    if (
+      BUILD_OUTPUT_SOURCE_ROOT_SEGMENTS.has(segments[index]!)
+      && segments[index + 1] === "src"
+      && !segments.slice(0, index).includes("src")
+    ) {
       return true;
     }
   }
@@ -182,7 +186,7 @@ async function walkForSourceRoots(
     if (shouldSkipSourceRootDiscoveryDirectory(absolutePath)) {
       continue;
     }
-    if (entry.name === "src") {
+    if (entry.name.toLowerCase() === "src") {
       await onSourceRoot(absolutePath);
       continue;
     }

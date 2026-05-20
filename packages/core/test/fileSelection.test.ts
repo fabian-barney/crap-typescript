@@ -100,6 +100,7 @@ describe("file selection", () => {
       "package.json": '{"name":"fixture","private":true}',
       "src/app.ts": "export const app = 1;",
       "src/build/handwritten.ts": "export const handwritten = 1;",
+      "src/build/src/nested.ts": "export const nested = 1;",
       "packages/demo/build/src/generated.ts": "export const generated = 1;",
       "packages/demo/out/src/generated.ts": "export const generated = 1;",
       "packages/demo/target/src/generated.ts": "export const generated = 1;",
@@ -113,7 +114,22 @@ describe("file selection", () => {
     const files = await findAllTypeScriptFilesUnderSourceRoots(tempDir);
     expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
       "src/app.ts",
-      "src/build/handwritten.ts"
+      "src/build/handwritten.ts",
+      "src/build/src/nested.ts"
+    ]);
+  });
+
+  it("discovers mixed-case src directories", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/Src/component.ts": "export const component = 1;"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "packages/demo/Src/component.ts"
     ]);
   });
 
@@ -231,17 +247,20 @@ describe("file selection", () => {
     await writeProjectFiles(tempDir, {
       "package.json": '{"name":"fixture","private":true}',
       "src/build/handwritten.ts": "export const handwritten = 1;\n",
+      "src/build/src/nested.ts": "export const nested = 1;\n",
       "packages/demo/build/src/generated.ts": "export const generated = 1;\n"
     });
     await runProcess("git", ["add", "."], tempDir);
     await runProcess("git", ["commit", "-m", "initial"], tempDir);
 
     await writeFile(path.join(tempDir, "src", "build", "handwritten.ts"), "export const handwritten = 2;\n", "utf8");
+    await writeFile(path.join(tempDir, "src", "build", "src", "nested.ts"), "export const nested = 2;\n", "utf8");
     await writeFile(path.join(tempDir, "packages", "demo", "build", "src", "generated.ts"), "export const generated = 2;\n", "utf8");
 
     const files = await changedTypeScriptFilesUnderSourceRoots(tempDir);
     expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
-      "src/build/handwritten.ts"
+      "src/build/handwritten.ts",
+      "src/build/src/nested.ts"
     ]);
   });
 
