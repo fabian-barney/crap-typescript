@@ -15,6 +15,7 @@ import { createTempDir, disposeTempDir, initGitRepository, runProcess, writeProj
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  vi.doUnmock("node:fs/promises");
   vi.doUnmock("../src/utils");
   vi.resetModules();
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
@@ -79,6 +80,8 @@ describe("file selection", () => {
       "src/app.ts": "export const app = 1;",
       "src/nested/util.ts": "export const util = 1;",
       "src/__tests__/ignored.ts": "export const ignored = 1;",
+      "src/.next/ignored.ts": "export const ignored = 1;",
+      "src/.vite/ignored.ts": "export const ignored = 1;",
       "src/coverage/ignored.ts": "export const ignored = 1;",
       "src/dist/ignored.ts": "export const ignored = 1;",
       "src/node_modules/ignored.ts": "export const ignored = 1;"
@@ -89,6 +92,75 @@ describe("file selection", () => {
       "src/app.ts",
       "src/nested/util.ts"
     ]);
+  });
+
+  it("skips build-output roots during source-root discovery without excluding src/build source folders", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/app.ts": "export const app = 1;",
+      "src/build/handwritten.ts": "export const handwritten = 1;",
+      "src/build/src/nested.ts": "export const nested = 1;",
+      "packages/demo/build/src/generated.ts": "export const generated = 1;",
+      "packages/demo/out/src/generated.ts": "export const generated = 1;",
+      "packages/demo/target/src/generated.ts": "export const generated = 1;",
+      "packages/demo/.next/src/generated.ts": "export const generated = 1;",
+      "packages/demo/.nuxt/src/generated.ts": "export const generated = 1;",
+      "packages/demo/.svelte-kit/src/generated.ts": "export const generated = 1;",
+      "packages/demo/.turbo/src/generated.ts": "export const generated = 1;",
+      "packages/demo/.vite/src/generated.ts": "export const generated = 1;"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/app.ts",
+      "src/build/handwritten.ts",
+      "src/build/src/nested.ts"
+    ]);
+  });
+
+  it("discovers mixed-case src directories", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/Src/component.ts": "export const component = 1;"
+    });
+
+    const files = await findAllTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "packages/demo/Src/component.ts"
+    ]);
+  });
+
+  it("does not descend into mixed-case ignored directories inside source trees", async () => {
+    vi.resetModules();
+    const repoRoot = path.join(process.cwd(), "mock-repo");
+    const srcRoot = path.join(repoRoot, "src");
+    const mixedCaseIgnored = path.join(srcRoot, "Node_Modules");
+    const readdir = vi.fn(async (currentDir: string) => {
+      if (currentDir === repoRoot) {
+        return [dirEntry("src", "directory")];
+      }
+      if (currentDir === srcRoot) {
+        return [
+          dirEntry("Node_Modules", "directory"),
+          dirEntry("app.ts", "file")
+        ];
+      }
+      if (currentDir === mixedCaseIgnored) {
+        throw new Error("walkSourceTree descended into a mixed-case ignored directory");
+      }
+      return [];
+    });
+    vi.doMock("node:fs/promises", () => ({ readdir }));
+
+    const { findAllTypeScriptFilesUnderSourceRoots: findFiles } = await import("../src/fileSelection");
+    const files = await findFiles(repoRoot);
+
+    expect(files).toEqual([path.join(srcRoot, "app.ts")]);
+    expect(readdir).not.toHaveBeenCalledWith(mixedCaseIgnored, { withFileTypes: true });
   });
 
   it("finds changed TypeScript files under src trees from git status", async () => {
@@ -152,16 +224,26 @@ describe("file selection", () => {
     ]);
   });
 
-  it("filters declaration, test, dist, coverage, and node_modules paths from analyzable files", () => {
+  it("filters declaration, test, and generated-output paths from analyzable files", () => {
     expect(isAnalyzableFile("C:/repo/src/app.ts")).toBe(true);
     expect(isAnalyzableFile("C:/repo/src/component.tsx")).toBe(true);
     expect(isAnalyzableFile("C:/repo/src/types.d.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/src/app.spec.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/src/app.test.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/src/__tests__/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/.next/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/.nuxt/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/.svelte-kit/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/.turbo/app.ts")).toBe(false);
+    expect(isAnalyzableFile("C:/repo/.vite/app.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/dist/app.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/coverage/app.ts")).toBe(false);
     expect(isAnalyzableFile("C:/repo/node_modules/pkg/index.ts")).toBe(false);
+    expect(isAnalyzableFile(".next/app.ts")).toBe(false);
+    expect(isAnalyzableFile(".nuxt/app.ts")).toBe(false);
+    expect(isAnalyzableFile(".svelte-kit/app.ts")).toBe(false);
+    expect(isAnalyzableFile(".turbo/app.ts")).toBe(false);
+    expect(isAnalyzableFile(".vite/app.ts")).toBe(false);
     expect(isAnalyzableFile("dist/app.ts")).toBe(false);
     expect(isAnalyzableFile("coverage/app.ts")).toBe(false);
     expect(isAnalyzableFile("node_modules/pkg/index.ts")).toBe(false);
@@ -170,6 +252,46 @@ describe("file selection", () => {
     expect(isAnalyzableFile(path.join(filesystemRoot, "dist", "app.ts"))).toBe(false);
     expect(isAnalyzableFile(path.join(filesystemRoot, "coverage", "app.ts"))).toBe(false);
     expect(isAnalyzableFile(path.join(filesystemRoot, "node_modules", "pkg", "index.ts"))).toBe(false);
+  });
+
+  it("does not expand explicit build-output directories that would only contain generated source roots", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/build/handwritten.ts": "export const handwritten = 1;",
+      "packages/demo/build/src/generated.ts": "export const generated = 1;",
+      "packages/demo/out/src/generated.ts": "export const generated = 1;"
+    });
+
+    await expect(expandExplicitPaths(tempDir, ["packages/demo/build", "packages/demo/out"])).resolves.toEqual([]);
+    await expect(expandExplicitPaths(tempDir, ["src/build"])).resolves.toEqual([
+      path.join(tempDir, "src", "build", "handwritten.ts")
+    ]);
+  });
+
+  it("ignores changed files under generated build-output src roots while keeping src/build files", async () => {
+    const tempDir = await createTempDir("crap-files-");
+    tempDirs.push(tempDir);
+    await initGitRepository(tempDir);
+    await writeProjectFiles(tempDir, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/build/handwritten.ts": "export const handwritten = 1;\n",
+      "src/build/src/nested.ts": "export const nested = 1;\n",
+      "packages/demo/build/src/generated.ts": "export const generated = 1;\n"
+    });
+    await runProcess("git", ["add", "."], tempDir);
+    await runProcess("git", ["commit", "-m", "initial"], tempDir);
+
+    await writeFile(path.join(tempDir, "src", "build", "handwritten.ts"), "export const handwritten = 2;\n", "utf8");
+    await writeFile(path.join(tempDir, "src", "build", "src", "nested.ts"), "export const nested = 2;\n", "utf8");
+    await writeFile(path.join(tempDir, "packages", "demo", "build", "src", "generated.ts"), "export const generated = 2;\n", "utf8");
+
+    const files = await changedTypeScriptFilesUnderSourceRoots(tempDir);
+    expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
+      "src/build/handwritten.ts",
+      "src/build/src/nested.ts"
+    ]);
   });
 
   it("ignores deleted and non-source changes and reports git errors clearly", async () => {
@@ -219,3 +341,15 @@ describe("file selection", () => {
     });
   });
 });
+
+function dirEntry(name: string, type: "directory" | "file"): {
+  name: string;
+  isDirectory(): boolean;
+  isFile(): boolean;
+} {
+  return {
+    name,
+    isDirectory: () => type === "directory",
+    isFile: () => type === "file"
+  };
+}
