@@ -202,7 +202,7 @@ async function walkSourceTree(
   for (const entry of entries) {
     const absolutePath = path.join(currentDir, entry.name);
     if (entry.isDirectory()) {
-      if (IGNORED_DIRECTORIES.has(entry.name)) {
+      if (IGNORED_DIRECTORIES.has(entry.name.toLowerCase())) {
         continue;
       }
       await walkSourceTree(absolutePath, onFile);

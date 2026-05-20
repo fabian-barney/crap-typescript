@@ -15,6 +15,7 @@ import { createTempDir, disposeTempDir, initGitRepository, runProcess, writeProj
 const tempDirs: string[] = [];
 
 afterEach(async () => {
+  vi.doUnmock("node:fs/promises");
   vi.doUnmock("../src/utils");
   vi.resetModules();
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
@@ -131,6 +132,35 @@ describe("file selection", () => {
     expect(files.map((file) => path.relative(tempDir, file).replace(/\\/g, "/"))).toEqual([
       "packages/demo/Src/component.ts"
     ]);
+  });
+
+  it("does not descend into mixed-case ignored directories inside source trees", async () => {
+    vi.resetModules();
+    const repoRoot = path.join(process.cwd(), "mock-repo");
+    const srcRoot = path.join(repoRoot, "src");
+    const mixedCaseIgnored = path.join(srcRoot, "Node_Modules");
+    const readdir = vi.fn(async (currentDir: string) => {
+      if (currentDir === repoRoot) {
+        return [dirEntry("src", "directory")];
+      }
+      if (currentDir === srcRoot) {
+        return [
+          dirEntry("Node_Modules", "directory"),
+          dirEntry("app.ts", "file")
+        ];
+      }
+      if (currentDir === mixedCaseIgnored) {
+        throw new Error("walkSourceTree descended into a mixed-case ignored directory");
+      }
+      return [];
+    });
+    vi.doMock("node:fs/promises", () => ({ readdir }));
+
+    const { findAllTypeScriptFilesUnderSourceRoots: findFiles } = await import("../src/fileSelection");
+    const files = await findFiles(repoRoot);
+
+    expect(files).toEqual([path.join(srcRoot, "app.ts")]);
+    expect(readdir).not.toHaveBeenCalledWith(mixedCaseIgnored, { withFileTypes: true });
   });
 
   it("finds changed TypeScript files under src trees from git status", async () => {
@@ -311,3 +341,15 @@ describe("file selection", () => {
     });
   });
 });
+
+function dirEntry(name: string, type: "directory" | "file"): {
+  name: string;
+  isDirectory(): boolean;
+  isFile(): boolean;
+} {
+  return {
+    name,
+    isDirectory: () => type === "directory",
+    isFile: () => type === "file"
+  };
+}
