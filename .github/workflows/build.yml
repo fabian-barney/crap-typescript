@@ -46,22 +46,18 @@ jobs:
       - name: Verify workspace packages
         run: npm pack --workspaces
 
-  ubuntu-build:
-    name: Build and Test (Node ${{ matrix.node-version }}, ubuntu-latest)
+  ubuntu-build-node-22:
+    name: Build and Test (Node 22.12.0, ubuntu-latest)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["22.12.0", "24.0.0"]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Node ${{ matrix.node-version }}
+      - name: Set up Node 22.12.0
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.12.0
           cache: npm
 
       - name: Set up npm 11.14.1
@@ -85,7 +81,7 @@ jobs:
       - name: Upload crap-typescript gate workspace
         uses: actions/upload-artifact@v4
         with:
-          name: crap-typescript-gate-workspace-node-${{ matrix.node-version }}
+          name: crap-typescript-gate-workspace-node-22.12.0
           path: |
             package.json
             package-lock.json
@@ -94,6 +90,56 @@ jobs:
             vitest.crap.config.ts
             scripts/
             packages/
+            tests/
+            node_modules/
+          compression-level: 0
+          if-no-files-found: error
+
+  ubuntu-build-node-24:
+    name: Build and Test (Node 24.0.0, ubuntu-latest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.0.0
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint sources
+        run: npm run lint
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Verify workspace packages
+        run: npm pack --workspaces
+
+      - name: Upload crap-typescript gate workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: crap-typescript-gate-workspace-node-24.0.0
+          path: |
+            package.json
+            package-lock.json
+            tsconfig*.json
+            vitest.config.ts
+            vitest.crap.config.ts
+            scripts/
+            packages/
+            tests/
             node_modules/
           compression-level: 0
           if-no-files-found: error
@@ -122,28 +168,41 @@ jobs:
       - name: Run cognitive-typescript gate
         run: node ./scripts/run-cognitive-typescript-gate.mjs packages
 
-  crap-typescript-gate:
-    name: crap-typescript Gate (Node ${{ matrix.node-version }})
+  crap-typescript-gate-node-22:
+    name: crap-typescript Gate (Node 22.12.0)
     runs-on: ubuntu-latest
-    needs: [ubuntu-build]
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["22.12.0", "24.0.0"]
+    needs: [ubuntu-build-node-22]
 
     steps:
-      - name: Set up Node ${{ matrix.node-version }}
+      - name: Set up Node 22.12.0
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
+          node-version: 22.12.0
 
       - name: Download prepared workspace
         uses: actions/download-artifact@v4
         with:
-          name: crap-typescript-gate-workspace-node-${{ matrix.node-version }}
+          name: crap-typescript-gate-workspace-node-22.12.0
+          path: .
+
+      - name: Run crap-typescript gate
+        run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
+
+  crap-typescript-gate-node-24:
+    name: crap-typescript Gate (Node 24.0.0)
+    runs-on: ubuntu-latest
+    needs: [ubuntu-build-node-24]
+
+    steps:
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.0.0
+
+      - name: Download prepared workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: crap-typescript-gate-workspace-node-24.0.0
           path: .
 
       - name: Run crap-typescript gate
@@ -152,14 +211,14 @@ jobs:
   crap-typescript-gate-required:
     name: crap-typescript Gate
     runs-on: ubuntu-latest
-    needs: [crap-typescript-gate]
+    needs: [crap-typescript-gate-node-22, crap-typescript-gate-node-24]
     if: ${{ always() }}
 
     steps:
       - name: Require the matrix CRAP gate to pass
         shell: bash
         run: |
-          if [ "${{ needs.crap-typescript-gate.result }}" != "success" ]; then
+          if [ "${{ needs.crap-typescript-gate-node-22.result }}" != "success" ] || [ "${{ needs.crap-typescript-gate-node-24.result }}" != "success" ]; then
             echo "The matrix crap-typescript gate did not complete successfully." >&2
             exit 1
           fi
