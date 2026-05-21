@@ -89,6 +89,7 @@ jobs:
           path: |
             package.json
             package-lock.json
+            tsconfig*.json
             vitest.config.ts
             vitest.crap.config.ts
             scripts/
