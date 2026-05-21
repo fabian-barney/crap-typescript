@@ -1,8 +1,8 @@
 export const CRAP_THRESHOLD = 8.0;
-const TOO_LENIENT_THRESHOLD = 8.0;
 export const COVERAGE_REPORT_RELATIVE_PATH = "coverage/coverage-final.json";
 export const NO_FILES_MESSAGE = "No TypeScript files to analyze.";
 export const NO_ANALYZABLE_FUNCTIONS_MESSAGE = "No analyzable functions found.";
+const IMPLEMENTATION_TARGET_CRAP_THRESHOLD = 6.0;
 
 export function validateThreshold(value: number): number {
   if (!Number.isFinite(value) || value <= 0) {
@@ -15,14 +15,14 @@ export function thresholdWarning(value: number): string {
   if (value < 4.0) {
     return `Warning: CRAP threshold below 4.0 is likely too noisy. ${thresholdRecommendation()}`;
   }
-  if (value > TOO_LENIENT_THRESHOLD) {
-    return `Warning: CRAP threshold above ${TOO_LENIENT_THRESHOLD.toFixed(1)} is too lenient even for hard gates. ${thresholdRecommendation()}`;
+  if (value > CRAP_THRESHOLD) {
+    return `Warning: CRAP threshold above ${CRAP_THRESHOLD.toFixed(1)} is too lenient even for hard gates. ${thresholdRecommendation()}`;
   }
   return "";
 }
 
 function thresholdRecommendation(): string {
-  return "Use 8.0 for hard gates, target 6.0 during implementation, and use the 8.0 default when in doubt.";
+  return `Use ${CRAP_THRESHOLD.toFixed(1)} for hard gates, target ${IMPLEMENTATION_TARGET_CRAP_THRESHOLD.toFixed(1)} during implementation, and use the ${CRAP_THRESHOLD.toFixed(1)} default when in doubt.`;
 }
 
 export const IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES = new Set([
