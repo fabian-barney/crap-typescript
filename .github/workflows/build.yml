@@ -78,22 +78,14 @@ jobs:
       - name: Verify workspace packages
         run: npm pack --workspaces
 
-      - name: Upload crap-typescript gate workspace
-        uses: actions/upload-artifact@v4
+      - name: Save crap-typescript gate workspace
+        uses: actions/cache/save@v4
         with:
-          name: crap-typescript-gate-workspace-node-22.12.0
           path: |
-            package.json
-            package-lock.json
-            tsconfig*.json
-            vitest.config.ts
-            vitest.crap.config.ts
-            scripts/
-            packages/
-            tests/
-            node_modules/
-          compression-level: 0
-          if-no-files-found: error
+            node_modules
+            packages/*/dist
+            packages/*/.tsbuildinfo
+          key: crap-typescript-gate-ubuntu-22.12.0-${{ github.sha }}
 
   ubuntu-build-node-24:
     name: Build and Test (Node 24.0.0, ubuntu-latest)
@@ -127,22 +119,14 @@ jobs:
       - name: Verify workspace packages
         run: npm pack --workspaces
 
-      - name: Upload crap-typescript gate workspace
-        uses: actions/upload-artifact@v4
+      - name: Save crap-typescript gate workspace
+        uses: actions/cache/save@v4
         with:
-          name: crap-typescript-gate-workspace-node-24.0.0
           path: |
-            package.json
-            package-lock.json
-            tsconfig*.json
-            vitest.config.ts
-            vitest.crap.config.ts
-            scripts/
-            packages/
-            tests/
-            node_modules/
-          compression-level: 0
-          if-no-files-found: error
+            node_modules
+            packages/*/dist
+            packages/*/.tsbuildinfo
+          key: crap-typescript-gate-ubuntu-24.0.0-${{ github.sha }}
 
   cognitive-typescript-gate:
     name: cognitive-typescript Gate (Node ${{ matrix.node-version }})
@@ -174,16 +158,23 @@ jobs:
     needs: [ubuntu-build-node-22]
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Set up Node 22.12.0
         uses: actions/setup-node@v6
         with:
           node-version: 22.12.0
 
-      - name: Download prepared workspace
-        uses: actions/download-artifact@v4
+      - name: Restore prepared workspace
+        uses: actions/cache/restore@v4
         with:
-          name: crap-typescript-gate-workspace-node-22.12.0
-          path: .
+          path: |
+            node_modules
+            packages/*/dist
+            packages/*/.tsbuildinfo
+          key: crap-typescript-gate-ubuntu-22.12.0-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Run crap-typescript gate
         run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
@@ -194,16 +185,23 @@ jobs:
     needs: [ubuntu-build-node-24]
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Set up Node 24.0.0
         uses: actions/setup-node@v6
         with:
           node-version: 24.0.0
 
-      - name: Download prepared workspace
-        uses: actions/download-artifact@v4
+      - name: Restore prepared workspace
+        uses: actions/cache/restore@v4
         with:
-          name: crap-typescript-gate-workspace-node-24.0.0
-          path: .
+          path: |
+            node_modules
+            packages/*/dist
+            packages/*/.tsbuildinfo
+          key: crap-typescript-gate-ubuntu-24.0.0-${{ github.sha }}
+          fail-on-cache-miss: true
 
       - name: Run crap-typescript gate
         run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
