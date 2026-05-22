@@ -194,3 +194,18 @@ jobs:
 
       - name: Run cognitive-typescript gate
         run: npm run cognitive-typescript-check
+
+  quality-crap-compat:
+    name: crap-typescript Gate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - quality-crap-crap-typescript
+
+    steps:
+      - name: Fail when the CRAP gate failed
+        if: ${{ needs.quality-crap-crap-typescript.result != 'success' }}
+        run: exit 1
+
+      - name: Confirm legacy CRAP gate
+        run: echo "CRAP gate succeeded."
