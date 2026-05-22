@@ -24,8 +24,8 @@
     "build": "tsc -b packages/core packages/cli packages/vitest packages/jest",
     "lint": "eslint .",
     "cognitive-typescript-check": "node ./scripts/run-cognitive-typescript-gate.mjs packages",
-    "crap-typescript-check": "npm run build && vitest run --config vitest.crap.config.ts",
-    "test": "npm run build && vitest run",
+    "crap-typescript-check": "vitest run --config vitest.crap.config.ts",
+    "test": "vitest run --coverage.enabled true",
     "pack": "npm pack --workspaces",
     "render-release-notes": "node ./scripts/render-release-notes.mjs",
     "verify-release-version": "node ./scripts/verify-release-version.mjs"
