@@ -28,8 +28,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
+      - name: Set up npm 11.6.2
+        run: npm install --global npm@11.6.2
 
       - name: Install dependencies
         run: npm ci
@@ -74,8 +74,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
+      - name: Set up npm 11.6.2
+        run: npm install --global npm@11.6.2
 
       - name: Download dependencies
         uses: actions/download-artifact@v4
@@ -115,8 +115,8 @@ jobs:
           node-version: 24.0.0
           cache: npm
 
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
+      - name: Set up npm 11.6.2
+        run: npm install --global npm@11.6.2
 
       - name: Download dependencies
         uses: actions/download-artifact@v4
@@ -144,8 +144,8 @@ jobs:
           node-version: 24.0.0
           cache: npm
 
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
+      - name: Set up npm 11.6.2
+        run: npm install --global npm@11.6.2
 
       - name: Download dependencies
         uses: actions/download-artifact@v4
@@ -179,8 +179,8 @@ jobs:
           node-version: 24.0.0
           cache: npm
 
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
+      - name: Set up npm 11.6.2
+        run: npm install --global npm@11.6.2
 
       - name: Download dependencies
         uses: actions/download-artifact@v4
@@ -220,8 +220,8 @@ jobs:
           node-version: 24.0.0
           cache: npm
 
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
+      - name: Set up npm 11.6.2
+        run: npm install --global npm@11.6.2
 
       - name: Download dependencies
         uses: actions/download-artifact@v4
