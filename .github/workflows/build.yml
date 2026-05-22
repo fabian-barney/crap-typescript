@@ -37,15 +37,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload build outputs
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output-${{ matrix.os }}-${{ matrix.node-version }}
-          path: |
-            packages/*/dist
-            packages/*/.tsbuildinfo
-          if-no-files-found: error
-
   test-unit:
     name: test / unit (Node ${{ matrix.node-version }}, ${{ matrix.os }})
     needs:
@@ -73,11 +64,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build outputs
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output-${{ matrix.os }}-${{ matrix.node-version }}
-          path: .
+      - name: Build
+        run: npm run build
 
       - name: Run unit tests
         run: npm test
@@ -137,11 +125,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build outputs
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output-ubuntu-latest-24.0.0
-          path: .
+      - name: Build
+        run: npm run build
 
       - name: Verify workspace packages
         run: npm pack --workspaces
@@ -169,11 +154,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build outputs
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output-ubuntu-latest-24.0.0
-          path: .
+      - name: Build
+        run: npm run build
 
       - name: Download coverage
         uses: actions/download-artifact@v4
@@ -207,11 +189,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download build outputs
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output-ubuntu-latest-24.0.0
-          path: .
+      - name: Build
+        run: npm run build
 
       - name: Run cognitive-typescript gate
         run: npm run cognitive-typescript-check
