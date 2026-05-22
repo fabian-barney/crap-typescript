@@ -37,7 +37,10 @@ jobs:
       - name: Render release notes
         run: node ./scripts/render-release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
 
-      - name: Run build and tests
+      - name: Build workspace packages
+        run: npm run build
+
+      - name: Run tests
         run: npm test
 
       - name: Run cognitive-typescript gate
@@ -49,7 +52,6 @@ jobs:
       - name: Build publish artifacts
         run: |
           mkdir -p release-artifacts
-          npm run build
           npm pack --workspaces --pack-destination release-artifacts
           cp release-notes.md release-artifacts/release-notes.md
 

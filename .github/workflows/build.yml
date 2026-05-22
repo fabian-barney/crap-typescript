@@ -10,12 +10,12 @@ permissions:
 
 jobs:
   build:
-    name: Build and Test (Node ${{ matrix.node-version }}, ${{ matrix.os }})
+    name: build (Node ${{ matrix.node-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
         node-version: ["22.12.0", "24.0.0"]
 
     steps:
@@ -34,106 +34,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint sources
-        run: npm run lint
-
-      - name: Build packages
+      - name: Build
         run: npm run build
 
-      - name: Run tests
-        run: npm test
-
-      - name: Verify workspace packages
-        run: npm pack --workspaces
-
-  ubuntu-build-node-22:
-    name: Build and Test (Node 22.12.0, ubuntu-latest)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node 22.12.0
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22.12.0
-          cache: npm
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint sources
-        run: npm run lint
-
-      - name: Build packages
-        run: npm run build
-
-      - name: Run tests
-        run: npm test
-
-      - name: Verify workspace packages
-        run: npm pack --workspaces
-
-      - name: Save crap-typescript gate workspace
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            node_modules
-            packages/*/dist
-            packages/*/.tsbuildinfo
-          key: crap-typescript-gate-ubuntu-22.12.0-${{ github.sha }}
-
-  ubuntu-build-node-24:
-    name: Build and Test (Node 24.0.0, ubuntu-latest)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Node 24.0.0
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.0.0
-          cache: npm
-
-      - name: Set up npm 11.14.1
-        run: npm install --global npm@11.14.1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint sources
-        run: npm run lint
-
-      - name: Build packages
-        run: npm run build
-
-      - name: Run tests
-        run: npm test
-
-      - name: Verify workspace packages
-        run: npm pack --workspaces
-
-      - name: Save crap-typescript gate workspace
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            node_modules
-            packages/*/dist
-            packages/*/.tsbuildinfo
-          key: crap-typescript-gate-ubuntu-24.0.0-${{ github.sha }}
-
-  cognitive-typescript-gate:
-    name: cognitive-typescript Gate (Node ${{ matrix.node-version }})
-    runs-on: ubuntu-latest
+  test-unit:
+    name: test / unit (Node ${{ matrix.node-version }}, ${{ matrix.os }})
+    needs:
+      - build
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
         node-version: ["22.12.0", "24.0.0"]
 
     steps:
@@ -149,40 +61,27 @@ jobs:
       - name: Set up npm 11.14.1
         run: npm install --global npm@11.14.1
 
-      - name: Run cognitive-typescript gate
-        run: node ./scripts/run-cognitive-typescript-gate.mjs packages
+      - name: Install dependencies
+        run: npm ci
 
-  crap-typescript-gate-node-22:
-    name: crap-typescript Gate (Node 22.12.0)
-    runs-on: ubuntu-latest
-    needs: [ubuntu-build-node-22]
+      - name: Build
+        run: npm run build
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Run unit tests
+        run: npm test
 
-      - name: Set up Node 22.12.0
-        uses: actions/setup-node@v6
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 22.12.0
+          name: coverage-${{ matrix.os }}-${{ matrix.node-version }}
+          path: coverage
+          if-no-files-found: error
 
-      - name: Restore prepared workspace
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            packages/*/dist
-            packages/*/.tsbuildinfo
-          key: crap-typescript-gate-ubuntu-22.12.0-${{ github.sha }}
-          fail-on-cache-miss: true
-
-      - name: Run crap-typescript gate
-        run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
-
-  crap-typescript-gate-node-24:
-    name: crap-typescript Gate (Node 24.0.0)
+  lint:
+    name: verify / lint
     runs-on: ubuntu-latest
-    needs: [ubuntu-build-node-24]
+    needs:
+      - build
 
     steps:
       - name: Checkout
@@ -192,31 +91,121 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24.0.0
+          cache: npm
 
-      - name: Restore prepared workspace
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            packages/*/dist
-            packages/*/.tsbuildinfo
-          key: crap-typescript-gate-ubuntu-24.0.0-${{ github.sha }}
-          fail-on-cache-miss: true
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
 
-      - name: Run crap-typescript gate
-        run: node ./node_modules/vitest/vitest.mjs run --config vitest.crap.config.ts
+      - name: Install dependencies
+        run: npm ci
 
-  crap-typescript-gate-required:
-    name: crap-typescript Gate
+      - name: Run lint
+        run: npm run lint
+
+  package:
+    name: package
     runs-on: ubuntu-latest
-    needs: [crap-typescript-gate-node-22, crap-typescript-gate-node-24]
-    if: ${{ always() }}
+    needs:
+      - build
+      - test-unit
 
     steps:
-      - name: Require the matrix CRAP gate to pass
-        shell: bash
-        run: |
-          if [ "${{ needs.crap-typescript-gate-node-22.result }}" != "success" ] || [ "${{ needs.crap-typescript-gate-node-24.result }}" != "success" ]; then
-            echo "The matrix crap-typescript gate did not complete successfully." >&2
-            exit 1
-          fi
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.0.0
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify workspace packages
+        run: npm pack --workspaces
+
+  quality-crap-crap-typescript:
+    name: verify / quality-crap-crap-typescript
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test-unit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.0.0
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-ubuntu-latest-24.0.0
+          path: coverage
+
+      - name: Run crap-typescript gate
+        run: npm run crap-typescript-check
+
+  quality-cognitive-crap-typescript:
+    name: verify / quality-cognitive-crap-typescript
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test-unit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node 24.0.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.0.0
+          cache: npm
+
+      - name: Set up npm 11.14.1
+        run: npm install --global npm@11.14.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run cognitive-typescript gate
+        run: npm run cognitive-typescript-check
+
+  quality-crap-compat:
+    name: crap-typescript Gate
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - quality-crap-crap-typescript
+
+    steps:
+      - name: Fail when the CRAP gate failed
+        if: ${{ needs.quality-crap-crap-typescript.result != 'success' }}
+        run: exit 1
+
+      - name: Confirm legacy CRAP gate
+        run: echo "CRAP gate succeeded."
