@@ -8,6 +8,24 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.4.0] - 2026-05-24
+
+### Added
+
+- Added configurable source exclusions for generated or external TypeScript sources, including path globs, path regexes, function-name regexes, comment markers, and optional default exclusions.
+- Added deterministic report sorting, GitLab-compatible JUnit XML output, Bun package-manager detection, and stricter report-path containment and package-manager validation.
+- Added stronger CI and release validation coverage, including platform-matrix builds, lint enforcement, package-version verification, release-artifact assembly, and self-gate release checks.
+
+### Changed
+
+- Hardened changed-file analysis, coverage-report fallback behavior, and coverage-command diagnostics across Windows, macOS, and Linux workflows.
+- Expanded the CLI, core library, and Jest and Vitest adapters to handle richer parser diagnostics, constructor and optional-chaining cases, and clearer threshold and exit-code messaging.
+
+### Fixed
+
+- Fixed parse-span and source-position validation around malformed coverage input, fixture-backed compatibility cases, and container/body attribution edge cases.
+- Fixed reporter and release-note rendering behavior so empty or partial report artifacts fail early instead of silently generating invalid output.
+
 ## [0.3.0] - 2026-05-10
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@barney-media/crap-typescript-vitest",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Vitest integration for crap-typescript.",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
@@ -41,7 +41,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@barney-media/crap-typescript-core": "^0.3.0"
+    "@barney-media/crap-typescript-core": "^0.4.0"
   },
   "peerDependencies": {
     "vitest": "^4.0.0"
