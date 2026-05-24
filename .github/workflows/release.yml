@@ -87,10 +87,10 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
-          npm publish "release-artifacts/barney-media-crap-typescript-core-${version}.tgz" --access public
-          npm publish "release-artifacts/barney-media-crap-typescript-${version}.tgz" --access public
-          npm publish "release-artifacts/barney-media-crap-typescript-vitest-${version}.tgz" --access public
-          npm publish "release-artifacts/barney-media-crap-typescript-jest-${version}.tgz" --access public
+          npm publish "./release-artifacts/barney-media-crap-typescript-core-${version}.tgz" --access public
+          npm publish "./release-artifacts/barney-media-crap-typescript-${version}.tgz" --access public
+          npm publish "./release-artifacts/barney-media-crap-typescript-vitest-${version}.tgz" --access public
+          npm publish "./release-artifacts/barney-media-crap-typescript-jest-${version}.tgz" --access public
 
       - name: Create GitHub release
         env:
