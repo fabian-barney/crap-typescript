@@ -25,7 +25,7 @@ jobs:
           node-version: "24"
           cache: npm
 
-      - name: Set up npm 11.14.1
+      - name: Set up npm 11.15.0
         run: npm install --global npm@11.15.0
 
       - name: Install dependencies
