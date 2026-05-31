@@ -157,6 +157,8 @@ Nested functions and class bodies shall not contribute to the enclosing function
 
 Coverage shall be attributed by matching the analyzed source file to an Istanbul coverage record and assigning statement and branch counters to function bodies.
 
+File coverage lookup shall first prefer exact normalized absolute-path agreement between the analyzed file and an Istanbul coverage record. If exact lookup misses, the analyzer may fall back to suffix matching, first with the project-relative source path and then with the module-root-relative source path when the coverage report is sourced from that module root. A suffix fallback shall be accepted only when exactly one coverage record matches. If multiple records match an attempted suffix, coverage for that analyzed file shall be reported as `N/A` and the analyzer shall emit a warning instead of selecting a record by report order.
+
 When Istanbul `fnMap` data is present for a file:
 
 - the analyzer shall first prefer exact body-span agreement between the TypeScript AST method body and the Istanbul function span
@@ -193,6 +195,7 @@ Unknown coverage includes cases such as:
 
 - missing coverage report
 - analyzed file not present in the report
+- multiple coverage records matching the analyzed file by suffix fallback
 - missing or unusable statement or branch attribution for a function that should have such coverage data
 - any zero-unit attribution where the analyzer cannot prove structural non-applicability
 

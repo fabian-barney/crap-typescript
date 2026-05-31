@@ -71,11 +71,23 @@ interface FileAnalysisResult {
   warnings: string[];
 }
 
+interface FileCoverageResolution {
+  coverage: FileCoverage | undefined;
+  unknownReason: CoverageUnknownReason | null;
+  ambiguousMatchCount?: number;
+}
+
 interface LoadedCoverage {
   coverageByFile: Map<string, FileCoverage>;
+  coverageSourceRoot: string | null;
   unknownReason: CoverageUnknownReason | null;
   warnings: string[];
 }
+
+type SuffixCoverageResolution =
+  | { status: "matched"; coverage: FileCoverage }
+  | { status: "ambiguous"; matchCount: number }
+  | { status: "unmatched" };
 
 function createAnalyzeContext(options: AnalyzeProjectOptions): AnalyzeContext {
   return {
@@ -158,6 +170,7 @@ async function loadModuleCoverage(
   if (!coverageResult.coverageSourcePath || !coverageResult.coverageSourceRoot) {
     return {
       coverageByFile: new Map<string, FileCoverage>(),
+      coverageSourceRoot: null,
       unknownReason: "missing_report",
       warnings: [emitWarning(
         context.stderr,
@@ -169,6 +182,7 @@ async function loadModuleCoverage(
   try {
     return {
       coverageByFile: await parseCoverageReport(coverageResult.coverageSourcePath, coverageResult.coverageSourceRoot),
+      coverageSourceRoot: coverageResult.coverageSourceRoot,
       unknownReason: null,
       warnings: []
     };
@@ -178,6 +192,7 @@ async function loadModuleCoverage(
       : `Coverage report at ${coverageResult.coverageSourcePath} could not be parsed: ${(error as Error).message}`;
     return {
       coverageByFile: new Map<string, FileCoverage>(),
+      coverageSourceRoot: null,
       unknownReason: "unparseable_report",
       warnings: [emitWarning(
         context.stderr,
@@ -219,9 +234,23 @@ async function analyzeFile(
       )]
     };
   }
-  const fileCoverage = resolveFileCoverage(loadedCoverage.coverageByFile, filePath, relativePath, loadedCoverage.unknownReason);
-  const methodCoverage = coverageForMethods(descriptors, fileCoverage.coverage, fileCoverage.unknownReason ?? undefined);
+  const moduleRelativePath = toRelativePath(moduleRoot, filePath);
+  const fileCoverage = resolveFileCoverage(
+    loadedCoverage.coverageByFile,
+    filePath,
+    relativePath,
+    moduleRelativePath,
+    isModuleCoverageSource(loadedCoverage.coverageSourceRoot, moduleRoot),
+    loadedCoverage.unknownReason
+  );
   const warnings: string[] = [];
+  if (fileCoverage.unknownReason === "file_ambiguous") {
+    warnings.push(emitWarning(
+      context.stderr,
+      `Warning: Coverage for ${relativePath} matched ${fileCoverage.ambiguousMatchCount ?? 0} report entries by suffix. Coverage will be N/A.`
+    ));
+  }
+  const methodCoverage = coverageForMethods(descriptors, fileCoverage.coverage, fileCoverage.unknownReason ?? undefined);
   const metrics = descriptors.map((descriptor, index) =>
     toMetric(descriptor, methodCoverage[index]!, filePath, relativePath, moduleRoot, context.stderr, warnings)
   );
@@ -278,22 +307,88 @@ function resolveFileCoverage(
   coverageByFile: Map<string, FileCoverage>,
   filePath: string,
   relativePath: string,
+  moduleRelativePath: string,
+  includeModuleRelativeFallback: boolean,
   coverageUnavailableReason: CoverageUnknownReason | null
-): { coverage: FileCoverage | undefined; unknownReason: CoverageUnknownReason | null } {
+): FileCoverageResolution {
   const exact = coverageByFile.get(normalizePathForMatch(filePath));
   if (exact) {
-    return { coverage: exact, unknownReason: null };
+    return matchedFileCoverage(exact);
   }
 
-  const suffix = `/${relativePath.replace(/\\/g, "/").toLowerCase()}`;
-  for (const [candidatePath, coverage] of coverageByFile.entries()) {
-    if (candidatePath.endsWith(suffix)) {
-      return { coverage, unknownReason: null };
+  for (const fallbackPath of suffixFallbackPaths(relativePath, moduleRelativePath, includeModuleRelativeFallback)) {
+    const suffixCoverage = resolveFileCoverageFromSuffixMatch(resolveSuffixCoverage(coverageByFile, fallbackPath));
+    if (suffixCoverage) {
+      return suffixCoverage;
     }
   }
+
   return {
     coverage: undefined,
     unknownReason: coverageUnavailableReason ?? "file_unmatched"
+  };
+}
+
+function isModuleCoverageSource(coverageSourceRoot: string | null, moduleRoot: string): boolean {
+  return coverageSourceRoot !== null &&
+    normalizePathForMatch(coverageSourceRoot) === normalizePathForMatch(moduleRoot);
+}
+
+function suffixFallbackPaths(
+  relativePath: string,
+  moduleRelativePath: string,
+  includeModuleRelativeFallback: boolean
+): string[] {
+  if (!includeModuleRelativeFallback || moduleRelativePath === relativePath) {
+    return [relativePath];
+  }
+  return [relativePath, moduleRelativePath];
+}
+
+function resolveSuffixCoverage(
+  coverageByFile: Map<string, FileCoverage>,
+  relativePath: string
+): SuffixCoverageResolution {
+  const suffix = `/${relativePath.replace(/\\/g, "/").toLowerCase()}`;
+  const matches: FileCoverage[] = [];
+  for (const [candidatePath, coverage] of coverageByFile.entries()) {
+    if (candidatePath.endsWith(suffix)) {
+      matches.push(coverage);
+    }
+  }
+
+  if (matches.length === 1) {
+    return { status: "matched", coverage: matches[0]! };
+  }
+  if (matches.length > 1) {
+    return { status: "ambiguous", matchCount: matches.length };
+  }
+  return { status: "unmatched" };
+}
+
+function resolveFileCoverageFromSuffixMatch(match: SuffixCoverageResolution): FileCoverageResolution | null {
+  switch (match.status) {
+    case "matched":
+      return matchedFileCoverage(match.coverage);
+    case "ambiguous":
+      return ambiguousFileCoverage(match.matchCount);
+    case "unmatched":
+      return null;
+  }
+}
+
+function matchedFileCoverage(coverage: FileCoverage): FileCoverageResolution {
+  return {
+    coverage,
+    unknownReason: null
+  };
+}
+
+function ambiguousFileCoverage(matchCount: number): FileCoverageResolution {
+  return {
+    coverage: undefined,
+    unknownReason: "file_ambiguous",
+    ambiguousMatchCount: matchCount
   };
 }
 

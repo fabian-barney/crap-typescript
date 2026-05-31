@@ -12,6 +12,7 @@ export type CoverageStatus = "measured" | "structural_na" | "unknown";
 export type CoverageUnknownReason =
   | "missing_report"
   | "unparseable_report"
+  | "file_ambiguous"
   | "file_unmatched"
   | "fnmap_conflict"
   | "statement_unattributed"

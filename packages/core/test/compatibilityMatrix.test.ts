@@ -16,6 +16,7 @@ interface CompatibilityCase {
   name: string;
   fixture: string;
   pathMode?: "relative" | "absolute";
+  expectedWarnings?: string[];
   expectedSelectedFiles?: string[];
   expectedMetrics: ExpectedMetric[];
 }
@@ -45,7 +46,7 @@ describe("compatibility matrix", () => {
         coverageMode: "existing-only"
       });
 
-      expect(result.warnings).toEqual([]);
+      expect(result.warnings).toEqual(testCase.expectedWarnings ?? []);
 
       if (testCase.expectedSelectedFiles) {
         expect(result.selectedFiles.map((file) => path.relative(projectRoot, file).replace(/\\/g, "/"))).toEqual(
