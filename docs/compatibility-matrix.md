@@ -9,6 +9,7 @@ This matrix records which coverage-attribution shapes are verified by golden fix
 | Vitest-style Istanbul JSON with relative source paths | `tests/fixtures/compatibility-matrix/vitest-style-report` | Verifies normalized Istanbul JSON coverage with relative `path` values. |
 | Jest-style Istanbul JSON with absolute source paths | `tests/fixtures/compatibility-matrix/jest-style-report` | Verifies normalized Istanbul JSON coverage when the report record resolves to an absolute source path. |
 | Workspace coverage lookup across multiple packages | `tests/fixtures/workspace-project` | Verifies per-package coverage lookup and analysis across a workspace layout. |
+| Ambiguous suffix coverage paths | `tests/fixtures/compatibility-matrix/ambiguous-suffix-coverage` | Verifies suffix fallback reports `N/A` with a warning instead of selecting the first same-suffix coverage record. |
 | TSX parsing and attribution | `tests/fixtures/compatibility-matrix/tsx-component` | Verifies `.tsx` parsing and attribution to an expression-bodied component function. |
 | TSX-adjacent generic arrows | `tests/fixtures/compatibility-matrix/tsx-generic-arrows` | Verifies generic arrow parsing in `.tsx` files that also contain JSX syntax. |
 | Accessors | `tests/fixtures/compatibility-matrix/accessors` | Verifies getter and setter discovery, naming, and independent coverage attribution. |

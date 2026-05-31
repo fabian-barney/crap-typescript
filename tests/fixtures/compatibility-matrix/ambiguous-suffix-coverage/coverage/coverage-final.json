@@ -1,0 +1,46 @@
+{
+  "/rebased/a/src/index.ts": {
+    "path": "/rebased/a/src/index.ts",
+    "statementMap": {
+      "0": {
+        "start": {
+          "line": 3,
+          "column": 4
+        },
+        "end": {
+          "line": 3,
+          "column": 13
+        }
+      }
+    },
+    "fnMap": {},
+    "branchMap": {},
+    "s": {
+      "0": 1
+    },
+    "f": {},
+    "b": {}
+  },
+  "/rebased/b/src/index.ts": {
+    "path": "/rebased/b/src/index.ts",
+    "statementMap": {
+      "0": {
+        "start": {
+          "line": 5,
+          "column": 2
+        },
+        "end": {
+          "line": 5,
+          "column": 11
+        }
+      }
+    },
+    "fnMap": {},
+    "branchMap": {},
+    "s": {
+      "0": 0
+    },
+    "f": {},
+    "b": {}
+  }
+}

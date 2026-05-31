@@ -237,6 +237,145 @@ describe("analyzeProject", () => {
     expect(result.metrics[0]?.branchCoverage.unknownReason).toBe("file_unmatched");
   });
 
+  it("keeps exact coverage matches ahead of ambiguous suffix candidates", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/index.ts": coveredFunctionSource("target"),
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/index.ts": coveredFunctionReport("src/index.ts", 1),
+        "packages/a/src/index.ts": coveredFunctionReport("packages/a/src/index.ts", 0),
+        "packages/b/src/index.ts": coveredFunctionReport("packages/b/src/index.ts", 0)
+      })
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      explicitPaths: ["src/index.ts"],
+      coverageMode: "existing-only"
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.metrics[0]?.coveragePercent).toBe(100);
+    expect(result.metrics[0]?.coverage.unknownReason).toBeNull();
+  });
+
+  it("uses a unique project-relative suffix match when exact coverage lookup misses", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/projectFallback.ts": coveredFunctionSource("projectFallback"),
+      "coverage/coverage-final.json": JSON.stringify({
+        "/rebased/workspace/src/projectFallback.ts": coveredFunctionReport(
+          "/rebased/workspace/src/projectFallback.ts",
+          1
+        )
+      })
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      explicitPaths: ["src/projectFallback.ts"],
+      coverageMode: "existing-only"
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.metrics[0]?.coveragePercent).toBe(100);
+    expect(result.metrics[0]?.coverage.unknownReason).toBeNull();
+  });
+
+  it("uses a unique module-root-relative suffix match when project-relative lookup misses", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/src/moduleFallback.ts": coveredFunctionSource("moduleFallback"),
+      "packages/demo/coverage/coverage-final.json": JSON.stringify({
+        "/rebased/demo/src/moduleFallback.ts": coveredFunctionReport(
+          "/rebased/demo/src/moduleFallback.ts",
+          1
+        )
+      })
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      explicitPaths: ["packages/demo/src/moduleFallback.ts"],
+      coverageMode: "existing-only"
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.metrics[0]?.coveragePercent).toBe(100);
+    expect(result.metrics[0]?.coverage.unknownReason).toBeNull();
+  });
+
+  it("does not apply module-root suffix fallback to project-level combined coverage reports", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "packages/demo/package.json": '{"name":"demo","private":true}',
+      "packages/demo/src/index.ts": coveredFunctionSource("target"),
+      "coverage/coverage-final.json": JSON.stringify({
+        "/rebased/a/src/index.ts": coveredFunctionReport("/rebased/a/src/index.ts", 1),
+        "/rebased/b/src/index.ts": coveredFunctionReport("/rebased/b/src/index.ts", 0)
+      })
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      explicitPaths: ["packages/demo/src/index.ts"],
+      coverageMode: "existing-only"
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.metrics[0]?.coveragePercent).toBeNull();
+    expect(result.metrics[0]?.coverage.unknownReason).toBe("file_unmatched");
+  });
+
+  it("warns and reports N/A coverage when suffix matching is ambiguous", async () => {
+    const projectRoot = await createTempDir("crap-analysis-");
+    tempDirs.push(projectRoot);
+    const warnings: string[] = [];
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "src/index.ts": `export function target(flag: boolean): number {
+  if (flag) {
+    return 1;
+  }
+  return 0;
+}
+`,
+      "coverage/coverage-final.json": JSON.stringify({
+        "/rebased/a/src/index.ts": coveredFunctionReport("/rebased/a/src/index.ts", 1),
+        "/rebased/b/src/index.ts": coveredFunctionReport("/rebased/b/src/index.ts", 0)
+      })
+    });
+
+    const result = await analyzeProject({
+      projectRoot,
+      explicitPaths: ["src/index.ts"],
+      coverageMode: "existing-only",
+      stderr: {
+        write(chunk: string) {
+          warnings.push(chunk);
+        }
+      }
+    });
+
+    expect(result.warnings).toHaveLength(1);
+    expect(warnings.join("")).toContain("src/index.ts");
+    expect(warnings.join("")).toContain("matched 2 report entries");
+    expect(result.metrics[0]?.coveragePercent).toBeNull();
+    expect(result.metrics[0]?.crapScore).toBeNull();
+    expect(result.metrics[0]?.coverage.unknownReason).toBe("file_ambiguous");
+    expect(result.metrics[0]?.statementCoverage.unknownReason).toBe("file_ambiguous");
+    expect(result.metrics[0]?.branchCoverage.unknownReason).toBe("file_ambiguous");
+  });
+
   it("warns and reports fnMap conflicts as unknown coverage", async () => {
     const projectRoot = await createTempDir("crap-analysis-");
     tempDirs.push(projectRoot);
@@ -327,3 +466,29 @@ describe("analyzeProject", () => {
     expect(result.metrics[0]?.coverage.unknownReason).toBe("fnmap_conflict");
   });
 });
+
+function coveredFunctionSource(name: string): string {
+  return `export function ${name}(): number {
+  return 1;
+}
+`;
+}
+
+function coveredFunctionReport(sourcePath: string, hits: number): Record<string, unknown> {
+  return {
+    path: sourcePath,
+    statementMap: {
+      "0": {
+        start: { line: 2, column: 2 },
+        end: { line: 2, column: 10 }
+      }
+    },
+    fnMap: {},
+    branchMap: {},
+    s: {
+      "0": hits
+    },
+    f: {},
+    b: {}
+  };
+}

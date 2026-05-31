@@ -44,6 +44,19 @@
       ]
     },
     {
+      "name": "ambiguous suffix coverage paths",
+      "fixture": "compatibility-matrix/ambiguous-suffix-coverage",
+      "expectedWarnings": [
+        "Warning: Coverage for src/index.ts matched 2 report entries by suffix. Coverage will be N/A."
+      ],
+      "expectedMetrics": [
+        {
+          "name": "target",
+          "coverage": null
+        }
+      ]
+    },
+    {
       "name": "TSX parsing",
       "fixture": "compatibility-matrix/tsx-component",
       "expectedMetrics": [
