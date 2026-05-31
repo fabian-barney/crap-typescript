@@ -8,6 +8,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.4.1] - 2026-06-01
+
+### Changed
+
+- Updated CI and release tooling used by the release pipeline.
+
+### Fixed
+
+- Fixed ambiguous coverage source matching when multiple workspace paths share the same suffix.
+
 ## [0.4.0] - 2026-05-24
 
 ### Added
