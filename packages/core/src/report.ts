@@ -64,8 +64,8 @@ export interface FormatAnalysisReportOptions {
 type SerializableReport = AnalysisReport | AgentAnalysisReport;
 type ReportValue = string | number | null;
 type ReportFormatter = (report: SerializableReport, omitMethodStatus: boolean) => string;
-type MethodColumn = typeof METHOD_COLUMNS[number];
-type AgentMethodColumn = typeof AGENT_METHOD_COLUMNS[number];
+type MethodColumn = (typeof METHOD_COLUMNS)[number];
+type AgentMethodColumn = (typeof AGENT_METHOD_COLUMNS)[number];
 type XmlNode = Record<string, unknown>;
 
 interface JunitMethodCounts {
@@ -83,16 +83,18 @@ const REPORT_FORMATTERS: Record<ReportFormat, ReportFormatter> = {
 
 export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
   return [...metrics].sort((left, right) => {
-    return compareCrapScores(left.crapScore, right.crapScore)
-      || compareReportText(left.relativePath, right.relativePath)
-      || compareNumber(left.startLine, right.startLine)
-      || compareReportText(left.displayName, right.displayName)
-      || compareNumber(left.bodySpan.startColumn, right.bodySpan.startColumn)
-      || compareNumber(left.endLine, right.endLine)
-      || compareNumber(left.bodySpan.endLine, right.bodySpan.endLine)
-      || compareNumber(left.bodySpan.endColumn, right.bodySpan.endColumn)
-      || compareReportText(left.containerName ?? "", right.containerName ?? "")
-      || compareReportText(left.functionName, right.functionName);
+    return (
+      compareCrapScores(left.crapScore, right.crapScore) ||
+      compareReportText(left.relativePath, right.relativePath) ||
+      compareNumber(left.startLine, right.startLine) ||
+      compareReportText(left.displayName, right.displayName) ||
+      compareNumber(left.bodySpan.startColumn, right.bodySpan.startColumn) ||
+      compareNumber(left.endLine, right.endLine) ||
+      compareNumber(left.bodySpan.endLine, right.bodySpan.endLine) ||
+      compareNumber(left.bodySpan.endColumn, right.bodySpan.endColumn) ||
+      compareReportText(left.containerName ?? "", right.containerName ?? "") ||
+      compareReportText(left.functionName, right.functionName)
+    );
   });
 }
 
@@ -161,10 +163,7 @@ export function formatAnalysisReport(metrics: MethodMetrics[], options: FormatAn
   if (options.format === "junit") {
     return formatJunitReport(report as AnalysisReport, resolvedOptions.omitRedundancy, options.elapsedSeconds);
   }
-  return REPORT_FORMATTERS[options.format](
-    report,
-    resolvedOptions.omitRedundancy
-  );
+  return REPORT_FORMATTERS[options.format](report, resolvedOptions.omitRedundancy);
 }
 
 interface ResolvedFormatOptions {
@@ -210,9 +209,7 @@ export function formatReport(metrics: MethodMetrics[]): string {
 }
 
 export function formatToonReport(report: SerializableReport, agent = false): string {
-  const toonReport = agent && reportHasMethodStatus(report)
-    ? omitMethodStatuses(report)
-    : report;
+  const toonReport = agent && reportHasMethodStatus(report) ? omitMethodStatuses(report) : report;
   return `${encode(toonReport)}\n`;
 }
 
@@ -228,8 +225,8 @@ export function formatTextReport(report: SerializableReport, agent = false): str
   const rows = includeStatus
     ? report.methods.map((method) => METHOD_COLUMNS.map((column) => formatTextValue(column, method[column])))
     : (report as AgentAnalysisReport).methods.map((method) =>
-      AGENT_METHOD_COLUMNS.map((column) => formatTextValue(column, method[column]))
-  );
+        AGENT_METHOD_COLUMNS.map((column) => formatTextValue(column, method[column]))
+      );
   const widths = columns.map((column, index) =>
     rows.reduce((max, row) => Math.max(max, row[index]?.length ?? 0), column.length)
   );
@@ -241,7 +238,9 @@ export function formatTextReport(report: SerializableReport, agent = false): str
 }
 
 export function formatJunitReport(report: AnalysisReport, omitRedundancy = false, elapsedSeconds = 0): string {
-  return `${formatXmlDeclaration()}\n${createXmlBuilder().build(toJunitXml(report, omitRedundancy, elapsedSeconds)).trimEnd()}\n`;
+  return `${formatXmlDeclaration()}\n${createXmlBuilder()
+    .build(toJunitXml(report, omitRedundancy, elapsedSeconds))
+    .trimEnd()}\n`;
 }
 
 function toMethodReportEntry(metric: MethodMetrics, threshold: number): MethodReportEntry {
@@ -445,10 +444,12 @@ function sourceExclusionXmlProperties(sourceExclusions: SourceExclusionAudit | u
     toXmlProperty("sourceExclusions.excludedFiles", String(sourceExclusions.excludedFiles))
   ];
   sourceExclusions.reasons.forEach((reason, index) => {
-    properties.push(toXmlProperty(
-      `sourceExclusions.reason.${index}`,
-      `${reason.source} ${reason.kind} ${reason.rule}: ${reason.count}`
-    ));
+    properties.push(
+      toXmlProperty(
+        `sourceExclusions.reason.${index}`,
+        `${reason.source} ${reason.kind} ${reason.rule}: ${reason.count}`
+      )
+    );
   });
   return properties;
 }
@@ -475,12 +476,18 @@ function toJunitTestcaseXml(entry: MethodReportEntry, threshold: number, omitRed
     properties: {
       property: methodProperties(entry, omitRedundancy).map(([name, value]) => toXmlProperty(name, value))
     },
+    "system-out": junitDiagnosticText(entry, threshold),
     ...junitStatusXml(entry, threshold)
   };
 }
 
 function junitTestcaseName(entry: MethodReportEntry): string {
-  return `${entry.method}:${entry.lineStart}`;
+  const metrics = [
+    `CRAP=${formatNullableNumber(entry.crap)}`,
+    `CC=${entry.cc}`,
+    `Cov=${formatJunitDiagnosticPercent(entry.cov)} (${entry.covKind})`
+  ].join(", ");
+  return `${entry.method}:${entry.lineStart} [${metrics}]`;
 }
 
 function toXmlProperty(name: string, value: string): XmlNode {
