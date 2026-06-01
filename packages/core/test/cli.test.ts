@@ -13,7 +13,10 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
 });
 
-async function runPathValidation(args: string[], projectRoot: string): Promise<{
+async function runPathValidation(
+  args: string[],
+  projectRoot: string
+): Promise<{
   exitCode: number;
   stdout: string;
   stderr: string;
@@ -30,30 +33,32 @@ async function runPathValidation(args: string[], projectRoot: string): Promise<{
 
 describe("cli", () => {
   it("parses supported options", () => {
-    expect(parseCliArguments([
-      "--changed",
-      "--package-manager",
-      "npm",
-      "--test-runner",
-      "vitest",
-      "--format",
-      "json",
-      "--agent",
-      "--failures-only=false",
-      "--output",
-      "reports/crap.json",
-      "--junit-report",
-      "reports/crap.xml",
-      "--exclude",
-      "src/generated/**",
-      "--exclude",
-      "**/*.pb.ts",
-      "--exclude-path-regex",
-      "^src/proto/",
-      "--exclude-generated-marker",
-      "@custom-generated",
-      "--use-default-exclusions=false"
-    ])).toEqual({
+    expect(
+      parseCliArguments([
+        "--changed",
+        "--package-manager",
+        "npm",
+        "--test-runner",
+        "vitest",
+        "--format",
+        "json",
+        "--agent",
+        "--failures-only=false",
+        "--output",
+        "reports/crap.json",
+        "--junit-report",
+        "reports/crap.xml",
+        "--exclude",
+        "src/generated/**",
+        "--exclude",
+        "**/*.pb.ts",
+        "--exclude-path-regex",
+        "^src/proto/",
+        "--exclude-generated-marker",
+        "@custom-generated",
+        "--use-default-exclusions=false"
+      ])
+    ).toEqual({
       mode: "changed",
       fileArgs: [],
       packageManager: "npm",
@@ -143,7 +148,9 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--use-default-exclusions", "--use-default-exclusions=false"])).toThrow(
       "--use-default-exclusions can only be provided once"
     );
-    expect(() => parseCliArguments(["--package-manager"])).toThrow("--package-manager requires one of: auto, npm, pnpm, yarn, bun");
+    expect(() => parseCliArguments(["--package-manager"])).toThrow(
+      "--package-manager requires one of: auto, npm, pnpm, yarn, bun"
+    );
     expect(() => parseCliArguments(["--test-runner"])).toThrow("--test-runner requires one of: auto, vitest, jest");
     expect(() => parseCliArguments(["--format"])).toThrow("--format requires one of: toon, json, text, junit, none");
     expect(() => parseCliArguments(["--threshold"])).toThrow("--threshold requires a finite number greater than 0");
@@ -151,7 +158,9 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--junit-report"])).toThrow("--junit-report requires a path");
     expect(() => parseCliArguments(["--exclude"])).toThrow("--exclude requires a path");
     expect(() => parseCliArguments(["--exclude-path-regex"])).toThrow("--exclude-path-regex requires a regex");
-    expect(() => parseCliArguments(["--exclude-generated-marker"])).toThrow("--exclude-generated-marker requires a marker");
+    expect(() => parseCliArguments(["--exclude-generated-marker"])).toThrow(
+      "--exclude-generated-marker requires a marker"
+    );
     expect(() => parseCliArguments(["--package-manager", "pip"])).toThrow(
       "--package-manager requires one of: auto, npm, pnpm, yarn, bun"
     );
@@ -161,10 +170,18 @@ describe("cli", () => {
     expect(() => parseCliArguments(["--format", "agent"])).toThrow(
       "--format requires one of: toon, json, text, junit, none"
     );
-    expect(() => parseCliArguments(["--threshold", "0"])).toThrow("--threshold requires a finite number greater than 0");
-    expect(() => parseCliArguments(["--threshold", "-1"])).toThrow("--threshold requires a finite number greater than 0");
-    expect(() => parseCliArguments(["--threshold", "NaN"])).toThrow("--threshold requires a finite number greater than 0");
-    expect(() => parseCliArguments(["--threshold", "Infinity"])).toThrow("--threshold requires a finite number greater than 0");
+    expect(() => parseCliArguments(["--threshold", "0"])).toThrow(
+      "--threshold requires a finite number greater than 0"
+    );
+    expect(() => parseCliArguments(["--threshold", "-1"])).toThrow(
+      "--threshold requires a finite number greater than 0"
+    );
+    expect(() => parseCliArguments(["--threshold", "NaN"])).toThrow(
+      "--threshold requires a finite number greater than 0"
+    );
+    expect(() => parseCliArguments(["--threshold", "Infinity"])).toThrow(
+      "--threshold requires a finite number greater than 0"
+    );
     expect(() => parseCliArguments(["--failures-only=maybe"])).toThrow(
       "--failures-only requires true or false when a value is provided"
     );
@@ -191,18 +208,20 @@ describe("cli", () => {
   });
 
   it("parses inline values for value options without consuming following file arguments", () => {
-    expect(parseCliArguments([
-      "--package-manager=pnpm",
-      "--test-runner=jest",
-      "--format=json",
-      "--threshold=6",
-      "--output=reports/crap.json",
-      "--junit-report=reports/crap.xml",
-      "--exclude=**/*.pb.ts",
-      "--exclude-path-regex=^src/generated/",
-      "--exclude-generated-marker=DO NOT EDIT",
-      "src/app.ts"
-    ])).toMatchObject({
+    expect(
+      parseCliArguments([
+        "--package-manager=pnpm",
+        "--test-runner=jest",
+        "--format=json",
+        "--threshold=6",
+        "--output=reports/crap.json",
+        "--junit-report=reports/crap.xml",
+        "--exclude=**/*.pb.ts",
+        "--exclude-path-regex=^src/generated/",
+        "--exclude-generated-marker=DO NOT EDIT",
+        "src/app.ts"
+      ])
+    ).toMatchObject({
       mode: "explicit",
       fileArgs: ["src/app.ts"],
       packageManager: "pnpm",
@@ -251,14 +270,10 @@ describe("cli", () => {
   it("rejects identical primary and JUnit report paths", async () => {
     const projectRoot = await createTempDir("crap-cli-");
     tempDirs.push(projectRoot);
-    const result = await runPathValidation([
-      "--format",
-      "none",
-      "--output",
-      "reports/crap.xml",
-      "--junit-report",
-      "reports/crap.xml"
-    ], projectRoot);
+    const result = await runPathValidation(
+      ["--format", "none", "--output", "reports/crap.xml", "--junit-report", "reports/crap.xml"],
+      projectRoot
+    );
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("--output and --junit-report must target different report files");
@@ -270,14 +285,10 @@ describe("cli", () => {
     await mkdir(path.join(projectRoot, "real-reports"));
     await symlink(path.join(projectRoot, "real-reports"), path.join(projectRoot, "linked-reports"), "junction");
 
-    const result = await runPathValidation([
-      "--format",
-      "none",
-      "--output",
-      "real-reports/crap.xml",
-      "--junit-report",
-      "linked-reports/crap.xml"
-    ], projectRoot);
+    const result = await runPathValidation(
+      ["--format", "none", "--output", "real-reports/crap.xml", "--junit-report", "linked-reports/crap.xml"],
+      projectRoot
+    );
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("--output and --junit-report must target different report files");
@@ -287,14 +298,10 @@ describe("cli", () => {
     it("rejects case-insensitive report path collisions on Windows", async () => {
       const projectRoot = await createTempDir("crap-cli-");
       tempDirs.push(projectRoot);
-      const result = await runPathValidation([
-        "--format",
-        "none",
-        "--output",
-        "reports/CRAP.xml",
-        "--junit-report",
-        "reports/crap.xml"
-      ], projectRoot);
+      const result = await runPathValidation(
+        ["--format", "none", "--output", "reports/CRAP.xml", "--junit-report", "reports/crap.xml"],
+        projectRoot
+      );
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain("--output and --junit-report must target different report files");
@@ -304,14 +311,10 @@ describe("cli", () => {
       const projectRoot = await createTempDir("crap-cli-");
       const reportRoot = await createTempDir("crap-reports-");
       tempDirs.push(projectRoot, reportRoot);
-      const result = await runPathValidation([
-        "--format",
-        "none",
-        "--output",
-        path.join(reportRoot, "CRAP.xml"),
-        "--junit-report",
-        "reports/crap.xml"
-      ], projectRoot);
+      const result = await runPathValidation(
+        ["--format", "none", "--output", path.join(reportRoot, "CRAP.xml"), "--junit-report", "reports/crap.xml"],
+        projectRoot
+      );
 
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain("--output must target a report file inside the project root");
@@ -322,12 +325,7 @@ describe("cli", () => {
     const projectRoot = await createTempDir("crap-cli-");
     tempDirs.push(projectRoot);
     await mkdir(path.join(projectRoot, "reports"));
-    const result = await runPathValidation([
-      "--format",
-      "none",
-      "--output",
-      "reports"
-    ], projectRoot);
+    const result = await runPathValidation(["--format", "none", "--output", "reports"], projectRoot);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("--output must target a report file, not an existing directory");
@@ -339,12 +337,7 @@ describe("cli", () => {
     await mkdir(path.join(projectRoot, "reports"));
     await symlink(path.join(projectRoot, "reports"), path.join(projectRoot, "linked-reports"), "junction");
 
-    const result = await runPathValidation([
-      "--format",
-      "none",
-      "--output",
-      "linked-reports"
-    ], projectRoot);
+    const result = await runPathValidation(["--format", "none", "--output", "linked-reports"], projectRoot);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("--output must target a report file, not an existing directory");
@@ -353,12 +346,7 @@ describe("cli", () => {
   it("rejects filesystem root report targets", async () => {
     const projectRoot = await createTempDir("crap-cli-");
     tempDirs.push(projectRoot);
-    const result = await runPathValidation([
-      "--format",
-      "none",
-      "--output",
-      path.parse(projectRoot).root
-    ], projectRoot);
+    const result = await runPathValidation(["--format", "none", "--output", path.parse(projectRoot).root], projectRoot);
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("--output must target a report file, not a filesystem root");
@@ -543,15 +531,18 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const stdout = new StringWriter();
     const stderr = new StringWriter();
     const exitCode = await runCli(["--format", "text"], projectRoot, stdout, stderr);
-    const tableLines = stdout.toString().split("\n").filter((line) => line.startsWith("|"));
-    const pipePositions = tableLines.map((line) =>
-      [...line].flatMap((char, index) => char === "|" ? [index] : [])
-    );
+    const tableLines = stdout
+      .toString()
+      .split("\n")
+      .filter((line) => line.startsWith("|"));
+    const pipePositions = tableLines.map((line) => [...line].flatMap((char, index) => (char === "|" ? [index] : [])));
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("status: passed");
     expect(stdout.toString()).toContain("threshold: 8");
-    expect(tableLines[0]).toBe("| status | crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |");
+    expect(tableLines[0]).toBe(
+      "| status | crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |"
+    );
     expect(new Set(pipePositions.map((positions) => positions.join(","))).size).toBe(1);
     expect(stderr.toString()).toBe("");
   });
@@ -642,15 +633,12 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     const stdout = new StringWriter();
     const stderr = new StringWriter();
-    const exitCode = await runCli([
-      "--agent",
-      "--format",
-      "json",
-      "--output",
-      "reports/crap.json",
-      "--junit-report",
-      "reports/crap.xml"
-    ], projectRoot, stdout, stderr);
+    const exitCode = await runCli(
+      ["--agent", "--format", "json", "--output", "reports/crap.json", "--junit-report", "reports/crap.xml"],
+      projectRoot,
+      stdout,
+      stderr
+    );
 
     const primary = JSON.parse(await readText(`${projectRoot}/reports/crap.json`)) as {
       status: string;
@@ -669,23 +657,28 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(primary.methods[0]).not.toHaveProperty("threshold");
     expect(primary).not.toHaveProperty("sourceExclusions");
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="safe:1"');
-    expect(junit).toContain('name="risky:5"');
+    expect(junit).toContain('name="safe:1 [CRAP=');
+    expect(junit).toContain('name="risky:5 [CRAP=');
     expect(junit).toContain('name="sourceExclusions.candidateFiles" value="2"');
     expect(Number.parseFloat(junit.match(/<testsuites [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
 
     const overrideStdout = new StringWriter();
     const overrideStderr = new StringWriter();
-    const overrideExitCode = await runCli([
-      "--agent",
-      "--format",
-      "json",
-      "--failures-only=false",
-      "--omit-redundancy=false",
-      "--output",
-      "reports/full.json"
-    ], projectRoot, overrideStdout, overrideStderr);
+    const overrideExitCode = await runCli(
+      [
+        "--agent",
+        "--format",
+        "json",
+        "--failures-only=false",
+        "--omit-redundancy=false",
+        "--output",
+        "reports/full.json"
+      ],
+      projectRoot,
+      overrideStdout,
+      overrideStderr
+    );
     const fullPrimary = JSON.parse(await readText(`${projectRoot}/reports/full.json`)) as {
       methods: Array<Record<string, unknown>>;
     };
@@ -790,15 +783,12 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     const stdout = new StringWriter();
     const stderr = new StringWriter();
-    const exitCode = await runCli([
-      "--failures-only",
-      "--format",
-      "json",
-      "--output",
-      "reports/crap.json",
-      "--junit-report",
-      "reports/crap.xml"
-    ], projectRoot, stdout, stderr);
+    const exitCode = await runCli(
+      ["--failures-only", "--format", "json", "--output", "reports/crap.json", "--junit-report", "reports/crap.xml"],
+      projectRoot,
+      stdout,
+      stderr
+    );
 
     const primary = JSON.parse(await readText(`${projectRoot}/reports/crap.json`)) as {
       status: string;
@@ -817,8 +807,8 @@ export function risky(flagA: boolean, flagB: boolean): number {
       method: "risky"
     });
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="safe:1"');
-    expect(junit).toContain('name="risky:5"');
+    expect(junit).toContain('name="safe:1 [CRAP=');
+    expect(junit).toContain('name="risky:5 [CRAP=');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
   });
 
@@ -874,15 +864,12 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     const stdout = new StringWriter();
     const stderr = new StringWriter();
-    const exitCode = await runCli([
-      "--omit-redundancy",
-      "--format",
-      "json",
-      "--output",
-      "reports/crap.json",
-      "--junit-report",
-      "reports/crap.xml"
-    ], projectRoot, stdout, stderr);
+    const exitCode = await runCli(
+      ["--omit-redundancy", "--format", "json", "--output", "reports/crap.json", "--junit-report", "reports/crap.xml"],
+      projectRoot,
+      stdout,
+      stderr
+    );
 
     const primary = JSON.parse(await readText(`${projectRoot}/reports/crap.json`)) as {
       status: string;
@@ -901,7 +888,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
       method: "safe"
     });
     expect(junit).toContain('tests="1"');
-    expect(junit).toContain('name="safe:1"');
+    expect(junit).toContain('name="safe:1 [CRAP=');
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(stderr.toString()).toBe("");
   });
@@ -937,15 +924,20 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     const stdout = new StringWriter();
     const stderr = new StringWriter();
-    const exitCode = await runCli([
-      "--omit-redundancy",
-      "--format",
-      "junit",
-      "--output",
-      "reports/primary.xml",
-      "--junit-report",
-      "reports/sidecar.xml"
-    ], projectRoot, stdout, stderr);
+    const exitCode = await runCli(
+      [
+        "--omit-redundancy",
+        "--format",
+        "junit",
+        "--output",
+        "reports/primary.xml",
+        "--junit-report",
+        "reports/sidecar.xml"
+      ],
+      projectRoot,
+      stdout,
+      stderr
+    );
 
     const primary = await readText(`${projectRoot}/reports/primary.xml`);
     const sidecar = await readText(`${projectRoot}/reports/sidecar.xml`);
@@ -953,10 +945,10 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toBe("");
     expect(primary).toContain('tests="1"');
-    expect(primary).toContain('name="safe:1"');
+    expect(primary).toContain('name="safe:1 [CRAP=');
     expect(primary).not.toContain('<property name="status"');
     expect(sidecar).toContain('tests="1"');
-    expect(sidecar).toContain('name="safe:1"');
+    expect(sidecar).toContain('name="safe:1 [CRAP=');
     expect(sidecar).toContain('<property name="status" value="passed"/>');
     expect(stderr.toString()).toBe("");
   });
@@ -992,14 +984,12 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     const stdout = new StringWriter();
     const stderr = new StringWriter();
-    const exitCode = await runCli([
-      "--format",
-      "none",
-      "--output",
-      "reports/primary.txt",
-      "--junit-report",
-      "reports/sidecar.xml"
-    ], projectRoot, stdout, stderr);
+    const exitCode = await runCli(
+      ["--format", "none", "--output", "reports/primary.txt", "--junit-report", "reports/sidecar.xml"],
+      projectRoot,
+      stdout,
+      stderr
+    );
 
     const primary = await readText(`${projectRoot}/reports/primary.txt`);
     const sidecar = await readText(`${projectRoot}/reports/sidecar.xml`);
@@ -1008,7 +998,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(stdout.toString()).toBe("");
     expect(primary).toBe("");
     expect(sidecar).toContain('tests="1"');
-    expect(sidecar).toContain('name="safe:1"');
+    expect(sidecar).toContain('name="safe:1 [CRAP=');
     expect(sidecar).toContain('<property name="status" value="passed"/>');
     expect(stderr.toString()).toBe("");
   });

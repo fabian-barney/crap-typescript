@@ -405,7 +405,9 @@ describe("CrapTypescriptJestReporter", () => {
     await callFinalize(reporter);
 
     expect(stdout.toString()).toBe("status: passed\nthreshold: 9.0\n");
-    expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain('<property name="threshold" value="9.0"/>');
+    expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain(
+      '<property name="threshold" value="9.0"/>'
+    );
     expect(stderr.toString()).toContain("CRAP threshold above 8.0 is too lenient");
   });
 
@@ -551,8 +553,8 @@ describe("CrapTypescriptJestReporter", () => {
     ]);
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="safe:1"');
-    expect(junit).toContain('name="risky:5"');
+    expect(junit).toContain('name="safe:1 [CRAP=');
+    expect(junit).toContain('name="risky:5 [CRAP=');
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(junit).toContain('<property name="status" value="failed"/>');
     expect(Number.parseFloat(junit.match(/<testsuite [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);

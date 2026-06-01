@@ -26,7 +26,10 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map(disposeTempDir));
 });
 
-async function finishWithOptions(projectRoot: string, options: CrapTypescriptVitestOptions): Promise<{
+async function finishWithOptions(
+  projectRoot: string,
+  options: CrapTypescriptVitestOptions
+): Promise<{
   stdout: StringWriter;
   stderr: StringWriter;
 }> {
@@ -171,7 +174,6 @@ describe("CrapTypescriptVitestReporter", () => {
     expect(process.exitCode).toBe(1);
   });
 
-
   it("honors custom thresholds and emits threshold warnings", async () => {
     const projectRoot = await createTempDir("crap-vitest-reporter-");
     tempDirs.push(projectRoot);
@@ -192,7 +194,9 @@ describe("CrapTypescriptVitestReporter", () => {
     await reporter.onFinishedReportCoverage();
 
     expect(stdout.toString()).toBe("status: passed\nthreshold: 9.0\n");
-    expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain('<property name="threshold" value="9.0"/>');
+    expect(await readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).toContain(
+      '<property name="threshold" value="9.0"/>'
+    );
     expect(stderr.toString()).toContain("CRAP threshold above 8.0 is too lenient");
   });
 
@@ -335,8 +339,8 @@ describe("CrapTypescriptVitestReporter", () => {
     ]);
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(junit).toContain('tests="2"');
-    expect(junit).toContain('name="safe:1"');
-    expect(junit).toContain('name="risky:5"');
+    expect(junit).toContain('name="safe:1 [CRAP=');
+    expect(junit).toContain('name="risky:5 [CRAP=');
     expect(junit).toContain('<property name="status" value="passed"/>');
     expect(junit).toContain('<property name="status" value="failed"/>');
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
@@ -431,7 +435,9 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await expect(reporter.onFinishedReportCoverage()).resolves.toBeUndefined();
 
-    expect(stdout.toString()).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0"');
+    expect(stdout.toString()).toContain(
+      '<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0"'
+    );
     expect(Number.parseFloat(stdout.toString().match(/<testsuite [^>]*time="([^"]+)"/)?.[1] ?? "0")).toBeGreaterThan(0);
     expect(stdout.toString()).not.toContain('<property name="status"');
     expect(stderr.toString()).toBe("");

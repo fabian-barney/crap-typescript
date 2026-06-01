@@ -268,10 +268,12 @@ describe("report formatting", () => {
   });
 
   it("includes source exclusion audit in full reports and JUnit sidecars", () => {
-    const parsed = JSON.parse(formatAnalysisReport([metric()], {
-      format: "json",
-      sourceExclusionAudit
-    })) as {
+    const parsed = JSON.parse(
+      formatAnalysisReport([metric()], {
+        format: "json",
+        sourceExclusionAudit
+      })
+    ) as {
       sourceExclusions: SourceExclusionAudit;
     };
     const text = formatAnalysisReport([metric()], {
@@ -291,43 +293,57 @@ describe("report formatting", () => {
   });
 
   it("omits source exclusion audit from optimized agent primary reports", () => {
-    const compactAgent = JSON.parse(formatAnalysisReport([metric({
-      displayName: "risky",
-      complexity: 4,
-      coverage: measured(0),
-      statementCoverage: measured(0),
-      branchCoverage: measured(0),
-      coveragePercent: 0,
-      crapScore: 20
-    })], {
-      format: "json",
-      agent: true,
-      sourceExclusionAudit
-    })) as Record<string, unknown>;
-    const fullAgentOverride = JSON.parse(formatAnalysisReport([metric()], {
-      format: "json",
-      agent: true,
-      failuresOnly: false,
-      omitRedundancy: false,
-      sourceExclusionAudit
-    })) as Record<string, unknown>;
+    const compactAgent = JSON.parse(
+      formatAnalysisReport(
+        [
+          metric({
+            displayName: "risky",
+            complexity: 4,
+            coverage: measured(0),
+            statementCoverage: measured(0),
+            branchCoverage: measured(0),
+            coveragePercent: 0,
+            crapScore: 20
+          })
+        ],
+        {
+          format: "json",
+          agent: true,
+          sourceExclusionAudit
+        }
+      )
+    ) as Record<string, unknown>;
+    const fullAgentOverride = JSON.parse(
+      formatAnalysisReport([metric()], {
+        format: "json",
+        agent: true,
+        failuresOnly: false,
+        omitRedundancy: false,
+        sourceExclusionAudit
+      })
+    ) as Record<string, unknown>;
 
     expect(compactAgent).not.toHaveProperty("sourceExclusions");
     expect(fullAgentOverride).toHaveProperty("sourceExclusions");
   });
 
   it("uses configured thresholds for method status and report metadata", () => {
-    const parsed = JSON.parse(formatAnalysisReport([
-      metric({
-        displayName: "borderline",
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "json", threshold: 21 })) as {
+    const parsed = JSON.parse(
+      formatAnalysisReport(
+        [
+          metric({
+            displayName: "borderline",
+            complexity: 4,
+            coverage: measured(0),
+            statementCoverage: measured(0),
+            branchCoverage: measured(0),
+            coveragePercent: 0,
+            crapScore: 20
+          })
+        ],
+        { format: "json", threshold: 21 }
+      )
+    ) as {
       status: string;
       threshold: number;
       methods: Array<{ status: string }>;
@@ -339,20 +355,25 @@ describe("report formatting", () => {
   });
 
   it("filters primary reports to failed methods without changing run metadata", () => {
-    const parsed = JSON.parse(formatAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        startLine: 5,
-        endLine: 10,
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "json", failuresOnly: true })) as {
+    const parsed = JSON.parse(
+      formatAnalysisReport(
+        [
+          metric(),
+          metric({
+            displayName: "risky",
+            startLine: 5,
+            endLine: 10,
+            complexity: 4,
+            coverage: measured(0),
+            statementCoverage: measured(0),
+            branchCoverage: measured(0),
+            coveragePercent: 0,
+            crapScore: 20
+          })
+        ],
+        { format: "json", failuresOnly: true }
+      )
+    ) as {
       status: string;
       threshold: number;
       methods: Array<{ status: string; method: string }>;
@@ -369,20 +390,25 @@ describe("report formatting", () => {
   });
 
   it("omits redundant method statuses without changing run metadata", () => {
-    const parsed = JSON.parse(formatAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        startLine: 5,
-        endLine: 10,
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "json", omitRedundancy: true })) as {
+    const parsed = JSON.parse(
+      formatAnalysisReport(
+        [
+          metric(),
+          metric({
+            displayName: "risky",
+            startLine: 5,
+            endLine: 10,
+            complexity: 4,
+            coverage: measured(0),
+            statementCoverage: measured(0),
+            branchCoverage: measured(0),
+            coveragePercent: 0,
+            crapScore: 20
+          })
+        ],
+        { format: "json", omitRedundancy: true }
+      )
+    ) as {
       status: string;
       threshold: number;
       methods: Array<Record<string, unknown>>;
@@ -402,20 +428,25 @@ describe("report formatting", () => {
   });
 
   it("uses agent as failures-only plus omit-redundancy defaults", () => {
-    const parsed = JSON.parse(formatAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        startLine: 5,
-        endLine: 10,
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "json", agent: true })) as {
+    const parsed = JSON.parse(
+      formatAnalysisReport(
+        [
+          metric(),
+          metric({
+            displayName: "risky",
+            startLine: 5,
+            endLine: 10,
+            complexity: 4,
+            coverage: measured(0),
+            statementCoverage: measured(0),
+            branchCoverage: measured(0),
+            coveragePercent: 0,
+            crapScore: 20
+          })
+        ],
+        { format: "json", agent: true }
+      )
+    ) as {
       status: string;
       threshold: number;
       methods: Array<Record<string, unknown>>;
@@ -432,25 +463,30 @@ describe("report formatting", () => {
   });
 
   it("lets explicit report options override agent defaults", () => {
-    const parsed = JSON.parse(formatAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        startLine: 5,
-        endLine: 10,
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], {
-      format: "json",
-      agent: true,
-      failuresOnly: false,
-      omitRedundancy: false
-    })) as {
+    const parsed = JSON.parse(
+      formatAnalysisReport(
+        [
+          metric(),
+          metric({
+            displayName: "risky",
+            startLine: 5,
+            endLine: 10,
+            complexity: 4,
+            coverage: measured(0),
+            statementCoverage: measured(0),
+            branchCoverage: measured(0),
+            coveragePercent: 0,
+            crapScore: 20
+          })
+        ],
+        {
+          format: "json",
+          agent: true,
+          failuresOnly: false,
+          omitRedundancy: false
+        }
+      )
+    ) as {
       methods: Array<{ status: string; method: string }>;
     };
 
@@ -466,18 +502,21 @@ describe("report formatting", () => {
   });
 
   it("omits redundant method statuses from TOON reports", () => {
-    const output = formatAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "toon", omitRedundancy: true });
+    const output = formatAnalysisReport(
+      [
+        metric(),
+        metric({
+          displayName: "risky",
+          complexity: 4,
+          coverage: measured(0),
+          statementCoverage: measured(0),
+          branchCoverage: measured(0),
+          coveragePercent: 0,
+          crapScore: 20
+        })
+      ],
+      { format: "toon", omitRedundancy: true }
+    );
 
     expect(output).toContain("status: failed");
     expect(output).toContain("threshold: 8");
@@ -488,18 +527,21 @@ describe("report formatting", () => {
   });
 
   it("omits redundant method statuses from text reports", () => {
-    const output = formatAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "text", omitRedundancy: true });
+    const output = formatAnalysisReport(
+      [
+        metric(),
+        metric({
+          displayName: "risky",
+          complexity: 4,
+          coverage: measured(0),
+          statementCoverage: measured(0),
+          branchCoverage: measured(0),
+          coveragePercent: 0,
+          crapScore: 20
+        })
+      ],
+      { format: "text", omitRedundancy: true }
+    );
     const tableLines = output.split("\n").filter((line) => line.startsWith("|"));
 
     expect(output).toContain("status: failed");
@@ -511,35 +553,45 @@ describe("report formatting", () => {
   });
 
   it("omits redundant JUnit status properties while preserving failure elements", () => {
-    const output = formatAnalysisReport([
-      metric({
-        displayName: "risky",
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "junit", omitRedundancy: true });
+    const output = formatAnalysisReport(
+      [
+        metric({
+          displayName: "risky",
+          complexity: 4,
+          coverage: measured(0),
+          statementCoverage: measured(0),
+          branchCoverage: measured(0),
+          coveragePercent: 0,
+          crapScore: 20
+        })
+      ],
+      { format: "junit", omitRedundancy: true }
+    );
 
-    expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0" time="0">');
+    expect(output).toContain(
+      '<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0" time="0">'
+    );
     expect(output).toContain("<failure");
     expect(output).not.toContain('<property name="status"');
   });
 
   it("returns empty primary content for none reports", () => {
-    expect(formatAnalysisReport([
-      metric({
-        displayName: "risky",
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "none" })).toBe("");
+    expect(
+      formatAnalysisReport(
+        [
+          metric({
+            displayName: "risky",
+            complexity: 4,
+            coverage: measured(0),
+            statementCoverage: measured(0),
+            branchCoverage: measured(0),
+            coveragePercent: 0,
+            crapScore: 20
+          })
+        ],
+        { format: "none" }
+      )
+    ).toBe("");
   });
 
   it("validates thresholds before returning empty none reports", () => {
@@ -549,22 +601,25 @@ describe("report formatting", () => {
   });
 
   it("allows agent defaults with primary JUnit reports", () => {
-    const output = formatAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ], { format: "junit", agent: true });
+    const output = formatAnalysisReport(
+      [
+        metric(),
+        metric({
+          displayName: "risky",
+          complexity: 4,
+          coverage: measured(0),
+          statementCoverage: measured(0),
+          branchCoverage: measured(0),
+          coveragePercent: 0,
+          crapScore: 20
+        })
+      ],
+      { format: "junit", agent: true }
+    );
 
     expect(output).toContain('tests="1"');
-    expect(output).toContain('name="risky:1"');
-    expect(output).not.toContain('name="safe:1"');
+    expect(output).toContain('name="risky:1 [CRAP=20.0, CC=4, Cov=0.0% (stmt)]"');
+    expect(output).not.toContain('name="safe:1 [');
     expect(output).not.toContain('<property name="status"');
   });
 
@@ -595,7 +650,7 @@ describe("report formatting", () => {
   it("formats full TOON reports with quoted strings and null values through the official encoder", () => {
     const report = buildAnalysisReport([
       metric({
-        displayName: "risky \"quoted\", value",
+        displayName: 'risky "quoted", value',
         relativePath: "src/a,b.ts",
         complexity: 4,
         coverage: measured(0),
@@ -621,28 +676,30 @@ describe("report formatting", () => {
   });
 
   it("formats text reports with aligned method columns", () => {
-    const output = formatTextReport(buildAnalysisReport([
-      metric(),
-      metric({
-        displayName: "risky",
-        startLine: 15,
-        endLine: 120,
-        complexity: 12,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 120
-      })
-    ]));
-    const tableLines = output.split("\n").filter((line) => line.startsWith("|"));
-    const pipePositions = tableLines.map((line) =>
-      [...line].flatMap((char, index) => char === "|" ? [index] : [])
+    const output = formatTextReport(
+      buildAnalysisReport([
+        metric(),
+        metric({
+          displayName: "risky",
+          startLine: 15,
+          endLine: 120,
+          complexity: 12,
+          coverage: measured(0),
+          statementCoverage: measured(0),
+          branchCoverage: measured(0),
+          coveragePercent: 0,
+          crapScore: 120
+        })
+      ])
     );
+    const tableLines = output.split("\n").filter((line) => line.startsWith("|"));
+    const pipePositions = tableLines.map((line) => [...line].flatMap((char, index) => (char === "|" ? [index] : [])));
 
     expect(output).toContain("status: failed");
     expect(output).toContain("threshold: 8.0");
-    expect(tableLines[0]).toBe("| status |  crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |");
+    expect(tableLines[0]).toBe(
+      "| status |  crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |"
+    );
     expect(new Set(pipePositions.map((positions) => positions.join(","))).size).toBe(1);
     expect(output).toContain("safe");
     expect(output).not.toContain("Summary");
@@ -658,24 +715,30 @@ describe("report formatting", () => {
   });
 
   it("formats JUnit XML with testcase properties and escaped values", () => {
-    const output = formatJunitReport(buildAnalysisReport([
-      metric({
-        displayName: "risky \"quoted\" <value>",
-        relativePath: "src/\"special\"&file.ts",
-        complexity: 4,
-        coverage: measured(0),
-        statementCoverage: measured(0),
-        branchCoverage: measured(0),
-        coveragePercent: 0,
-        crapScore: 20
-      })
-    ]));
+    const output = formatJunitReport(
+      buildAnalysisReport([
+        metric({
+          displayName: 'risky "quoted" <value>',
+          relativePath: 'src/"special"&file.ts',
+          complexity: 4,
+          coverage: measured(0),
+          statementCoverage: measured(0),
+          branchCoverage: measured(0),
+          coveragePercent: 0,
+          crapScore: 20
+        })
+      ])
+    );
 
-    expect(output).toContain('<testsuites name="crap-typescript" tests="1" failures="1" skipped="0" errors="0" time="0">');
-    expect(output).toContain('<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0" time="0">');
+    expect(output).toContain(
+      '<testsuites name="crap-typescript" tests="1" failures="1" skipped="0" errors="0" time="0">'
+    );
+    expect(output).toContain(
+      '<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0" time="0">'
+    );
     expect(output).toContain('<property name="threshold" value="8.0"/>');
     expect(output).toContain('classname="src/&quot;special&quot;&amp;file.ts"');
-    expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;:1"');
+    expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;:1 [CRAP=20.0, CC=4, Cov=0.0% (stmt)]"');
     expect(output).toContain('file="src/&quot;special&quot;&amp;file.ts"');
     expect(output).toContain('time="0"');
     expect(output).toContain('<property name="status" value="failed"/>');
@@ -687,6 +750,7 @@ describe("report formatting", () => {
     expect(output).toContain("CRAP score: 20.0");
     expect(output).toContain("Threshold: 8.0");
     expect(output).toContain("Coverage: 0.0% (stmt)");
+    expect(output).toContain("<system-out>CRAP score: 20.0");
     expect(output).toContain("Source: src/");
     expect(output).toContain(":1-3");
     expect(output.endsWith("\n")).toBe(true);
@@ -694,39 +758,54 @@ describe("report formatting", () => {
   });
 
   it("formats unavailable JUnit numeric properties as empty values", () => {
-    const output = formatJunitReport(buildAnalysisReport([
-      metric({
-        displayName: "missingCoverage",
-        coverage: unknown("missing_report"),
-        statementCoverage: unknown("missing_report"),
-        branchCoverage: unknown("missing_report"),
-        coveragePercent: null,
-        crapScore: null
-      })
-    ]));
+    const output = formatJunitReport(
+      buildAnalysisReport([
+        metric({
+          displayName: "missingCoverage",
+          coverage: unknown("missing_report"),
+          statementCoverage: unknown("missing_report"),
+          branchCoverage: unknown("missing_report"),
+          coveragePercent: null,
+          crapScore: null
+        })
+      ])
+    );
 
     expect(output).toContain('<property name="crap" value=""/>');
     expect(output).toContain('<property name="cov" value=""/>');
+    expect(output).toContain('name="missingCoverage:1 [CRAP=N/A, CC=1, Cov=N/A (N/A)]"');
     expect(output).toContain("<skipped");
     expect(output).toContain("CRAP score: N/A");
     expect(output).toContain("Threshold: 8.0");
     expect(output).toContain("Coverage: N/A (N/A)");
+    expect(output).toContain("<system-out>CRAP score: N/A");
     expect(output).toContain("Source: src/sample.ts:1-3");
   });
 
   it("formats JUnit suite times from elapsed seconds without changing testcase times", () => {
     const output = formatJunitReport(buildAnalysisReport([metric()]), false, 1.2345);
 
-    expect(output).toContain('<testsuites name="crap-typescript" tests="1" failures="0" skipped="0" errors="0" time="1.234">');
-    expect(output).toContain('<testsuite name="crap-typescript" status="passed" tests="1" failures="0" skipped="0" errors="0" time="1.234">');
-    expect(output).toContain('<testcase classname="src/sample.ts" name="safe:1" file="src/sample.ts" time="0" line="1">');
+    expect(output).toContain(
+      '<testsuites name="crap-typescript" tests="1" failures="0" skipped="0" errors="0" time="1.234">'
+    );
+    expect(output).toContain(
+      '<testsuite name="crap-typescript" status="passed" tests="1" failures="0" skipped="0" errors="0" time="1.234">'
+    );
+    expect(output).toContain(
+      '<testcase classname="src/sample.ts" name="safe:1 [CRAP=1.0, CC=1, Cov=100.0% (stmt)]" file="src/sample.ts" time="0" line="1">'
+    );
+    expect(output).toContain("<system-out>CRAP score: 1.0");
   });
 
   it("formats empty JUnit reports without testcase elements", () => {
     const output = formatJunitReport(buildAnalysisReport([]));
 
-    expect(output).toContain('<testsuites name="crap-typescript" tests="0" failures="0" skipped="0" errors="0" time="0">');
-    expect(output).toContain('<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0" time="0">');
+    expect(output).toContain(
+      '<testsuites name="crap-typescript" tests="0" failures="0" skipped="0" errors="0" time="0">'
+    );
+    expect(output).toContain(
+      '<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0" time="0">'
+    );
     expect(output).toContain('<property name="threshold" value="8.0"/>');
     expect(output).not.toContain("<testcase");
     expect(output.endsWith("\n")).toBe(true);
