@@ -8,6 +8,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.4.2] - 2026-06-19
+
+### Changed
+
+- Updated vite from 8.0.15 to 8.0.16.
+
 ## [0.4.1] - 2026-06-01
 
 ### Changed
