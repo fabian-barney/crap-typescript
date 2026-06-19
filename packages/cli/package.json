@@ -1,6 +1,6 @@
 {
   "name": "@barney-media/crap-typescript",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "CLI for CRAP metric analysis in TypeScript projects.",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",

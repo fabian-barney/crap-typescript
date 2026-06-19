@@ -1,6 +1,6 @@
 {
   "name": "@barney-media/crap-typescript-jest",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Jest integration for crap-typescript.",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
