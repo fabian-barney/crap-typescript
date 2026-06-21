@@ -102,7 +102,7 @@ describe("report formatting", () => {
     ]);
 
     expect(report.status).toBe("failed");
-    expect(report.threshold).toBe(8);
+    expect(report.threshold).toBe(6);
     expect(report.methods).toMatchObject([
       {
         status: "failed",
@@ -251,7 +251,7 @@ describe("report formatting", () => {
 
     expect(Object.keys(parsed)).toEqual(["status", "threshold", "methods"]);
     expect(parsed.status).toBe("passed");
-    expect(parsed.threshold).toBe(8);
+    expect(parsed.threshold).toBe(6);
     expect(parsed.methods).toEqual([
       {
         status: "passed",
@@ -380,7 +380,7 @@ describe("report formatting", () => {
     };
 
     expect(parsed.status).toBe("failed");
-    expect(parsed.threshold).toBe(8);
+    expect(parsed.threshold).toBe(6);
     expect(parsed.methods).toEqual([
       expect.objectContaining({
         status: "failed",
@@ -415,7 +415,7 @@ describe("report formatting", () => {
     };
 
     expect(parsed.status).toBe("failed");
-    expect(parsed.threshold).toBe(8);
+    expect(parsed.threshold).toBe(6);
     expect(parsed.methods).toHaveLength(2);
     expect(parsed.methods[0]).not.toHaveProperty("status");
     expect(parsed.methods[0]).toMatchObject({
@@ -453,7 +453,7 @@ describe("report formatting", () => {
     };
 
     expect(parsed.status).toBe("failed");
-    expect(parsed.threshold).toBe(8);
+    expect(parsed.threshold).toBe(6);
     expect(parsed.methods).toEqual([
       expect.objectContaining({
         method: "risky"
@@ -519,7 +519,7 @@ describe("report formatting", () => {
     );
 
     expect(output).toContain("status: failed");
-    expect(output).toContain("threshold: 8");
+    expect(output).toContain("threshold: 6");
     expect(output).toContain("methods[2]{crap,cc,cov,covKind,method,src,lineStart,lineEnd}:");
     expect(output).toContain("risky");
     expect(output).toContain("safe");
@@ -545,7 +545,7 @@ describe("report formatting", () => {
     const tableLines = output.split("\n").filter((line) => line.startsWith("|"));
 
     expect(output).toContain("status: failed");
-    expect(output).toContain("threshold: 8.0");
+    expect(output).toContain("threshold: 6.0");
     expect(tableLines[0]).toBe("| crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |");
     expect(output).toContain("risky");
     expect(output).toContain("safe");
@@ -640,7 +640,7 @@ describe("report formatting", () => {
 
     expect(output).toBe(`${encode(report)}\n`);
     expect(output).toContain("status: failed");
-    expect(output).toContain("threshold: 8");
+    expect(output).toContain("threshold: 6");
     expect(output).toContain("methods[1]{crap,cc,cov,covKind,method,src,lineStart,lineEnd}:");
     expect(output).toContain("risky value");
     expect(output).not.toContain("safe");
@@ -696,7 +696,7 @@ describe("report formatting", () => {
     const pipePositions = tableLines.map((line) => [...line].flatMap((char, index) => (char === "|" ? [index] : [])));
 
     expect(output).toContain("status: failed");
-    expect(output).toContain("threshold: 8.0");
+    expect(output).toContain("threshold: 6.0");
     expect(tableLines[0]).toBe(
       "| status |  crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |"
     );
@@ -711,7 +711,7 @@ describe("report formatting", () => {
 
     expect(formatToonReport(report)).toBe(`${encode(report)}\n`);
     expect(formatToonReport(agentReport, true)).toBe(`${encode(agentReport)}\n`);
-    expect(formatToonReport(report)).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
+    expect(formatToonReport(report)).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
   });
 
   it("formats JUnit XML with testcase properties and escaped values", () => {
@@ -736,7 +736,7 @@ describe("report formatting", () => {
     expect(output).toContain(
       '<testsuite name="crap-typescript" status="failed" tests="1" failures="1" skipped="0" errors="0" time="0">'
     );
-    expect(output).toContain('<property name="threshold" value="8.0"/>');
+    expect(output).toContain('<property name="threshold" value="6.0"/>');
     expect(output).toContain('classname="src/&quot;special&quot;&amp;file.ts"');
     expect(output).toContain('name="risky &quot;quoted&quot; &lt;value&gt;:1 [CRAP=20.0, CC=4, Cov=0.0% (stmt)]"');
     expect(output).toContain('file="src/&quot;special&quot;&amp;file.ts"');
@@ -748,7 +748,7 @@ describe("report formatting", () => {
     expect(output.match(/property name="threshold"/g)).toHaveLength(1);
     expect(output).toContain("<failure");
     expect(output).toContain("CRAP score: 20.0");
-    expect(output).toContain("Threshold: 8.0");
+    expect(output).toContain("Threshold: 6.0");
     expect(output).toContain("Coverage: 0.0% (stmt)");
     expect(output).toContain("<system-out>CRAP score: 20.0");
     expect(output).toContain("Source: src/");
@@ -776,7 +776,7 @@ describe("report formatting", () => {
     expect(output).toContain('name="missingCoverage:1 [CRAP=N/A, CC=1, Cov=N/A (N/A)]"');
     expect(output).toContain("<skipped");
     expect(output).toContain("CRAP score: N/A");
-    expect(output).toContain("Threshold: 8.0");
+    expect(output).toContain("Threshold: 6.0");
     expect(output).toContain("Coverage: N/A (N/A)");
     expect(output).toContain("<system-out>CRAP score: N/A");
     expect(output).toContain("Source: src/sample.ts:1-3");
@@ -806,7 +806,7 @@ describe("report formatting", () => {
     expect(output).toContain(
       '<testsuite name="crap-typescript" status="passed" tests="0" failures="0" skipped="0" errors="0" time="0">'
     );
-    expect(output).toContain('<property name="threshold" value="8.0"/>');
+    expect(output).toContain('<property name="threshold" value="6.0"/>');
     expect(output).not.toContain("<testcase");
     expect(output.endsWith("\n")).toBe(true);
     expect(output.endsWith("\n\n")).toBe(false);

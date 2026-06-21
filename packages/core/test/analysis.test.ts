@@ -26,17 +26,40 @@ describe("analyzeProject", () => {
       "packages/package-a/src/math.ts",
       "packages/package-b/src/text.ts"
     ]);
-    expect(result.metrics.map((metric) => ({
-      name: metric.displayName,
-      coverage: metric.coveragePercent === null ? null : Number(metric.coveragePercent.toFixed(1)),
-      crap: metric.crapScore === null ? null : Number(metric.crapScore.toFixed(1)),
-      coverageStatus: metric.coverage.status,
-      statementStatus: metric.statementCoverage.status,
-      branchStatus: metric.branchCoverage.status
-    }))).toEqual([
-      { name: "add", coverage: 100.0, crap: 1.0, coverageStatus: "measured", statementStatus: "measured", branchStatus: "structural_na" },
-      { name: "risky", coverage: 0.0, crap: 12.0, coverageStatus: "measured", statementStatus: "measured", branchStatus: "measured" },
-      { name: "upper", coverage: 100.0, crap: 1.0, coverageStatus: "measured", statementStatus: "measured", branchStatus: "structural_na" }
+    expect(
+      result.metrics.map((metric) => ({
+        name: metric.displayName,
+        coverage: metric.coveragePercent === null ? null : Number(metric.coveragePercent.toFixed(1)),
+        crap: metric.crapScore === null ? null : Number(metric.crapScore.toFixed(1)),
+        coverageStatus: metric.coverage.status,
+        statementStatus: metric.statementCoverage.status,
+        branchStatus: metric.branchCoverage.status
+      }))
+    ).toEqual([
+      {
+        name: "add",
+        coverage: 100.0,
+        crap: 1.0,
+        coverageStatus: "measured",
+        statementStatus: "measured",
+        branchStatus: "structural_na"
+      },
+      {
+        name: "risky",
+        coverage: 0.0,
+        crap: 12.0,
+        coverageStatus: "measured",
+        statementStatus: "measured",
+        branchStatus: "measured"
+      },
+      {
+        name: "upper",
+        coverage: 100.0,
+        crap: 1.0,
+        coverageStatus: "measured",
+        statementStatus: "measured",
+        branchStatus: "structural_na"
+      }
     ]);
     expect(result.maxCrap).toBeGreaterThan(CRAP_THRESHOLD);
     expect(result.threshold).toBe(CRAP_THRESHOLD);
@@ -62,7 +85,7 @@ describe("analyzeProject", () => {
     expect(result.threshold).toBe(13);
     expect(result.thresholdExceeded).toBe(false);
     expect(result.warnings).toEqual([
-      "Warning: CRAP threshold above 8.0 is too lenient even for hard gates. Use 8.0 for hard gates, target 6.0 during implementation, and use the 8.0 default when in doubt."
+      "Warning: CRAP threshold above 8.0 is too lenient even for hard gates. Use 8.0 for hard gates, target 6.0 during implementation, and use the 6.0 default when in doubt."
     ]);
     expect(warnings.join("")).toContain("CRAP threshold above 8.0 is too lenient");
   });
@@ -294,10 +317,7 @@ describe("analyzeProject", () => {
       "packages/demo/package.json": '{"name":"demo","private":true}',
       "packages/demo/src/moduleFallback.ts": coveredFunctionSource("moduleFallback"),
       "packages/demo/coverage/coverage-final.json": JSON.stringify({
-        "/rebased/demo/src/moduleFallback.ts": coveredFunctionReport(
-          "/rebased/demo/src/moduleFallback.ts",
-          1
-        )
+        "/rebased/demo/src/moduleFallback.ts": coveredFunctionReport("/rebased/demo/src/moduleFallback.ts", 1)
       })
     });
 

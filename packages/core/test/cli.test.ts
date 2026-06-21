@@ -64,7 +64,7 @@ describe("cli", () => {
       packageManager: "npm",
       testRunner: "vitest",
       format: "json",
-      threshold: 8,
+      threshold: 6,
       agent: true,
       failuresOnly: false,
       omitRedundancy: true,
@@ -89,7 +89,7 @@ describe("cli", () => {
       packageManager: "pnpm",
       testRunner: "jest",
       format: "toon",
-      threshold: 8,
+      threshold: 6,
       agent: false,
       failuresOnly: false,
       omitRedundancy: false,
@@ -101,7 +101,7 @@ describe("cli", () => {
       packageManager: "yarn",
       testRunner: "auto",
       format: "toon",
-      threshold: 8,
+      threshold: 6,
       agent: false,
       failuresOnly: false,
       omitRedundancy: false,
@@ -113,7 +113,7 @@ describe("cli", () => {
       packageManager: "auto",
       testRunner: "auto",
       format: "junit",
-      threshold: 8,
+      threshold: 6,
       agent: true,
       failuresOnly: true,
       omitRedundancy: true,
@@ -493,7 +493,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     expect(exitCode).toBe(2);
     expect(stdout.toString()).toContain("status: failed");
-    expect(stdout.toString()).toContain("threshold: 8");
+    expect(stdout.toString()).toContain("threshold: 6");
     expect(stdout.toString()).toContain("methods[2]{status,crap,cc,cov,covKind,method,src,lineStart,lineEnd}:");
     expect(stdout.toString()).toContain("risky");
     expect(stderr.toString()).toContain("CRAP threshold exceeded");
@@ -539,7 +539,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("status: passed");
-    expect(stdout.toString()).toContain("threshold: 8");
+    expect(stdout.toString()).toContain("threshold: 6");
     expect(tableLines[0]).toBe(
       "| status | crap | cc |    cov | covKind | method | src           | lineStart | lineEnd |"
     );
@@ -650,7 +650,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(exitCode).toBe(2);
     expect(stdout.toString()).toBe("");
     expect(primary.status).toBe("failed");
-    expect(primary.threshold).toBe(8);
+    expect(primary.threshold).toBe(6);
     expect(primary.methods).toHaveLength(1);
     expect(primary.methods[0].method).toBe("risky");
     expect(primary.methods[0]).not.toHaveProperty("status");
@@ -800,7 +800,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(exitCode).toBe(2);
     expect(stdout.toString()).toBe("");
     expect(primary.status).toBe("failed");
-    expect(primary.threshold).toBe(8);
+    expect(primary.threshold).toBe(6);
     expect(primary.methods).toHaveLength(1);
     expect(primary.methods[0]).toMatchObject({
       status: "failed",
@@ -881,7 +881,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toBe("");
     expect(primary.status).toBe("passed");
-    expect(primary.threshold).toBe(8);
+    expect(primary.threshold).toBe(6);
     expect(primary.methods).toHaveLength(1);
     expect(primary.methods[0]).not.toHaveProperty("status");
     expect(primary.methods[0]).toMatchObject({
@@ -1064,7 +1064,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
 
     expect(exitCode).toBe(0);
     expect(stdout.toString()).toContain("status: passed");
-    expect(stdout.toString()).toContain("threshold: 8");
+    expect(stdout.toString()).toContain("threshold: 6");
     expect(stdout.toString()).toContain("safe");
     expect(stderr.toString()).toBe("");
   });
@@ -1081,7 +1081,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const exitCode = await runCli([], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
 
@@ -1099,7 +1099,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const exitCode = await runCli([], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
 

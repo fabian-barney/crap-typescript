@@ -43,7 +43,7 @@ Options:
                              Omit redundant per-method status in the primary report
   --output <path>            Write the primary report to a file instead of stdout
   --junit-report <path>      Also write a full JUnit XML report for CI test-report UIs
-  --threshold <number>       Override the CRAP threshold (default: 8.0)
+  --threshold <number>       Override the CRAP threshold (default: ${CRAP_THRESHOLD.toFixed(1)})
 
 Behavior:
   (no args)                  Analyze all TypeScript files under any nested src/ tree
@@ -320,8 +320,11 @@ function cliMode(state: ParseState): CliArguments["mode"] {
   return state.fileArgs.length > 0 ? "explicit" : "all";
 }
 
-function optionalPath<K extends "output" | "junitReport">(key: K, value: string | undefined): Pick<CliArguments, K> | {} {
-  return value === undefined ? {} : { [key]: value } as Pick<CliArguments, K>;
+function optionalPath<K extends "output" | "junitReport">(
+  key: K,
+  value: string | undefined
+): Pick<CliArguments, K> | {} {
+  return value === undefined ? {} : ({ [key]: value } as Pick<CliArguments, K>);
 }
 
 function parsePackageManagerSelection(value: string | undefined): PackageManagerSelection {
@@ -368,9 +371,7 @@ function parseThreshold(value: string | undefined): number {
 
 function splitInlineOption(arg: string): [string, string | undefined] {
   const separatorIndex = arg.indexOf("=");
-  return separatorIndex === -1
-    ? [arg, undefined]
-    : [arg.slice(0, separatorIndex), arg.slice(separatorIndex + 1)];
+  return separatorIndex === -1 ? [arg, undefined] : [arg.slice(0, separatorIndex), arg.slice(separatorIndex + 1)];
 }
 
 function inlineValueArgs(args: string[], index: number, option: string, value: string): string[] {
@@ -426,7 +427,7 @@ function optionalArray<K extends "excludes" | "excludePathRegexes" | "excludeGen
   key: K,
   values: string[]
 ): Pick<CliArguments, K> | {} {
-  return values.length === 0 ? {} : { [key]: values } as Pick<CliArguments, K>;
+  return values.length === 0 ? {} : ({ [key]: values } as Pick<CliArguments, K>);
 }
 
 function optionalBoolean<K extends "useDefaultExclusions">(
@@ -434,7 +435,7 @@ function optionalBoolean<K extends "useDefaultExclusions">(
   value: boolean,
   include: boolean
 ): Pick<CliArguments, K> | {} {
-  return include ? { [key]: value } as Pick<CliArguments, K> : {};
+  return include ? ({ [key]: value } as Pick<CliArguments, K>) : {};
 }
 
 export async function runCli(
@@ -480,12 +481,7 @@ function parseCliInputs(args: string[], stdout: Writer, stderr: Writer): CliArgu
   }
 }
 
-async function analyzeCliProject(
-  parsed: CliArguments,
-  projectRoot: string,
-  stdout: Writer,
-  stderr: Writer
-) {
+async function analyzeCliProject(parsed: CliArguments, projectRoot: string, stdout: Writer, stderr: Writer) {
   try {
     return await analyzeProject({
       projectRoot: path.resolve(projectRoot),
@@ -552,12 +548,16 @@ async function writeCliReports(
   }
 
   if (parsed.junit && parsed.junitReport) {
-    await writeReportFile(projectRoot, parsed.junitReport, formatAnalysisReport(result.metrics, {
-      format: "junit",
-      threshold: result.threshold,
-      elapsedSeconds,
-      sourceExclusionAudit: result.sourceExclusionAudit
-    }));
+    await writeReportFile(
+      projectRoot,
+      parsed.junitReport,
+      formatAnalysisReport(result.metrics, {
+        format: "junit",
+        threshold: result.threshold,
+        elapsedSeconds,
+        sourceExclusionAudit: result.sourceExclusionAudit
+      })
+    );
   }
 }
 
@@ -574,10 +574,7 @@ async function writeReportFile(projectRoot: string, reportPath: string, content:
   await writeFile(absolutePath, content);
 }
 
-function writeCliThresholdStatus(
-  result: Awaited<ReturnType<typeof analyzeProject>>,
-  stderr: Writer
-): number {
+function writeCliThresholdStatus(result: Awaited<ReturnType<typeof analyzeProject>>, stderr: Writer): number {
   if (!result.thresholdExceeded) {
     return 0;
   }

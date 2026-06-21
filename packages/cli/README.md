@@ -41,7 +41,7 @@ npx crap-typescript packages/api packages/web
 --omit-redundancy[=true|false] Omit redundant per-method status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
---threshold <number>         Override the CRAP threshold (`8.0` by default)
+--threshold <number>         Override the CRAP threshold (`6.0` by default)
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
@@ -54,7 +54,7 @@ Full primary reports and JUnit sidecars include source-exclusion audit counts wh
 
 Commands run by the built-in executor, including coverage commands and `--changed` discovery, time out after 300 seconds by default. Set `CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS` to a non-negative millisecond value to override this default; `0` disables the timeout. Captured stdout and stderr are capped at 10 MiB per stream. User-facing command failures may include truncated output, while internal commands that require complete output, such as `git status --porcelain -z`, fail if the cap is exceeded.
 
-The default threshold is `8.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates.
+The default threshold is `6.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates.
 
 ## Exit Codes
 
