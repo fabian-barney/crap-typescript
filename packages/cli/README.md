@@ -41,7 +41,7 @@ npx crap-typescript packages/api packages/web
 --omit-redundancy[=true|false] Omit redundant per-method status in the primary report
 --output <path>              Write the primary report to a file instead of stdout
 --junit-report <path>        Also write a full JUnit XML report for CI test-report UIs
---threshold <number>         Override the CRAP threshold (`8.0` by default)
+--threshold <number>         Override the CRAP threshold (`6.0` by default)
 <file ...>                   Analyze explicit TypeScript files
 <directory ...>              Analyze TypeScript files under each directory's nested src/ tree
 ```
