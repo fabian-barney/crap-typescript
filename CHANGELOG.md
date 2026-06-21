@@ -6,7 +6,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
-- No unreleased changes.
+### Changed
+
+- Reduced the default CRAP threshold from `8.0` to `6.0` while keeping the recommended `4.0` to `8.0` range unchanged.
 
 ## [0.4.2] - 2026-06-19
 

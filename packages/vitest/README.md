@@ -30,7 +30,7 @@ The reporter defaults primary `format` to `none`, so it emits no primary stdout 
 
 Baseline analyzability exclusions always skip declarations, test/spec files, `__tests__/`, `dist/`, `coverage/`, and `node_modules/`. Generated-code defaults exclude generated directory segments, exact `gen` directory segments, common generated filename suffixes, protobuf outputs, Angular generated artifacts, and leading generated-header markers. User exclusions compose with defaults unless `useDefaultExclusions: false`; full reports and JUnit sidecars include exclusion audit counts when files were excluded.
 
-The default threshold is `8.0`; values below `4.0` or above `8.0` print the same threshold guidance warnings as the CLI.
+The default threshold is `6.0`; values below `4.0` or above `8.0` print the same threshold guidance warnings as the CLI.
 
 Exit code `2` means the CRAP threshold was exceeded. Reporter errors such as invalid options, missing coverage, or report-write failures use exit code `1`.
 

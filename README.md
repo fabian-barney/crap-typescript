@@ -154,7 +154,7 @@ Use `--omit-redundancy` to keep run-level metadata but omit per-method `status` 
 
 Use `--junit-report <path>` to write a full JUnit XML artifact alongside the primary report. JUnit sidecars always contain the full method set, regardless of `--agent`, `--failures-only`, or `--omit-redundancy`. JUnit output is shaped for GitLab's Tests tab: it wraps the suite in `<testsuites>`, sets testcase `classname` and `file` to `src`, sets testcase `name` to `method:lineStart [CRAP=score, CC=complexity, Cov=percent (kind)]`, writes `time="0"`, and includes CRAP score, threshold, coverage kind, source path, and line range in testcase-level `system-out` and failure or skipped element content. Custom properties remain for CI tools that read them, but GitLab-visible details do not rely on properties.
 
-The default threshold is `8.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates. The warning recommends `8.0` for hard gates, targeting `6.0` during implementation, and using the `8.0` default when in doubt.
+The default threshold is `6.0`. Values below `4.0` print a warning because they are likely too noisy; values above `8.0` print a warning because they are too lenient even for hard gates. The warning recommends `8.0` for hard gates, targeting `6.0` during implementation, and using the `6.0` default when in doubt.
 
 ## Adapter Usage
 

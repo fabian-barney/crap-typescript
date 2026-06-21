@@ -118,7 +118,7 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
     expect(stderr.toString()).toBe("");
   });
 
@@ -504,7 +504,7 @@ describe("CrapTypescriptJestReporter", () => {
     const junit = await readText(`${projectRoot}/custom-coverage/crap-typescript-junit.xml`);
 
     expect(stdout.toString()).toContain("status: failed");
-    expect(stdout.toString()).toContain("threshold: 8.0");
+    expect(stdout.toString()).toContain("threshold: 6.0");
     expect(stdout.toString()).toContain("| status |");
     expect(stdout.toString()).toContain("risky");
     expect(junit).toContain('tests="1"');
@@ -619,7 +619,7 @@ describe("CrapTypescriptJestReporter", () => {
 
     await callFinalize(reporter);
 
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 8\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
     await expect(readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).rejects.toThrow();
     expect(stderr.toString()).toBe("");
     expect(reporter.getLastError()).toBeUndefined();

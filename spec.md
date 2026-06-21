@@ -240,9 +240,9 @@ When the primary report format is `none`, the primary report shall emit no stdou
 
 ## 11. Threshold
 
-The default CRAP threshold shall be `8.0`. A finite positive threshold may be configured.
+The default CRAP threshold shall be `6.0`. A finite positive threshold may be configured.
 
-If the configured threshold is below `4.0`, the tool shall print a warning that the threshold is likely too noisy and recommend `8.0` for hard gates, targeting `6.0` during implementation, and using the `8.0` default when in doubt.
+If the configured threshold is below `4.0`, the tool shall print a warning that the threshold is likely too noisy and recommend `8.0` for hard gates, targeting `6.0` during implementation, and using the `6.0` default when in doubt.
 
 If the configured threshold is above `8.0`, the tool shall print a warning that the threshold is too lenient even for hard gates and the same recommendation.
 
