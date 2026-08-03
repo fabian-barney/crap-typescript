@@ -5,6 +5,5 @@ import baseConfig from "./vitest.config";
 export default withCrapTypescriptVitest(baseConfig, {
   packageManager: "npm",
   paths: ["packages"],
-  projectRoot: process.cwd(),
-  threshold: 8.0
+  projectRoot: process.cwd()
 });

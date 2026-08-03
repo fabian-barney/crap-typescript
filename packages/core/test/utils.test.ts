@@ -67,6 +67,39 @@ describe("runCommand", () => {
     expect(kill).toHaveBeenCalledWith("SIGKILL");
   });
 
+  it("falls back when the configured default timeout is negative", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS", "-1");
+    const kill = vi.fn();
+    const child = new EventEmitter() as EventEmitter & {
+      stdout: PassThrough;
+      stderr: PassThrough;
+      kill: (signal: string) => boolean;
+    };
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    child.kill = kill.mockReturnValue(true);
+    vi.doMock("node:child_process", () => ({
+      spawn: vi.fn(() => child)
+    }));
+
+    try {
+      vi.resetModules();
+      const { runCommand: runMockedCommand } = await import("../src/utils");
+      const timeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      const result = runMockedCommand("never-closes", [], process.cwd());
+      const rejection = expect(result).rejects.toThrow("Command timed out after 300000ms");
+
+      expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 300_000);
+      await vi.advanceTimersByTimeAsync(300_000);
+      await rejection;
+      expect(kill).toHaveBeenCalledWith("SIGKILL");
+    } finally {
+      child.emit("close", 0);
+      vi.useRealTimers();
+    }
+  });
+
   it("bounds captured stdout and stderr", async () => {
     const result = await runCommand(
       process.execPath,
@@ -83,33 +116,26 @@ describe("runCommand", () => {
 
   it("rejects when truncated output is not allowed", async () => {
     await expect(
-      runCommand(
-        process.execPath,
-        ["-e", "process.stdout.write('abcdef')"],
-        process.cwd(),
-        { maxBufferBytes: 3, rejectOnTruncatedOutput: true }
-      )
+      runCommand(process.execPath, ["-e", "process.stdout.write('abcdef')"], process.cwd(), {
+        maxBufferBytes: 3,
+        rejectOnTruncatedOutput: true
+      })
     ).rejects.toThrow("Command output exceeded 3 bytes:");
   });
 
   it("normalizes negative command buffer limits before diagnostics", async () => {
     await expect(
-      runCommand(
-        process.execPath,
-        ["-e", "process.stdout.write('x')"],
-        process.cwd(),
-        { maxBufferBytes: -1, rejectOnTruncatedOutput: true }
-      )
+      runCommand(process.execPath, ["-e", "process.stdout.write('x')"], process.cwd(), {
+        maxBufferBytes: -1,
+        rejectOnTruncatedOutput: true
+      })
     ).rejects.toThrow("Command output exceeded 0 bytes:");
   });
 
   it("returns raw bounded output without mutation when truncated", async () => {
-    const emptyResult = await runCommand(
-      process.execPath,
-      ["-e", "process.stdout.write('abc')"],
-      process.cwd(),
-      { maxBufferBytes: 0 }
-    );
+    const emptyResult = await runCommand(process.execPath, ["-e", "process.stdout.write('abc')"], process.cwd(), {
+      maxBufferBytes: 0
+    });
     const newlineResult = await runCommand(
       process.execPath,
       ["-e", "process.stdout.write('abc\\ndef')"],

@@ -13,7 +13,7 @@ if (targets.length === 0) {
 const gateArguments = [
   "exec",
   "--yes",
-  "--package=@barney-media/cognitive-typescript@0.1.1",
+  "--package=@barney-media/cognitive-typescript@0.2.2",
   "--",
   "cognitive-typescript",
   ...targets.map((target) => resolve(target))

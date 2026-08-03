@@ -112,14 +112,21 @@ const DESCRIPTOR_BUILDERS: DescriptorBuilder[] = [
 ];
 
 function descriptorFromFunctionDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
-  if (!ts.isFunctionDeclaration(node) || !node.body) {
+  if (!ts.isFunctionDeclaration(node)) {
     return null;
   }
-  const functionName = node.name?.text ?? inferFunctionDeclarationName(node);
+  if (!node.body) {
+    return null;
+  }
+  const functionName = functionDeclarationName(node);
   if (!functionName) {
     return null;
   }
   return buildMethodDescriptor(functionName, findContainerName(node), node, node.body, sourceFile);
+}
+
+function functionDeclarationName(node: ts.FunctionDeclaration): string | null {
+  return node.name?.text ?? inferFunctionDeclarationName(node);
 }
 
 function descriptorFromMethodDeclaration(node: ts.Node, sourceFile: ts.SourceFile): MethodDescriptor | null {
@@ -169,7 +176,8 @@ function buildMethodDescriptor(
   sourceFile: ts.SourceFile
 ): MethodDescriptor {
   const startLine = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-  const endLine = sourceFile.getLineAndCharacterOfPosition(Math.max(bodyNode.end - 1, bodyNode.getStart(sourceFile))).line + 1;
+  const endLine =
+    sourceFile.getLineAndCharacterOfPosition(Math.max(bodyNode.end - 1, bodyNode.getStart(sourceFile))).line + 1;
   return {
     functionName,
     containerName,
@@ -242,7 +250,11 @@ function assignedNameFromBinaryExpression(
   parent: ts.Node,
   node: ts.FunctionExpression | ts.ArrowFunction
 ): { name: string; containerName: string | null } | null {
-  if (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken && parent.right === node) {
+  if (
+    ts.isBinaryExpression(parent) &&
+    parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+    parent.right === node
+  ) {
     return assignmentTarget(parent.left);
   }
   return null;
@@ -439,9 +451,7 @@ function toDisplayName(containerName: string | null, functionName: string): stri
   if (!containerName) {
     return functionName;
   }
-  return functionName.startsWith("[")
-    ? `${containerName}${functionName}`
-    : `${containerName}.${functionName}`;
+  return functionName.startsWith("[") ? `${containerName}${functionName}` : `${containerName}.${functionName}`;
 }
 
 function propertyName(name: ts.PropertyName): string {
@@ -515,8 +525,7 @@ function isNestedBoundary(node: ts.Node): boolean {
 }
 
 function isProvablyNonExecutableDeclarationStatement(statement: ts.Statement): boolean {
-  return ts.isInterfaceDeclaration(statement) ||
-    ts.isTypeAliasDeclaration(statement);
+  return ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement);
 }
 
 function complexityContribution(node: ts.Node): number {
@@ -543,8 +552,10 @@ function hasBranchSyntax(node: ts.Node): boolean {
 }
 
 function hasOwnOptionalChainToken(node: ts.Node): boolean {
-  return (ts.isPropertyAccessChain(node) || ts.isElementAccessChain(node) || ts.isCallChain(node)) &&
-    node.questionDotToken !== undefined;
+  return (
+    (ts.isPropertyAccessChain(node) || ts.isElementAccessChain(node) || ts.isCallChain(node)) &&
+    node.questionDotToken !== undefined
+  );
 }
 
 function isAssignmentExpression(node: ts.Node): node is ts.BinaryExpression {
