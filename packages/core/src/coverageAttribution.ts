@@ -69,10 +69,7 @@ function buildAttributableMethods(
   });
 }
 
-function matchFunctionCoverage(
-  method: MethodDescriptor,
-  functions: FunctionCoverageUnit[]
-): MatchOutcome {
+function matchFunctionCoverage(method: MethodDescriptor, functions: FunctionCoverageUnit[]): MatchOutcome {
   return resolveMatchOutcome([
     matchByCandidateSpans(method.bodySpan, functions),
     matchByContainingSpan(method.bodySpan, functions),
@@ -82,9 +79,7 @@ function matchFunctionCoverage(
 
 function fnMapMatchSpans(methodSpan: SourceSpan): SourceSpan[] {
   const normalized = normalizeMethodSpanForFnMap(methodSpan);
-  return spansEqual(methodSpan, normalized)
-    ? [methodSpan]
-    : [methodSpan, normalized];
+  return spansEqual(methodSpan, normalized) ? [methodSpan] : [methodSpan, normalized];
 }
 
 function matchByCandidateSpans(methodSpan: SourceSpan, functions: FunctionCoverageUnit[]): MatchOutcome {
@@ -95,7 +90,9 @@ function matchByCandidateSpans(methodSpan: SourceSpan, functions: FunctionCovera
     }
 
     const lineAlignedMatch = uniqueMatchOutcome(
-      functions.filter((entry) => spansShareBoundaryLines(entry.span, candidateSpan) && spansOverlap(entry.span, candidateSpan))
+      functions.filter(
+        (entry) => spansShareBoundaryLines(entry.span, candidateSpan) && spansOverlap(entry.span, candidateSpan)
+      )
     );
     if (lineAlignedMatch !== undefined) {
       return lineAlignedMatch;
@@ -106,7 +103,9 @@ function matchByCandidateSpans(methodSpan: SourceSpan, functions: FunctionCovera
 }
 
 function matchByContainingSpan(methodSpan: SourceSpan, functions: FunctionCoverageUnit[]): MatchOutcome {
-  return uniqueMatchOutcome(functions.filter((entry) => spanContains(entry.span, normalizeMethodSpanForFnMap(methodSpan))));
+  return uniqueMatchOutcome(
+    functions.filter((entry) => spanContains(entry.span, normalizeMethodSpanForFnMap(methodSpan)))
+  );
 }
 
 function matchByDeclaration(method: MethodDescriptor, functions: FunctionCoverageUnit[]): MatchOutcome {
@@ -141,13 +140,10 @@ function findOwningMethodIndex(methods: AttributableMethod[], span: SourceSpan):
 
   for (let index = 0; index < methods.length; index += 1) {
     const method = methods[index]!;
-    if (method.fnMapConflict) {
+    if (!isCandidateMethod(method, span)) {
       continue;
     }
-    if (!spanContains(method.span, span) && !spanContainsPosition(method.span, span.startLine, span.startColumn)) {
-      continue;
-    }
-    if (bestMatch === null || spanContains(methods[bestMatch]!.span, method.span)) {
+    if (isPreferredMethod(methods, bestMatch, index)) {
       bestMatch = index;
     }
   }
@@ -155,26 +151,32 @@ function findOwningMethodIndex(methods: AttributableMethod[], span: SourceSpan):
   return bestMatch;
 }
 
+function isCandidateMethod(method: AttributableMethod, span: SourceSpan): boolean {
+  if (method.fnMapConflict) {
+    return false;
+  }
+  return spanContains(method.span, span) || spanContainsPosition(method.span, span.startLine, span.startColumn);
+}
+
+function isPreferredMethod(methods: AttributableMethod[], bestMatch: number | null, candidateIndex: number): boolean {
+  return bestMatch === null || spanContains(methods[bestMatch]!.span, methods[candidateIndex]!.span);
+}
+
 function spanContains(container: SourceSpan, candidate: SourceSpan): boolean {
-  return comparePosition(
-    container.startLine,
-    container.startColumn,
-    candidate.startLine,
-    candidate.startColumn
-  ) <= 0 && comparePosition(candidate.endLine, candidate.endColumn, container.endLine, container.endColumn) <= 0;
+  return (
+    comparePosition(container.startLine, container.startColumn, candidate.startLine, candidate.startColumn) <= 0 &&
+    comparePosition(candidate.endLine, candidate.endColumn, container.endLine, container.endColumn) <= 0
+  );
 }
 
 function spanContainsPosition(span: SourceSpan, line: number, column: number): boolean {
-  return comparePosition(span.startLine, span.startColumn, line, column) <= 0 &&
-    comparePosition(line, column, span.endLine, span.endColumn) < 0;
+  return (
+    comparePosition(span.startLine, span.startColumn, line, column) <= 0 &&
+    comparePosition(line, column, span.endLine, span.endColumn) < 0
+  );
 }
 
-function comparePosition(
-  leftLine: number,
-  leftColumn: number,
-  rightLine: number,
-  rightColumn: number
-): number {
+function comparePosition(leftLine: number, leftColumn: number, rightLine: number, rightColumn: number): number {
   if (leftLine !== rightLine) {
     return leftLine - rightLine;
   }
@@ -182,20 +184,23 @@ function comparePosition(
 }
 
 function spansEqual(left: SourceSpan, right: SourceSpan): boolean {
-  return left.startLine === right.startLine &&
+  return (
+    left.startLine === right.startLine &&
     left.startColumn === right.startColumn &&
     left.endLine === right.endLine &&
-    left.endColumn === right.endColumn;
+    left.endColumn === right.endColumn
+  );
 }
 
 function spansShareBoundaryLines(left: SourceSpan, right: SourceSpan): boolean {
-  return left.startLine === right.startLine &&
-    left.endLine === right.endLine;
+  return left.startLine === right.startLine && left.endLine === right.endLine;
 }
 
 function spansOverlap(left: SourceSpan, right: SourceSpan): boolean {
-  return comparePosition(left.startLine, left.startColumn, right.endLine, right.endColumn) < 0 &&
-    comparePosition(right.startLine, right.startColumn, left.endLine, left.endColumn) < 0;
+  return (
+    comparePosition(left.startLine, left.startColumn, right.endLine, right.endColumn) < 0 &&
+    comparePosition(right.startLine, right.startColumn, left.endLine, left.endColumn) < 0
+  );
 }
 
 function matchesMethodDeclaration(entry: FunctionCoverageUnit, method: MethodDescriptor): boolean {

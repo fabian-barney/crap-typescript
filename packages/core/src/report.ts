@@ -99,16 +99,10 @@ export function sortMetrics(metrics: MethodMetrics[]): MethodMetrics[] {
 }
 
 function compareCrapScores(left: number | null, right: number | null): number {
-  if (left === null && right !== null) {
-    return 1;
+  if (left === null) {
+    return right === null ? 0 : 1;
   }
-  if (left !== null && right === null) {
-    return -1;
-  }
-  if (left !== null && right !== null) {
-    return right - left;
-  }
-  return 0;
+  return right === null ? -1 : right - left;
 }
 
 function compareReportText(left: string, right: string): number {
@@ -285,16 +279,12 @@ function coverageKind(metric: MethodMetrics): CoverageKind {
 }
 
 function measuredCoverageKind(statementCoverage: CoverageMetric, branchCoverage: CoverageMetric): CoverageKind {
-  if (statementCoverage.status === "measured" && branchCoverage.status === "measured") {
-    return branchCoverage.percent! < statementCoverage.percent! ? "branch" : "stmt";
+  const statementMeasured = statementCoverage.status === "measured";
+  const branchMeasured = branchCoverage.status === "measured";
+  if (statementMeasured) {
+    return branchMeasured ? (branchCoverage.percent! < statementCoverage.percent! ? "branch" : "stmt") : "stmt";
   }
-  if (statementCoverage.status === "measured") {
-    return "stmt";
-  }
-  if (branchCoverage.status === "measured") {
-    return "branch";
-  }
-  return "stmt";
+  return branchMeasured ? "branch" : "stmt";
 }
 
 function formatNullableNumber(value: number | null): string {

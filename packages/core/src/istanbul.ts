@@ -30,10 +30,7 @@ export class CoverageReportParseError extends Error {
   }
 }
 
-export async function parseCoverageReport(
-  reportPath: string,
-  sourceRoot: string
-): Promise<Map<string, FileCoverage>> {
+export async function parseCoverageReport(reportPath: string, sourceRoot: string): Promise<Map<string, FileCoverage>> {
   const raw = parseCoverageJson(reportPath, await readFile(reportPath, "utf8"));
   const report = isRecord(raw) ? raw : {};
   const records = new Map<string, FileCoverage>();
@@ -68,15 +65,22 @@ function parseStatements(statementMapValue: unknown, hitsValue: unknown): Statem
 
   const statements: StatementCoverageUnit[] = [];
   for (const [key, locationValue] of Object.entries(statementMapValue)) {
-    const hits = parseFiniteNumber(hitsValue[key]);
-    const span = parseSpan(locationValue);
-    if (hits === null || span === null) {
-      continue;
+    const statement = parseStatementEntry(locationValue, hitsValue[key]);
+    if (statement) {
+      statements.push(statement);
     }
-    statements.push({ span, hits });
   }
 
   return deduplicateStatements(statements);
+}
+
+function parseStatementEntry(locationValue: unknown, hitsValue: unknown): StatementCoverageUnit | null {
+  const hits = parseFiniteNumber(hitsValue);
+  if (hits === null) {
+    return null;
+  }
+  const span = parseSpan(locationValue);
+  return span === null ? null : { span, hits };
 }
 
 function parseBranches(branchMapValue: unknown, hitsValue: unknown): BranchCoverageUnit[] {
@@ -109,9 +113,7 @@ function parseCoverageEntry(
     return null;
   }
 
-  const resolved = isAbsolutePath(sourcePath)
-    ? sourcePath
-    : path.resolve(sourceRoot, sourcePath);
+  const resolved = isAbsolutePath(sourcePath) ? sourcePath : path.resolve(sourceRoot, sourcePath);
   return {
     normalizedPath: normalizePathForMatch(resolved),
     coverage: {
@@ -214,9 +216,7 @@ function parsePosition(value: unknown): { line: number; column: number } | null 
     return null;
   }
 
-  const column = value.column === null || value.column === undefined
-    ? MAX_COLUMN
-    : parseColumnNumber(value.column);
+  const column = value.column === null || value.column === undefined ? MAX_COLUMN : parseColumnNumber(value.column);
   if (column === null) {
     return null;
   }
@@ -229,9 +229,7 @@ function parseHitArray(value: unknown): number[] {
     return [];
   }
 
-  return value
-    .map((entry) => parseFiniteNumber(entry))
-    .filter((entry): entry is number => entry !== null);
+  return value.map((entry) => parseFiniteNumber(entry)).filter((entry): entry is number => entry !== null);
 }
 
 function parseFiniteNumber(value: unknown): number | null {
@@ -293,12 +291,7 @@ function deduplicateFunctions(functions: FunctionCoverageUnit[]): FunctionCovera
 }
 
 function stringifySpan(span: SourceSpan): string {
-  return [
-    span.startLine,
-    span.startColumn,
-    span.endLine,
-    span.endColumn
-  ].join(":");
+  return [span.startLine, span.startColumn, span.endLine, span.endColumn].join(":");
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -319,9 +312,7 @@ function toBranchCoverageUnit(branchValue: unknown, hitsValue: unknown): BranchC
 }
 
 function resolveBranchSpan(branchValue: JsonRecord): SourceSpan | null {
-  return parseSpan(branchValue.loc) ??
-    parseFirstLocation(branchValue.locations) ??
-    parseLineSpan(branchValue.line);
+  return parseSpan(branchValue.loc) ?? parseFirstLocation(branchValue.locations) ?? parseLineSpan(branchValue.line);
 }
 
 function resolveFunctionEntry(entryValue: unknown): FunctionCoverageUnit | null {
@@ -333,9 +324,15 @@ function resolveFunctionEntry(entryValue: unknown): FunctionCoverageUnit | null 
   if (!resolved) {
     return null;
   }
+  return createFunctionCoverageUnit(entryValue, resolved);
+}
+
+function createFunctionCoverageUnit(
+  entryValue: JsonRecord,
+  resolved: { span: SourceSpan; source: FunctionSpanSource }
+): FunctionCoverageUnit {
   const declarationStart = resolveDeclarationStart(entryValue);
   const name = typeof entryValue.name === "string" ? entryValue.name : undefined;
-
   return {
     span: resolved.span,
     spanSource: resolved.source,
@@ -344,7 +341,9 @@ function resolveFunctionEntry(entryValue: unknown): FunctionCoverageUnit | null 
   };
 }
 
-function resolveFunctionSpanWithSource(entryValue: JsonRecord): { span: SourceSpan; source: FunctionSpanSource } | null {
+function resolveFunctionSpanWithSource(
+  entryValue: JsonRecord
+): { span: SourceSpan; source: FunctionSpanSource } | null {
   const loc = parseSpan(entryValue.loc);
   if (loc) {
     return { span: loc, source: "loc" };
@@ -423,12 +422,7 @@ function firstNonZeroComparison(comparisons: number[]): number {
   return comparisons.find((comparison) => comparison !== 0) ?? 0;
 }
 
-function comparePosition(
-  leftLine: number,
-  leftColumn: number,
-  rightLine: number,
-  rightColumn: number
-): number {
+function comparePosition(leftLine: number, leftColumn: number, rightLine: number, rightColumn: number): number {
   if (leftLine !== rightLine) {
     return leftLine - rightLine;
   }

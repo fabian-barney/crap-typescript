@@ -67,6 +67,14 @@ describe("runCommand", () => {
     expect(kill).toHaveBeenCalledWith("SIGKILL");
   });
 
+  it("falls back when the configured default timeout is negative", async () => {
+    vi.stubEnv("CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS", "-1");
+
+    await expect(
+      runCommand(process.execPath, ["-e", "setTimeout(() => {}, 1000)"], process.cwd(), { timeoutMs: 1 })
+    ).rejects.toThrow("Command timed out after 1ms");
+  });
+
   it("bounds captured stdout and stderr", async () => {
     const result = await runCommand(
       process.execPath,
@@ -83,33 +91,26 @@ describe("runCommand", () => {
 
   it("rejects when truncated output is not allowed", async () => {
     await expect(
-      runCommand(
-        process.execPath,
-        ["-e", "process.stdout.write('abcdef')"],
-        process.cwd(),
-        { maxBufferBytes: 3, rejectOnTruncatedOutput: true }
-      )
+      runCommand(process.execPath, ["-e", "process.stdout.write('abcdef')"], process.cwd(), {
+        maxBufferBytes: 3,
+        rejectOnTruncatedOutput: true
+      })
     ).rejects.toThrow("Command output exceeded 3 bytes:");
   });
 
   it("normalizes negative command buffer limits before diagnostics", async () => {
     await expect(
-      runCommand(
-        process.execPath,
-        ["-e", "process.stdout.write('x')"],
-        process.cwd(),
-        { maxBufferBytes: -1, rejectOnTruncatedOutput: true }
-      )
+      runCommand(process.execPath, ["-e", "process.stdout.write('x')"], process.cwd(), {
+        maxBufferBytes: -1,
+        rejectOnTruncatedOutput: true
+      })
     ).rejects.toThrow("Command output exceeded 0 bytes:");
   });
 
   it("returns raw bounded output without mutation when truncated", async () => {
-    const emptyResult = await runCommand(
-      process.execPath,
-      ["-e", "process.stdout.write('abc')"],
-      process.cwd(),
-      { maxBufferBytes: 0 }
-    );
+    const emptyResult = await runCommand(process.execPath, ["-e", "process.stdout.write('abc')"], process.cwd(), {
+      maxBufferBytes: 0
+    });
     const newlineResult = await runCommand(
       process.execPath,
       ["-e", "process.stdout.write('abc\\ndef')"],

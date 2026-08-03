@@ -45,6 +45,6 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@barney-media/crap-typescript-core": "^0.4.1"
+    "@barney-media/crap-typescript-core": "^0.4.2"
   }
 }

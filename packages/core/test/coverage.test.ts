@@ -101,6 +101,51 @@ describe("coverage helpers", () => {
     );
   });
 
+  it("ignores malformed entries and normalizes relative and absolute source paths", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    const absoluteSourcePath = path.join(projectRoot, "src", "absolute.ts");
+    await writeProjectFiles(projectRoot, {
+      "package.json": '{"name":"fixture","private":true}',
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/fallback.ts": {
+          statementMap: {},
+          branchMap: {},
+          fnMap: {},
+          s: {},
+          b: {},
+          f: {}
+        },
+        "empty-path": {
+          path: "",
+          statementMap: {},
+          branchMap: {},
+          fnMap: {},
+          s: {},
+          b: {},
+          f: {}
+        },
+        "absolute-key": {
+          path: absoluteSourcePath,
+          statementMap: {},
+          branchMap: {},
+          fnMap: {},
+          s: {},
+          b: {},
+          f: {}
+        },
+        invalid: null
+      })
+    });
+
+    const coverage = await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot);
+    const expectedPaths = [path.resolve(projectRoot, "src", "fallback.ts"), absoluteSourcePath].map((filePath) =>
+      filePath.replace(/\\/g, "/").toLowerCase()
+    );
+
+    expect([...coverage.keys()].sort()).toEqual(expectedPaths.sort());
+  });
+
   it("computes function coverage as the minimum of statement and branch coverage", async () => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);
@@ -462,9 +507,7 @@ export function enumDeclOnly(): void {
             hits: [1, 1]
           }
         ],
-        functions: [
-          { span: method.bodySpan }
-        ]
+        functions: [{ span: method.bodySpan }]
       }).map(summarizeMethodCoverage)
     ).toEqual([
       {
@@ -502,9 +545,7 @@ export function enumDeclOnly(): void {
             hits: [1, 1]
           }
         ],
-        functions: [
-          { span: { startLine: 1, startColumn: 0, endLine: 6, endColumn: 1 } }
-        ]
+        functions: [{ span: { startLine: 1, startColumn: 0, endLine: 6, endColumn: 1 } }]
       }).map(summarizeMethodCoverage)
     ).toEqual([
       {
@@ -902,13 +943,9 @@ export function enumDeclOnly(): void {
     const methods = await parseFileMethods(path.join(projectRoot, "src", "sample.ts"));
     expect(
       coverageForMethods(methods, {
-        statements: [
-          { span: { startLine: 1, startColumn: 39, endLine: 1, endColumn: 51 }, hits: 1 }
-        ],
+        statements: [{ span: { startLine: 1, startColumn: 39, endLine: 1, endColumn: 51 }, hits: 1 }],
         branches: [],
-        functions: [
-          { span: { startLine: 1, startColumn: 0, endLine: 1, endColumn: 10 } }
-        ]
+        functions: [{ span: { startLine: 1, startColumn: 0, endLine: 1, endColumn: 10 } }]
       }).map(summarizeMethodCoverage)
     ).toEqual([
       {
@@ -978,7 +1015,9 @@ export function enumDeclOnly(): void {
       })
     });
 
-    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+    const [fileCoverage] = (
+      await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)
+    ).values();
     expect(fileCoverage.statements).toEqual([
       {
         span: {
@@ -1091,7 +1130,9 @@ export function enumDeclOnly(): void {
       })
     });
 
-    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+    const [fileCoverage] = (
+      await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)
+    ).values();
 
     expect(fileCoverage.statements).toEqual([
       {
@@ -1170,7 +1211,9 @@ export function enumDeclOnly(): void {
       })
     });
 
-    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+    const [fileCoverage] = (
+      await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)
+    ).values();
 
     expect(fileCoverage.statements).toEqual([]);
     expect(fileCoverage.branches).toEqual([]);
@@ -1225,7 +1268,9 @@ export function enumDeclOnly(): void {
       })
     });
 
-    const [fileCoverage] = (await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)).values();
+    const [fileCoverage] = (
+      await parseCoverageReport(path.join(projectRoot, "coverage", "coverage-final.json"), projectRoot)
+    ).values();
 
     expect(fileCoverage.functions).toEqual([
       {
@@ -1262,11 +1307,11 @@ function summarizeMethodCoverage(coverage: {
   };
 }
 
-function summarizeMetric(metric: {
+function summarizeMetric(metric: { percent: number | null; status: string; unknownReason: string | null }): {
   percent: number | null;
   status: string;
-  unknownReason: string | null;
-}): { percent: number | null; status: string; reason: string | null } {
+  reason: string | null;
+} {
   return {
     percent: metric.percent === null ? null : Number(metric.percent.toFixed(1)),
     status: metric.status,

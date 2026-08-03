@@ -10,10 +10,13 @@ import type {
   Writer
 } from "@barney-media/crap-typescript-core";
 
-type VitestReporterEntry = string | [string, unknown] | {
-  onTestRunEnd?: () => Promise<void>;
-  onFinishedReportCoverage?: () => Promise<void>;
-};
+type VitestReporterEntry =
+  | string
+  | [string, unknown]
+  | {
+      onTestRunEnd?: () => Promise<void>;
+      onFinishedReportCoverage?: () => Promise<void>;
+    };
 type VitestConfig = Record<string, unknown> & {
   test?: Record<string, unknown> & {
     coverage?: Record<string, unknown> & {
@@ -25,6 +28,8 @@ type VitestConfig = Record<string, unknown> & {
     reporters?: VitestReporterEntry[] | VitestReporterEntry;
   };
 };
+type VitestTestConfig = NonNullable<VitestConfig["test"]>;
+type VitestCoverageConfig = NonNullable<VitestTestConfig["coverage"]>;
 
 export interface CrapTypescriptVitestOptions {
   projectRoot?: string;
@@ -73,12 +78,7 @@ export class CrapTypescriptVitestReporter {
         stderr: options.stderr
       });
 
-      await writeReporterReports(
-        result.metrics,
-        result.sourceExclusionAudit,
-        options,
-        elapsedSecondsSince(startedAt)
-      );
+      await writeReporterReports(result.metrics, result.sourceExclusionAudit, options, elapsedSecondsSince(startedAt));
       if (result.thresholdExceeded) {
         const error = `CRAP threshold exceeded: ${result.maxCrap.toFixed(1)} > ${result.threshold.toFixed(1)}`;
         options.stderr.write(`${error}\n`);
@@ -99,26 +99,43 @@ export function withCrapTypescriptVitest(
   const coverage = testConfig.coverage ?? {};
   const coverageEnabled = coverage.enabled ?? true;
   const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "json", "text");
-  const reporters = ensureDefaultReporter(asArray(testConfig.reporters));
   const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory);
-  if (coverageEnabled) {
-    reporters.push(new CrapTypescriptVitestReporter(reporterOptions(options, coverageReportPath)));
-  }
 
   return {
     ...config,
     test: {
       ...testConfig,
-      coverage: {
-        ...coverage,
-        enabled: coverageEnabled,
-        provider: coverage.provider ?? "v8",
-        reporter: coverageReporters,
-        reportsDirectory: coverage.reportsDirectory ?? "coverage"
-      },
-      reporters
+      coverage: configuredCoverage(coverage, coverageEnabled, coverageReporters),
+      reporters: configuredReporters(testConfig.reporters, coverageEnabled, options, coverageReportPath)
     }
   };
+}
+
+function configuredCoverage(
+  coverage: VitestCoverageConfig,
+  coverageEnabled: boolean,
+  coverageReporters: Array<string | [string, unknown]>
+): VitestCoverageConfig {
+  return {
+    ...coverage,
+    enabled: coverageEnabled,
+    provider: coverage.provider ?? "v8",
+    reporter: coverageReporters,
+    reportsDirectory: coverage.reportsDirectory ?? "coverage"
+  };
+}
+
+function configuredReporters(
+  existing: VitestTestConfig["reporters"],
+  coverageEnabled: boolean,
+  options: CrapTypescriptVitestOptions,
+  coverageReportPath: string
+): VitestReporterEntry[] {
+  const reporters = ensureDefaultReporter(asArray(existing));
+  if (coverageEnabled) {
+    reporters.push(new CrapTypescriptVitestReporter(reporterOptions(options, coverageReportPath)));
+  }
+  return reporters;
 }
 
 function asArray<T>(value: T | T[] | undefined): T[] {
@@ -173,9 +190,7 @@ function configuredFormat(options: CrapTypescriptVitestOptions): ReportFormat {
 }
 
 function configuredJunitReport(options: CrapTypescriptVitestOptions, coverageReportPath: string): string {
-  return options.junitReport === undefined
-    ? buildJunitReportFromCoverage(coverageReportPath)
-    : options.junitReport;
+  return options.junitReport === undefined ? buildJunitReportFromCoverage(coverageReportPath) : options.junitReport;
 }
 
 function toError(error: unknown): Error {
@@ -284,12 +299,16 @@ async function writeReporterReports(
   }
 
   if (options.junit) {
-    await writeReportFile(options.projectRoot, options.junitReport, formatAnalysisReport(metrics, {
-      format: "junit",
-      threshold: options.threshold,
-      elapsedSeconds,
-      sourceExclusionAudit
-    }));
+    await writeReportFile(
+      options.projectRoot,
+      options.junitReport,
+      formatAnalysisReport(metrics, {
+        format: "junit",
+        threshold: options.threshold,
+        elapsedSeconds,
+        sourceExclusionAudit
+      })
+    );
   }
 }
 

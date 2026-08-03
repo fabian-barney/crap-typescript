@@ -5,7 +5,11 @@ import { coverageForMethods } from "./coverageAttribution.js";
 import { ensureCoverageReport, expectedCoveragePath } from "./coverage.js";
 import type { FileCoverage } from "./coverageUnits.js";
 import { calculateCrapScore, maxCrap } from "./crapScore.js";
-import { changedTypeScriptFilesUnderSourceRoots, expandExplicitPaths, findAllTypeScriptFilesUnderSourceRoots } from "./fileSelection.js";
+import {
+  changedTypeScriptFilesUnderSourceRoots,
+  expandExplicitPaths,
+  findAllTypeScriptFilesUnderSourceRoots
+} from "./fileSelection.js";
 import { CoverageReportParseError, parseCoverageReport } from "./istanbul.js";
 import { resolveModuleRoot } from "./moduleResolution.js";
 import { parseFileMethods } from "./parser.js";
@@ -23,7 +27,11 @@ import type {
 export async function analyzeProject(options: AnalyzeProjectOptions = {}): Promise<AnalysisResult> {
   const context = createAnalyzeContext(options);
   const runWarnings = emitThresholdWarning(context.stderr, context.threshold);
-  const candidateFiles = await selectFiles(context.projectRoot, options.explicitPaths ?? [], options.changedOnly ?? false);
+  const candidateFiles = await selectFiles(
+    context.projectRoot,
+    options.explicitPaths ?? [],
+    options.changedOnly ?? false
+  );
   const exclusionResult = await filterSourceFiles(context.projectRoot, candidateFiles, options);
   const selectedFiles = exclusionResult.files;
   if (selectedFiles.length === 0) {
@@ -85,20 +93,24 @@ interface LoadedCoverage {
 }
 
 type SuffixCoverageResolution =
-  | { status: "matched"; coverage: FileCoverage }
-  | { status: "ambiguous"; matchCount: number }
-  | { status: "unmatched" };
+  { status: "matched"; coverage: FileCoverage } | { status: "ambiguous"; matchCount: number } | { status: "unmatched" };
 
 function createAnalyzeContext(options: AnalyzeProjectOptions): AnalyzeContext {
+  return {
+    ...createAnalyzeContextDefaults(options),
+    coverageReportPath: options.coverageReportPath,
+    executor: options.executor ?? new DefaultCommandExecutor(),
+    stderr: options.stderr
+  };
+}
+
+function createAnalyzeContextDefaults(options: AnalyzeProjectOptions) {
   return {
     projectRoot: path.resolve(options.projectRoot ?? process.cwd()),
     coverageMode: options.coverageMode ?? "auto",
     packageManager: options.packageManager ?? "auto",
     testRunner: options.testRunner ?? "auto",
-    threshold: validateThreshold(options.threshold ?? CRAP_THRESHOLD),
-    coverageReportPath: options.coverageReportPath,
-    executor: options.executor ?? new DefaultCommandExecutor(),
-    stderr: options.stderr
+    threshold: validateThreshold(options.threshold ?? CRAP_THRESHOLD)
   };
 }
 
@@ -130,7 +142,10 @@ async function groupFilesByModule(projectRoot: string, selectedFiles: string[]):
   return groupedByModule;
 }
 
-async function analyzeModules(groupedByModule: Map<string, string[]>, context: AnalyzeContext): Promise<ModuleAnalysisResult[]> {
+async function analyzeModules(
+  groupedByModule: Map<string, string[]>,
+  context: AnalyzeContext
+): Promise<ModuleAnalysisResult[]> {
   const results: ModuleAnalysisResult[] = [];
   for (const [moduleRoot, moduleFiles] of groupedByModule.entries()) {
     results.push(await analyzeModule(moduleRoot, moduleFiles, context));
@@ -172,10 +187,12 @@ async function loadModuleCoverage(
       coverageByFile: new Map<string, FileCoverage>(),
       coverageSourceRoot: null,
       unknownReason: "missing_report",
-      warnings: [emitWarning(
-        context.stderr,
-        `Warning: Coverage report not found at ${expectedCoveragePath(moduleRoot, context.coverageReportPath)}. Coverage will be N/A.`
-      )]
+      warnings: [
+        emitWarning(
+          context.stderr,
+          `Warning: Coverage report not found at ${expectedCoveragePath(moduleRoot, context.coverageReportPath)}. Coverage will be N/A.`
+        )
+      ]
     };
   }
 
@@ -187,17 +204,15 @@ async function loadModuleCoverage(
       warnings: []
     };
   } catch (error) {
-    const parseMessage = error instanceof CoverageReportParseError
-      ? error.message
-      : `Coverage report at ${coverageResult.coverageSourcePath} could not be parsed: ${(error as Error).message}`;
+    const parseMessage =
+      error instanceof CoverageReportParseError
+        ? error.message
+        : `Coverage report at ${coverageResult.coverageSourcePath} could not be parsed: ${(error as Error).message}`;
     return {
       coverageByFile: new Map<string, FileCoverage>(),
       coverageSourceRoot: null,
       unknownReason: "unparseable_report",
-      warnings: [emitWarning(
-        context.stderr,
-        `Warning: ${parseMessage}. Coverage will be N/A.`
-      )]
+      warnings: [emitWarning(context.stderr, `Warning: ${parseMessage}. Coverage will be N/A.`)]
     };
   }
 }
@@ -228,10 +243,12 @@ async function analyzeFile(
   } catch (error) {
     return {
       metrics: [],
-      warnings: [emitWarning(
-        context.stderr,
-        `Warning: Could not parse ${relativePath}: ${(error as Error).message}. Skipping file.`
-      )]
+      warnings: [
+        emitWarning(
+          context.stderr,
+          `Warning: Could not parse ${relativePath}: ${(error as Error).message}. Skipping file.`
+        )
+      ]
     };
   }
   const moduleRelativePath = toRelativePath(moduleRoot, filePath);
@@ -245,12 +262,18 @@ async function analyzeFile(
   );
   const warnings: string[] = [];
   if (fileCoverage.unknownReason === "file_ambiguous") {
-    warnings.push(emitWarning(
-      context.stderr,
-      `Warning: Coverage for ${relativePath} matched ${fileCoverage.ambiguousMatchCount ?? 0} report entries by suffix. Coverage will be N/A.`
-    ));
+    warnings.push(
+      emitWarning(
+        context.stderr,
+        `Warning: Coverage for ${relativePath} matched ${fileCoverage.ambiguousMatchCount ?? 0} report entries by suffix. Coverage will be N/A.`
+      )
+    );
   }
-  const methodCoverage = coverageForMethods(descriptors, fileCoverage.coverage, fileCoverage.unknownReason ?? undefined);
+  const methodCoverage = coverageForMethods(
+    descriptors,
+    fileCoverage.coverage,
+    fileCoverage.unknownReason ?? undefined
+  );
   const metrics = descriptors.map((descriptor, index) =>
     toMetric(descriptor, methodCoverage[index]!, filePath, relativePath, moduleRoot, context.stderr, warnings)
   );
@@ -269,10 +292,12 @@ function toMetric(
 ): MethodMetrics {
   const coveragePercent = coverage.coverage.percent;
   if (coverage.coverage.unknownReason === "fnmap_conflict") {
-    warnings.push(emitWarning(
-      stderr,
-      `Warning: Function coverage metadata in ${relativePath} could not be matched unambiguously for ${descriptor.displayName}. Coverage will be N/A.`
-    ));
+    warnings.push(
+      emitWarning(
+        stderr,
+        `Warning: Function coverage metadata in ${relativePath} could not be matched unambiguously for ${descriptor.displayName}. Coverage will be N/A.`
+      )
+    );
   }
 
   return {
@@ -289,11 +314,7 @@ function toMetric(
   };
 }
 
-async function selectFiles(
-  projectRoot: string,
-  explicitPaths: string[],
-  changedOnly: boolean
-): Promise<string[]> {
+async function selectFiles(projectRoot: string, explicitPaths: string[], changedOnly: boolean): Promise<string[]> {
   if (changedOnly) {
     return changedTypeScriptFilesUnderSourceRoots(projectRoot);
   }
@@ -330,8 +351,7 @@ function resolveFileCoverage(
 }
 
 function isModuleCoverageSource(coverageSourceRoot: string | null, moduleRoot: string): boolean {
-  return coverageSourceRoot !== null &&
-    normalizePathForMatch(coverageSourceRoot) === normalizePathForMatch(moduleRoot);
+  return coverageSourceRoot !== null && normalizePathForMatch(coverageSourceRoot) === normalizePathForMatch(moduleRoot);
 }
 
 function suffixFallbackPaths(

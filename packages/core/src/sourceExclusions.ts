@@ -107,18 +107,26 @@ function createEffectiveOptions(options: AnalyzeProjectOptions): EffectiveExclus
   const useDefaultExclusions = options.useDefaultExclusions ?? true;
   return {
     useDefaultExclusions,
+    ...createUserExclusionRules(options),
+    defaultPathGlobs: createDefaultPathRules(useDefaultExclusions),
+    defaultGeneratedMarkers: createDefaultGeneratedMarkers(useDefaultExclusions)
+  };
+}
+
+function createUserExclusionRules(options: AnalyzeProjectOptions) {
+  return {
     userPathGlobs: (options.excludes ?? []).map((glob) => pathGlobRule("user", glob)),
     userPathRegexes: (options.excludePathRegexes ?? []).map((regex) => pathRegexRule("user", regex)),
-    userGeneratedMarkers: (options.excludeGeneratedMarkers ?? []).map((marker) =>
-      markerRule("user", marker)
-    ),
-    defaultPathGlobs: useDefaultExclusions
-      ? DEFAULT_PATH_GLOBS.map((glob) => pathGlobRule("default", glob))
-      : [],
-    defaultGeneratedMarkers: useDefaultExclusions
-      ? DEFAULT_GENERATED_MARKERS.map((marker) => markerRule("default", marker))
-      : []
+    userGeneratedMarkers: (options.excludeGeneratedMarkers ?? []).map((marker) => markerRule("user", marker))
   };
+}
+
+function createDefaultPathRules(enabled: boolean): PathGlobRule[] {
+  return enabled ? DEFAULT_PATH_GLOBS.map((glob) => pathGlobRule("default", glob)) : [];
+}
+
+function createDefaultGeneratedMarkers(enabled: boolean): ExclusionReason[] {
+  return enabled ? DEFAULT_GENERATED_MARKERS.map((marker) => markerRule("default", marker)) : [];
 }
 
 async function exclusionReason(
@@ -126,23 +134,21 @@ async function exclusionReason(
   relativePath: string,
   options: EffectiveExclusionOptions
 ): Promise<ExclusionReason | null> {
-  return pathExclusionReason(relativePath, options)
-    ?? await generatedMarkerExclusionReason(filePath, options);
+  return pathExclusionReason(relativePath, options) ?? (await generatedMarkerExclusionReason(filePath, options));
 }
 
-function pathExclusionReason(
-  relativePath: string,
-  options: EffectiveExclusionOptions
-): ExclusionReason | null {
+function pathExclusionReason(relativePath: string, options: EffectiveExclusionOptions): ExclusionReason | null {
   if (options.useDefaultExclusions) {
     const directoryReason = generatedDirectoryReason(relativePath);
     if (directoryReason) {
       return directoryReason;
     }
   }
-  return firstMatchingPathGlob(relativePath, options.defaultPathGlobs)
-    ?? firstMatchingPathGlob(relativePath, options.userPathGlobs)
-    ?? firstMatchingPathRegex(relativePath, options.userPathRegexes);
+  return (
+    firstMatchingPathGlob(relativePath, options.defaultPathGlobs) ??
+    firstMatchingPathGlob(relativePath, options.userPathGlobs) ??
+    firstMatchingPathRegex(relativePath, options.userPathRegexes)
+  );
 }
 
 function generatedDirectoryReason(relativePath: string): ExclusionReason | null {
@@ -252,9 +258,7 @@ function readHeaderStep(sourceText: string, startIndex: number, finalChunk: bool
   if (!comment) {
     return doneHeaderStep(true);
   }
-  return comment.complete
-    ? { done: false, comment }
-    : doneHeaderStep(false);
+  return comment.complete ? { done: false, comment } : doneHeaderStep(false);
 }
 
 function doneHeaderStep(complete: boolean): HeaderStep {
@@ -406,7 +410,9 @@ function recordReason(reasons: Map<string, SourceExclusionReasonCount>, reason: 
 }
 
 function compareReasonCounts(left: SourceExclusionReasonCount, right: SourceExclusionReasonCount): number {
-  return left.source.localeCompare(right.source)
-    || left.kind.localeCompare(right.kind)
-    || left.rule.localeCompare(right.rule);
+  return (
+    left.source.localeCompare(right.source) ||
+    left.kind.localeCompare(right.kind) ||
+    left.rule.localeCompare(right.rule)
+  );
 }
