@@ -68,11 +68,36 @@ describe("runCommand", () => {
   });
 
   it("falls back when the configured default timeout is negative", async () => {
+    vi.useFakeTimers();
     vi.stubEnv("CRAP_TYPESCRIPT_COMMAND_TIMEOUT_MS", "-1");
+    const kill = vi.fn();
+    const child = new EventEmitter() as EventEmitter & {
+      stdout: PassThrough;
+      stderr: PassThrough;
+      kill: (signal: string) => boolean;
+    };
+    child.stdout = new PassThrough();
+    child.stderr = new PassThrough();
+    child.kill = kill.mockReturnValue(true);
+    vi.doMock("node:child_process", () => ({
+      spawn: vi.fn(() => child)
+    }));
 
-    await expect(
-      runCommand(process.execPath, ["-e", "setTimeout(() => {}, 1000)"], process.cwd(), { timeoutMs: 1 })
-    ).rejects.toThrow("Command timed out after 1ms");
+    try {
+      vi.resetModules();
+      const { runCommand: runMockedCommand } = await import("../src/utils");
+      const timeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      const result = runMockedCommand("never-closes", [], process.cwd());
+      const rejection = expect(result).rejects.toThrow("Command timed out after 300000ms");
+
+      expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 300_000);
+      await vi.advanceTimersByTimeAsync(300_000);
+      await rejection;
+      expect(kill).toHaveBeenCalledWith("SIGKILL");
+    } finally {
+      child.emit("close", 0);
+      vi.useRealTimers();
+    }
   });
 
   it("bounds captured stdout and stderr", async () => {
