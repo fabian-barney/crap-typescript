@@ -16,9 +16,13 @@ describe("render-release-notes", () => {
         ["## [0.2.2] - prerelease", "", "prerelease notes", "", "## [0.2.2]", "", "stable notes", ""].join("\n")
       );
 
+      const environment = { ...process.env };
+      delete environment.GITHUB_REF_NAME;
+
       const result = spawnSync(process.execPath, [renderReleaseNotesScript, "0.2.2"], {
         cwd: temporaryDirectory,
-        encoding: "utf8"
+        encoding: "utf8",
+        env: environment
       });
 
       expect(result.status).toBe(0);
