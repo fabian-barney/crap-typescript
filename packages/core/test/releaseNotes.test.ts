@@ -13,7 +13,9 @@ describe("render-release-notes", () => {
     try {
       writeFileSync(
         path.join(temporaryDirectory, "CHANGELOG.md"),
-        ["## [0.2.2] - prerelease", "", "prerelease notes", "", "## [0.2.2]", "", "stable notes", ""].join("\n")
+        ["## [0.2.2] - prerelease", "", "prerelease notes", "", "## [0.2.2] - 2026-04-10", "", "stable notes", ""].join(
+          "\n"
+        )
       );
 
       const environment = { ...process.env };
