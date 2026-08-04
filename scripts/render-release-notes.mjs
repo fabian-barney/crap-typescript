@@ -10,7 +10,9 @@ const expectedVersion = tagRef.startsWith("v") ? tagRef.slice(1) : tagRef;
 const changelog = await readFile(path.resolve("CHANGELOG.md"), "utf8");
 const lines = changelog.replace(/\r\n/g, "\n").split("\n");
 const sectionHeader = `## [${expectedVersion}]`;
-const startIndex = lines.findIndex((line) => line.startsWith(sectionHeader));
+const escapedSectionHeader = sectionHeader.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const sectionHeaderPattern = new RegExp(`^${escapedSectionHeader}(?: - \\d{4}-\\d{2}-\\d{2})?$`);
+const startIndex = lines.findIndex((line) => sectionHeaderPattern.test(line));
 
 if (startIndex === -1) {
   throw new Error(`CHANGELOG.md does not contain a section for ${expectedVersion}.`);
