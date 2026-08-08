@@ -192,7 +192,10 @@ The Jest adapter defaults primary `format` to `none`, so it emits no primary std
 
 ## Release
 
-Update `CHANGELOG.md` with the tagged version entry before releasing. Tag `v<version>` from `main` after the build workflow is green. The tag-triggered release workflow verifies the package versions, renders the GitHub release notes from `CHANGELOG.md`, publishes the four npm packages, and creates the GitHub release.
+Update `CHANGELOG.md` with the tagged version entry before releasing. Tag `v<version>` from `main` after the
+build workflow is green. The tag-triggered release workflow verifies the package versions, renders the GitHub
+release notes from `CHANGELOG.md`, creates a draft GitHub release, publishes the four npm packages, and promotes
+the release only after all packages succeed.
 
 ## Contributing
 

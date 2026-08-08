@@ -83,6 +83,23 @@ jobs:
           name: release-artifacts
           path: release-artifacts
 
+      - name: Create GitHub release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            is_draft="$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)"
+            if [[ "${is_draft}" != "true" ]]; then
+              echo "A published GitHub release already exists for ${GITHUB_REF_NAME}; refusing to republish."
+              exit 1
+            fi
+            gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-artifacts/release-notes.md --draft
+          else
+            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-artifacts/release-notes.md --draft --verify-tag
+          fi
+
       - name: Publish packages
         run: |
           set -euo pipefail
@@ -92,13 +109,9 @@ jobs:
           npm publish "./release-artifacts/barney-media-crap-typescript-vitest-${version}.tgz" --access public
           npm publish "./release-artifacts/barney-media-crap-typescript-jest-${version}.tgz" --access public
 
-      - name: Create GitHub release
+      - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-artifacts/release-notes.md
-          else
-            gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-artifacts/release-notes.md
-          fi
+          gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-artifacts/release-notes.md --draft=false
