@@ -46,7 +46,9 @@ describe("source exclusions", () => {
       "src/angular/app.ngsummary.ts",
       "src/angular/app.ngtypecheck.ts"
     ];
-    const projectRoot = await createFiles(Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"])));
+    const projectRoot = await createFiles(
+      Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"]))
+    );
 
     const result = await filterSourceFiles(projectRoot, absoluteFiles(projectRoot, relativePaths), {});
 
@@ -74,7 +76,9 @@ describe("source exclusions", () => {
       "src/api/clientgenerated.ts",
       "src/models/user.schema.ts"
     ];
-    const projectRoot = await createFiles(Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"])));
+    const projectRoot = await createFiles(
+      Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"]))
+    );
 
     const result = await filterSourceFiles(projectRoot, absoluteFiles(projectRoot, relativePaths), {});
 
@@ -92,7 +96,9 @@ describe("source exclusions", () => {
       "packages/api/src/internal.ts",
       "src/generatedByRegex.ts"
     ];
-    const projectRoot = await createFiles(Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"])));
+    const projectRoot = await createFiles(
+      Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"]))
+    );
 
     const result = await filterSourceFiles(projectRoot, absoluteFiles(projectRoot, relativePaths), {
       excludes: ["packages/api/**", "src/*/client?.ts"],
@@ -128,13 +134,33 @@ describe("source exclusions", () => {
     ]);
   });
 
+  it("preserves glob boundaries, single-character matches, and literal escaping", async () => {
+    const relativePaths = [
+      "src/top-level.ts",
+      "src/nested/top-level.ts",
+      "src/nested/client1.ts",
+      "src/nested/deeper/client2.ts",
+      "src/literal+name.ts"
+    ];
+    const projectRoot = await createFiles(
+      Object.fromEntries(relativePaths.map((file) => [file, "export const value = 1;\n"]))
+    );
+
+    const result = await filterSourceFiles(projectRoot, absoluteFiles(projectRoot, relativePaths), {
+      excludes: ["top-level.ts", "src/*/client?.ts", "src/literal+name.ts"],
+      useDefaultExclusions: false
+    });
+
+    expect(relativeFiles(projectRoot, result.files)).toEqual(["src/nested/deeper/client2.ts"]);
+  });
+
   it("matches generated markers only in the leading header comments", async () => {
     const files = {
       "src/generated-header.ts": "// @generated\nexport const value = 1;\n",
       "src/generated-block.ts": "/* This file was generated */\nexport const value = 1;\n",
       "src/custom-marker.ts": "// custom generated\nexport const value = 1;\n",
       "src/later-comment.ts": "export const value = 1;\n// @generated\n",
-      "src/string-literal.ts": "export const value = \"DO NOT EDIT\";\n",
+      "src/string-literal.ts": 'export const value = "DO NOT EDIT";\n',
       "src/eslint.ts": "/* eslint-disable */\nexport const value = 1;\n"
     };
     const projectRoot = await createFiles(files);

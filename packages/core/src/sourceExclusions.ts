@@ -358,31 +358,39 @@ function markerRule(source: SourceExclusionSource, marker: string): ExclusionRea
 
 function globToRegex(glob: string): RegExp {
   const normalizedGlob = normalizeGlob(glob);
-  let pattern = "^";
+  const patternParts: string[] = [];
   for (let index = 0; index < normalizedGlob.length; index += 1) {
-    const char = normalizedGlob.charAt(index);
-    if (char === "*") {
-      const nextChar = normalizedGlob[index + 1];
-      if (nextChar === "*") {
-        if (normalizedGlob[index + 2] === "/") {
-          pattern += "(?:.*/)?";
-          index += 2;
-        } else {
-          pattern += ".*";
-          index += 1;
-        }
-      } else {
-        pattern += "[^/]*";
-      }
-      continue;
-    }
-    if (char === "?") {
-      pattern += "[^/]";
-      continue;
-    }
-    pattern += escapeRegex(char);
+    const token = globToken(normalizedGlob, index);
+    patternParts.push(token.pattern);
+    index += token.additionalCharacters;
   }
-  return new RegExp(`${pattern}$`);
+  return new RegExp(`^${patternParts.join("")}$`);
+}
+
+interface GlobToken {
+  pattern: string;
+  additionalCharacters: number;
+}
+
+function globToken(glob: string, index: number): GlobToken {
+  const char = glob.charAt(index);
+  if (char === "*") {
+    return wildcardToken(glob, index);
+  }
+  if (char === "?") {
+    return { pattern: "[^/]", additionalCharacters: 0 };
+  }
+  return { pattern: escapeRegex(char), additionalCharacters: 0 };
+}
+
+function wildcardToken(glob: string, index: number): GlobToken {
+  if (glob[index + 1] !== "*") {
+    return { pattern: "[^/]*", additionalCharacters: 0 };
+  }
+  if (glob[index + 2] === "/") {
+    return { pattern: "(?:.*/)?", additionalCharacters: 2 };
+  }
+  return { pattern: ".*", additionalCharacters: 1 };
 }
 
 function normalizeGlob(glob: string): string {
