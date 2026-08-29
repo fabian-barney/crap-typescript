@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@toon-format/toon": "~2.1.0",
-    "fast-xml-parser": "^5.9.3",
+    "fast-xml-parser": "^5.11.1",
     "typescript": "^6.0.2"
   }
 }
