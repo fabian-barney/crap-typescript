@@ -8,6 +8,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - No unreleased changes.
 
+## [0.5.1] - 2026-08-29
+
+### Changed
+
+- Updated compatible dependency ranges and lockfile versions after `v0.5.0`.
+- Updated the cognitive quality gate to released `cognitive-typescript@0.3.0`
+  and adopted the native CRAP `6.0` and cognitive `8` thresholds.
+- Refactored internal glob conversion and source traversal while preserving
+  behavior and keeping the public API and public defaults unchanged.
+
 ## [0.5.0] - 2026-08-09
 
 ### Changed
