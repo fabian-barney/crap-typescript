@@ -13,7 +13,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Changed
 
 - Updated compatible dependency ranges and lockfile versions after `v0.5.0`.
-- Updated the cognitive quality gate to released `cognitive-typescript@0.3.0`
+- Updated the cognitive quality gate to `cognitive-typescript@0.3.0`, the released
+  version with native threshold `8`,
   and adopted the native CRAP `6.0` and cognitive `8` thresholds.
 - Refactored internal glob conversion and source traversal while preserving
   behavior and keeping the public API and public defaults unchanged.
