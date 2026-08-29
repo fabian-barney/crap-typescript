@@ -1,4 +1,5 @@
 import { readdir, stat } from "node:fs/promises";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 
 import { IGNORED_DIRECTORIES, IGNORED_SOURCE_ROOT_DISCOVERY_DIRECTORIES } from "./constants.js";
@@ -29,10 +30,7 @@ export async function findAllTypeScriptFilesUnderSourceRoots(projectRoot: string
   return Array.from(files).sort();
 }
 
-export async function expandExplicitPaths(
-  projectRoot: string,
-  values: string[]
-): Promise<string[]> {
+export async function expandExplicitPaths(projectRoot: string, values: string[]): Promise<string[]> {
   const files = new Set<string>();
   for (const value of values) {
     const resolvedPath = path.resolve(projectRoot, value);
@@ -147,9 +145,9 @@ function isGeneratedSourceRootPath(normalizedPath: string): boolean {
   const segments = normalizedPath.split("/").filter(Boolean);
   for (let index = 0; index < segments.length - 1; index += 1) {
     if (
-      BUILD_OUTPUT_SOURCE_ROOT_SEGMENTS.has(segments[index]!)
-      && segments[index + 1] === "src"
-      && !segments.slice(0, index).includes("src")
+      BUILD_OUTPUT_SOURCE_ROOT_SEGMENTS.has(segments[index]!) &&
+      segments[index + 1] === "src" &&
+      !segments.slice(0, index).includes("src")
     ) {
       return true;
     }
@@ -194,24 +192,34 @@ async function walkForSourceRoots(
   }
 }
 
-async function walkSourceTree(
-  currentDir: string,
-  onFile: (filePath: string) => Promise<void>
-): Promise<void> {
+async function walkSourceTree(currentDir: string, onFile: (filePath: string) => Promise<void>): Promise<void> {
   const entries = await readdir(currentDir, { withFileTypes: true });
   for (const entry of entries) {
-    const absolutePath = path.join(currentDir, entry.name);
-    if (entry.isDirectory()) {
-      if (IGNORED_DIRECTORIES.has(entry.name.toLowerCase())) {
-        continue;
-      }
-      await walkSourceTree(absolutePath, onFile);
-      continue;
-    }
-    if (entry.isFile() && isAnalyzableFile(absolutePath)) {
-      await onFile(absolutePath);
-    }
+    await walkSourceTreeEntry(currentDir, entry, onFile);
   }
+}
+
+async function walkSourceTreeEntry(
+  currentDir: string,
+  entry: Dirent,
+  onFile: (filePath: string) => Promise<void>
+): Promise<void> {
+  const absolutePath = path.join(currentDir, entry.name);
+  if (entry.isDirectory()) {
+    await walkDirectory(absolutePath, onFile);
+    return;
+  }
+  if (!entry.isFile() || !isAnalyzableFile(absolutePath)) {
+    return;
+  }
+  await onFile(absolutePath);
+}
+
+async function walkDirectory(directoryPath: string, onFile: (filePath: string) => Promise<void>): Promise<void> {
+  if (IGNORED_DIRECTORIES.has(path.basename(directoryPath).toLowerCase())) {
+    return;
+  }
+  await walkSourceTree(directoryPath, onFile);
 }
 
 async function expandDirectoryPath(directoryPath: string, files: Set<string>): Promise<void> {
