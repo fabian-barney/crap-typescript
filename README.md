@@ -172,6 +172,12 @@ export default withCrapTypescriptVitest({
 
 The Vitest adapter defaults primary `format` to `none`, so it emits no primary stdout report unless configured. It enables `junit` by default and writes a full sidecar for CI test-report UIs. With the default coverage report path, the sidecar is `coverage/crap-typescript-junit.xml`; custom coverage paths derive a matching sidecar path. Pass `format`, `agent`, `failuresOnly`, `omitRedundancy`, `output`, `junit`, `junitReport`, `threshold`, `excludes`, `excludePathRegexes`, `excludeGeneratedMarkers`, or `useDefaultExclusions` in the adapter options to customize analysis and reporting. Set `junit: false` to disable the JUnit artifact. JUnit sidecars are full reports and are not affected by `agent`, `failuresOnly`, or `omitRedundancy`.
 
+When `test.reporters` is omitted, the Vitest adapter keeps the `default` reporter and adds the CRAP reporter. An explicit
+reporter value or array replaces that default; the adapter preserves the configured entries and adds only the CRAP
+reporter. Similarly, an omitted `coverage.reporter` defaults to `json` and `text`, while an explicit value is preserved
+and augmented only with the required `json` reporter when needed. Use empty reporter arrays to keep only the CRAP and
+JSON reporters and suppress Vitest's test and coverage terminal reports.
+
 Jest:
 
 ```js

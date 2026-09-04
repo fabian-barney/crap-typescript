@@ -44,6 +44,44 @@ export default withCrapTypescriptVitest(
     expect(`${result.stdout}\n${result.stderr}`).toContain("CRAP threshold exceeded");
   });
 
+  it("runs CRAP analysis without explicitly suppressed test and coverage terminal reports", async () => {
+    const projectRoot = await copyFixture("vitest-project");
+    tempDirs.push(projectRoot);
+    const adapterUrl = pathToFileURL(repoPath("packages", "vitest", "dist", "index.js")).href;
+    await writeProjectFiles(projectRoot, {
+      "vitest.config.mjs": `import { withCrapTypescriptVitest } from ${JSON.stringify(adapterUrl)};
+
+export default withCrapTypescriptVitest(
+  {
+    test: {
+      include: ["test/**/*.test.ts"],
+      reporters: [],
+      coverage: {
+        reporter: []
+      }
+    }
+  },
+  {
+    projectRoot: process.cwd()
+  }
+);
+`
+    });
+
+    const result = await runProcess(
+      process.execPath,
+      [repoPath("node_modules", "vitest", "vitest.mjs"), "run", "--config", "vitest.config.mjs"],
+      projectRoot
+    );
+    const output = `${result.stdout}\n${result.stderr}`;
+
+    expect(result.exitCode).toBe(2);
+    await expect(access(path.join(projectRoot, "coverage", "coverage-final.json"))).resolves.toBeUndefined();
+    expect(output).toContain("CRAP threshold exceeded");
+    expect(output).not.toContain("Test Files");
+    expect(output).not.toContain("% Stmts");
+  });
+
   it("honors custom coverage output directories when enforcing the CRAP threshold", async () => {
     const projectRoot = await copyFixture("vitest-project");
     tempDirs.push(projectRoot);

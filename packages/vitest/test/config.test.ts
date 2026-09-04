@@ -26,22 +26,19 @@ describe("withCrapTypescriptVitest", () => {
     expect(coverageReporters).toEqual(["json", "text"]);
   });
 
-  it("preserves existing default reporters and augments single coverage reporter values", () => {
+  it("preserves explicit single reporters and adds only the required reporters", () => {
     const config = withCrapTypescriptVitest({
       test: {
-        reporters: ["default"],
+        reporters: "dot",
         coverage: {
-          reporter: "json",
+          reporter: "text-summary",
           reportsDirectory: "custom-coverage"
         }
       }
     });
 
-    expect(config.test?.reporters).toEqual([
-      "default",
-      expect.any(CrapTypescriptVitestReporter)
-    ]);
-    expect(config.test?.coverage?.reporter).toEqual(["json", "text"]);
+    expect(config.test?.reporters).toEqual(["dot", expect.any(CrapTypescriptVitestReporter)]);
+    expect(config.test?.coverage?.reporter).toEqual(["text-summary", "json"]);
     expect(config.test?.coverage?.reportsDirectory).toBe("custom-coverage");
     expect(config.test?.reporters?.[1]).toMatchObject({
       options: expect.objectContaining({
@@ -52,20 +49,72 @@ describe("withCrapTypescriptVitest", () => {
     });
   });
 
-  it("passes renamed reporting options to the reporter", () => {
-    const config = withCrapTypescriptVitest({}, {
-      format: "json",
-      agent: true,
-      failuresOnly: true,
-      omitRedundancy: true,
-      output: "reports/crap.txt",
-      junit: false,
-      junitReport: "reports/custom-junit.xml",
-      excludes: ["src/generated/**"],
-      excludePathRegexes: ["^src/proto/"],
-      excludeGeneratedMarkers: ["@custom-generated"],
-      useDefaultExclusions: false
+  it("preserves explicit reporter arrays and tuple options without mutating the input", () => {
+    const testReporters: Array<string | [string, unknown]> = [["default", { summary: false }], "dot"];
+    const coverageReporters: Array<string | [string, unknown]> = [
+      ["text", { skipFull: true }],
+      ["json", { file: "coverage-final.json" }]
+    ];
+    const input = {
+      test: {
+        reporters: testReporters,
+        coverage: {
+          reporter: coverageReporters
+        }
+      }
+    };
+
+    const config = withCrapTypescriptVitest(input);
+
+    expect(config.test?.reporters).toEqual([
+      ["default", { summary: false }],
+      "dot",
+      expect.any(CrapTypescriptVitestReporter)
+    ]);
+    expect(config.test?.coverage?.reporter).toEqual([
+      ["text", { skipFull: true }],
+      ["json", { file: "coverage-final.json" }]
+    ]);
+    expect(testReporters).toEqual([["default", { summary: false }], "dot"]);
+    expect(coverageReporters).toEqual([
+      ["text", { skipFull: true }],
+      ["json", { file: "coverage-final.json" }]
+    ]);
+    expect(config.test?.reporters).not.toBe(testReporters);
+    expect(config.test?.coverage?.reporter).not.toBe(coverageReporters);
+  });
+
+  it("honors explicitly empty reporter arrays", () => {
+    const config = withCrapTypescriptVitest({
+      test: {
+        reporters: [],
+        coverage: {
+          reporter: []
+        }
+      }
     });
+
+    expect(config.test?.reporters).toEqual([expect.any(CrapTypescriptVitestReporter)]);
+    expect(config.test?.coverage?.reporter).toEqual(["json"]);
+  });
+
+  it("passes renamed reporting options to the reporter", () => {
+    const config = withCrapTypescriptVitest(
+      {},
+      {
+        format: "json",
+        agent: true,
+        failuresOnly: true,
+        omitRedundancy: true,
+        output: "reports/crap.txt",
+        junit: false,
+        junitReport: "reports/custom-junit.xml",
+        excludes: ["src/generated/**"],
+        excludePathRegexes: ["^src/proto/"],
+        excludeGeneratedMarkers: ["@custom-generated"],
+        useDefaultExclusions: false
+      }
+    );
 
     expect(config.test?.reporters).toEqual([
       "default",
@@ -90,7 +139,7 @@ describe("withCrapTypescriptVitest", () => {
   it("preserves explicitly disabled coverage without registering the CRAP reporter", () => {
     const config = withCrapTypescriptVitest({
       test: {
-        reporters: ["default"],
+        reporters: ["dot"],
         coverage: {
           enabled: false,
           reporter: "json",
@@ -101,15 +150,18 @@ describe("withCrapTypescriptVitest", () => {
 
     expect(config.test?.coverage?.enabled).toBe(false);
     expect(config.test?.coverage?.provider).toBe("v8");
-    expect(config.test?.coverage?.reporter).toEqual(["json", "text"]);
+    expect(config.test?.coverage?.reporter).toEqual(["json"]);
     expect(config.test?.coverage?.reportsDirectory).toBe("custom-coverage");
-    expect(config.test?.reporters).toEqual(["default"]);
+    expect(config.test?.reporters).toEqual(["dot"]);
   });
 
   it("derives the default JUnit report from an overridden coverage report", () => {
-    const config = withCrapTypescriptVitest({}, {
-      coverageReportPath: "custom-coverage/results/coverage-final.json"
-    });
+    const config = withCrapTypescriptVitest(
+      {},
+      {
+        coverageReportPath: "custom-coverage/results/coverage-final.json"
+      }
+    );
 
     expect(config.test?.reporters).toEqual([
       "default",

@@ -257,6 +257,15 @@ If no numeric CRAP values exist, the maximum shall be treated as `0.0`.
 
 The Vitest and Jest adapters shall enable the canonical Istanbul JSON coverage output and register the CRAP reporter.
 
+When Vitest `test.reporters` is absent, the Vitest adapter shall register the `default` reporter before the CRAP
+reporter. When `test.reporters` is explicitly configured, including as an empty array, the adapter shall preserve the
+configured reporters in order and append only the CRAP reporter while coverage is enabled.
+
+When Vitest `coverage.reporter` is absent, the Vitest adapter shall configure `json` and `text`. When
+`coverage.reporter` is explicitly configured, including as an empty array, the adapter shall preserve the configured
+reporters in order and append `json` only when no string or tuple entry already names it. Explicit reporter arrays shall
+not be mutated.
+
 Both adapters shall expose these reporting options:
 
 - `threshold`
