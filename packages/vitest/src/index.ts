@@ -98,7 +98,7 @@ export function withCrapTypescriptVitest(
   const testConfig = config.test ?? {};
   const coverage = testConfig.coverage ?? {};
   const coverageEnabled = coverage.enabled ?? true;
-  const coverageReporters = ensureReporterEntries(asArray(coverage.reporter), "json", "text");
+  const coverageReporters = configuredCoverageReporters(coverage.reporter);
   const coverageReportPath = options.coverageReportPath ?? buildCoverageReportPath(coverage.reportsDirectory);
 
   return {
@@ -131,17 +131,18 @@ function configuredReporters(
   options: CrapTypescriptVitestOptions,
   coverageReportPath: string
 ): VitestReporterEntry[] {
-  const reporters = ensureDefaultReporter(asArray(existing));
+  const reporters: VitestReporterEntry[] = existing === undefined ? ["default"] : asArray(existing);
   if (coverageEnabled) {
     reporters.push(new CrapTypescriptVitestReporter(reporterOptions(options, coverageReportPath)));
   }
   return reporters;
 }
 
-function asArray<T>(value: T | T[] | undefined): T[] {
-  if (value === undefined) {
-    return [];
-  }
+function configuredCoverageReporters(existing: VitestCoverageConfig["reporter"]): Array<string | [string, unknown]> {
+  return existing === undefined ? ["json", "text"] : ensureReporterEntries(asArray(existing), "json");
+}
+
+function asArray<T>(value: T | T[]): T[] {
   return Array.isArray(value) ? [...value] : [value];
 }
 
@@ -156,16 +157,6 @@ function ensureReporterEntries(
     }
   }
   return result;
-}
-
-function ensureDefaultReporter(existing: VitestReporterEntry[]): VitestReporterEntry[] {
-  if (existing.length === 0) {
-    return ["default"];
-  }
-  if (!existing.some((entry) => (Array.isArray(entry) ? entry[0] : entry) === "default")) {
-    return ["default", ...existing];
-  }
-  return existing;
 }
 
 function buildCoverageReportPath(reportsDirectory: string | undefined): string {

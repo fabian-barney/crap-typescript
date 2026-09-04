@@ -6,7 +6,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
-- No unreleased changes.
+### Fixed
+
+- Updated the Vitest adapter to respect explicit test and coverage reporter configuration while retaining the reporters
+  required for CRAP analysis.
 
 ## [0.5.1] - 2026-08-29
 
