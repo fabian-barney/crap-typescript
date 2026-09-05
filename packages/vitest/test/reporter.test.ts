@@ -89,7 +89,7 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await reporter.onFinishedReportCoverage();
 
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods: []\n");
     expect(stderr.toString()).toBe("");
   });
 
@@ -388,7 +388,7 @@ describe("CrapTypescriptVitestReporter", () => {
 
     await reporter.onFinishedReportCoverage();
 
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods: []\n");
     await expect(readText(`${projectRoot}/coverage/crap-typescript-junit.xml`)).rejects.toThrow();
     expect(stderr.toString()).toBe("");
   });

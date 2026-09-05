@@ -41,7 +41,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
-    "@toon-format/toon": "~2.1.0",
+    "@toon-format/toon": "~2.3.1",
     "fast-xml-parser": "^5.11.1",
     "typescript": "^6.0.2"
   }
