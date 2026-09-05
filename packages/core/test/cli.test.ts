@@ -1081,7 +1081,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const exitCode = await runCli([], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods: []\n");
     expect(stderr.toString()).toBe("");
   });
 
@@ -1099,7 +1099,7 @@ export function risky(flagA: boolean, flagB: boolean): number {
     const exitCode = await runCli([], projectRoot, stdout, stderr);
 
     expect(exitCode).toBe(0);
-    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
+    expect(stdout.toString()).toBe("status: passed\nthreshold: 6\nmethods: []\n");
     expect(stderr.toString()).toBe("");
   });
 

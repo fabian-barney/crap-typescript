@@ -711,7 +711,7 @@ describe("report formatting", () => {
 
     expect(formatToonReport(report)).toBe(`${encode(report)}\n`);
     expect(formatToonReport(agentReport, true)).toBe(`${encode(agentReport)}\n`);
-    expect(formatToonReport(report)).toBe("status: passed\nthreshold: 6\nmethods[0]:\n");
+    expect(formatToonReport(report)).toBe("status: passed\nthreshold: 6\nmethods: []\n");
   });
 
   it("formats JUnit XML with testcase properties and escaped values", () => {

@@ -10,6 +10,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - Updated the Vitest adapter to respect explicit test and coverage reporter configuration while retaining the reporters
   required for CRAP analysis.
+- Upgraded `@toon-format/toon` to 2.3.1 to address prototype pollution and use canonical `methods: []` encoding for
+  empty reports.
 
 ## [0.5.1] - 2026-08-29
 
