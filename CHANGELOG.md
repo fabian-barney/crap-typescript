@@ -8,6 +8,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- Updated `@toon-format/toon` to `2.3.1` for the published security fix and
+  aligned empty-method report expectations with the encoder's canonical output.
 - Updated the Vitest adapter to respect explicit test and coverage reporter configuration while retaining the reporters
   required for CRAP analysis.
 
