@@ -6,6 +6,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-05
+
 ### Fixed
 
 - Updated `@toon-format/toon` to `2.3.1` for the published security fix and
