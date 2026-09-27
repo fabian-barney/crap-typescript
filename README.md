@@ -198,10 +198,10 @@ The Jest adapter defaults primary `format` to `none`, so it emits no primary std
 
 ## Release
 
-Update `CHANGELOG.md` with the tagged version entry before releasing. Tag `v<version>` from `main` after the
-build workflow is green. The tag-triggered release workflow verifies the package versions, renders the GitHub
-release notes from `CHANGELOG.md`, creates a draft GitHub release, publishes the four npm packages, and promotes
-the release only after all packages succeed.
+Merge a reviewed version-bump PR into `main` to release automatically after the exact commit passes all CI gates.
+Ordinary merges do not publish. Releases include the four npm archives, CycloneDX SBOMs, SHA-256 checksums,
+and keyless provenance and SBOM attestations. See [RELEASING.md](RELEASING.md) for preparation, verification,
+trusted-publisher configuration, and failure recovery.
 
 ## Contributing
 

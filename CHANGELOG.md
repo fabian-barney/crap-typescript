@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-09-26
+
+### Changed
+
+- Updated Vitest from 4.1.10 to 4.1.11 and its resolved dependencies.
+- Updated js-yaml from 3.15.1 to 3.15.2 for merge-sequence CPU safeguards.
+
 ## [0.5.2] - 2026-09-05
 
 ### Fixed

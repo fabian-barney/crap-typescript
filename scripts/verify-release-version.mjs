@@ -1,24 +1,9 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import { packages, readJson, validateVersions } from "./release-lib.mjs";
 
-const tagRef = process.env.GITHUB_REF_NAME ?? process.argv[2];
+const tagRef = process.argv[2] ?? process.env.GITHUB_REF_NAME;
 if (!tagRef) {
   throw new Error("A tag name is required.");
 }
 
 const expectedVersion = tagRef.startsWith("v") ? tagRef.slice(1) : tagRef;
-const versionFiles = [
-  "package.json",
-  "packages/core/package.json",
-  "packages/cli/package.json",
-  "packages/vitest/package.json",
-  "packages/jest/package.json"
-];
-
-for (const versionFile of versionFiles) {
-  const raw = await readFile(path.resolve(versionFile), "utf8");
-  const parsed = JSON.parse(raw);
-  if (parsed.version !== expectedVersion) {
-    throw new Error(`${versionFile} has version ${parsed.version}, expected ${expectedVersion}`);
-  }
-}
+validateVersions(expectedVersion, readJson("package.json"), packages(), readJson("package-lock.json"));
