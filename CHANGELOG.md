@@ -6,6 +6,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-27
+
+### Changed
+
+- Declare the existing core, CLI, Vitest, and Jest APIs stable under Semantic Versioning, preserving current behavior, defaults, and runtime support.
+- Release automatically from reviewed version-bump merges after all checks pass on the exact source commit.
+
+### Added
+
+- Downloadable npm archives, package-specific CycloneDX SBOMs, and SHA-256 checksums on GitHub releases.
+- Keyless build-provenance and SBOM attestations with downloadable verification bundles, alongside npm provenance.
+- Release verification and recovery instructions in `RELEASING.md`.
+
 ## [0.5.3] - 2026-09-26
 
 ### Changed
