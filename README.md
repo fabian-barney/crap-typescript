@@ -2,6 +2,8 @@
 
 `crap-typescript` is a shared CRAP metric toolkit for TypeScript projects.
 
+Version 1.0.0 declares the existing core, CLI, Vitest, and Jest APIs stable under Semantic Versioning.
+
 It combines cyclomatic complexity with function-level coverage derived from Istanbul statement and branch counters and reports CRAP scores for concrete TypeScript function bodies. The repository publishes a standalone CLI plus dedicated Vitest and Jest adapters.
 
 ## Modules
