@@ -41,9 +41,9 @@ export function validateVersions(version, root, manifests, lock) {
   }
 }
 
-export async function jsonRequest(url, { token, allowMissing = false } = {}) {
+export async function jsonRequest(url, { token, allowMissing = false, headers = {} } = {}) {
   const response = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } : {},
+    headers: { ...(token ? { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } : {}), ...headers },
     signal: AbortSignal.timeout(30000)
   });
   if (allowMissing && response.status === 404) return null;

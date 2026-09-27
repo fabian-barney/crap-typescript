@@ -66,11 +66,25 @@ test("post-publish verification waits for metadata and provenance propagation", 
   const pkg = { name: "core", version: "1.0.0" };
   const metadata = { dist: { integrity: `sha512-${digest("archive", "sha512", "base64")}`, attestations: { url: "attestations" } } };
   const responses = [null, metadata, null, metadata, { attestations: [] }, metadata,
-    { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] }];
+    { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] }, { versions: { "1.0.0": metadata } }];
   let pauses = 0;
   await verifyPublishedPackage(pkg, "archive", { request: async () => responses.shift(), pause: async () => { pauses++; } });
   assert.equal(pauses, 3);
   assert.equal(responses.length, 0);
+});
+
+test("verification waits for npm install metadata and uses its canonical scoped URL", async () => {
+  const pkg = { name: "@scope/core", version: "1.0.0" };
+  const metadata = { dist: { integrity: `sha512-${digest("archive", "sha512", "base64")}`, attestations: { url: "attestations" } } };
+  let installReads = 0;
+  await verifyPublishedPackage(pkg, "archive", { pause: async () => {}, request: async (url, options) => {
+    if (url === "attestations") return { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] };
+    if (url.endsWith("/1.0.0")) return metadata;
+    assert.equal(url, "https://registry.npmjs.org/@scope%2fcore");
+    assert.equal(options.headers.Accept, "application/vnd.npm.install-v1+json");
+    return ++installReads === 1 ? { versions: {} } : { versions: { "1.0.0": metadata } };
+  } });
+  assert.equal(installReads, 2);
 });
 
 test("post-publish retries are bounded and never hide integrity or permission failures", async () => {

@@ -7,7 +7,9 @@ export async function verifyPublishedPackage(pkg, bytes, {
   pause = () => new Promise((resolve) => setTimeout(resolve, 10000))
 } = {}) {
   const expected = `sha512-${digest(bytes, "sha512", "base64")}`;
-  const url = `https://registry.npmjs.org/${encodeURIComponent(pkg.name)}/${pkg.version}`;
+  // Match npm's canonical scoped-package URL and its separate install-metadata representation.
+  const packageUrl = `https://registry.npmjs.org/${encodeURIComponent(pkg.name).replace(/^%40/, "@").replaceAll("%2F", "%2f")}`;
+  const url = `${packageUrl}/${pkg.version}`;
   for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       const metadata = await request(url, { allowMissing: true });
@@ -15,7 +17,15 @@ export async function verifyPublishedPackage(pkg, bytes, {
         if (metadata.dist?.integrity !== expected) throw new Error(`npm integrity mismatch: ${pkg.name}`);
         if (metadata.dist.attestations?.url) {
           const provenance = await request(metadata.dist.attestations.url, { allowMissing: true });
-          if (provenance?.attestations?.some((entry) => entry.predicateType === "https://slsa.dev/provenance/v1")) return;
+          if (provenance?.attestations?.some((entry) => entry.predicateType === "https://slsa.dev/provenance/v1")) {
+            const installMetadata = await request(packageUrl, { allowMissing: true,
+              headers: { Accept: "application/vnd.npm.install-v1+json", "Cache-Control": "no-cache" } });
+            const published = installMetadata?.versions?.[pkg.version];
+            if (published) {
+              if (published.dist?.integrity !== expected) throw new Error(`npm install integrity mismatch: ${pkg.name}`);
+              return;
+            }
+          }
         }
       }
     } catch (error) {
