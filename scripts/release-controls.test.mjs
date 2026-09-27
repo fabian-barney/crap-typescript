@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -118,5 +118,30 @@ test("release notes require a nonempty version section even on main", () => {
     assert.notEqual(execute().status, 0);
     writeFileSync(path.join(directory, "CHANGELOG.md"), "## [1.0.0]\n\nStable release\n");
     assert.equal(execute().status, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("all attestation calls enforce the same policy, including the tamper probe", { skip: process.platform === "win32" }, () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "release-attest-"));
+  try {
+    const mock = path.join(directory, "gh");
+    writeFileSync(mock, `#!/bin/sh\nprintf '%s\\n' "$*" >> "$VERIFY_LOG"\nif grep -q tampered "$3"; then exit 1; fi\n`);
+    chmodSync(mock, 0o755);
+    for (const file of ["package.tgz", "package.tgz.cdx.json", "SHA256SUMS", "provenance.sigstore.json", "package.tgz.sbom.sigstore.json"]) {
+      writeFileSync(path.join(directory, file), "original");
+    }
+    const log = path.join(directory, "calls");
+    execFileSync("bash", [path.resolve("scripts/verify-release-attestations.sh"), directory], {
+      env: { ...process.env, PATH: `${directory}:${process.env.PATH}`, GH_REPO: "owner/repo", GITHUB_SHA: "expected-sha", VERIFY_LOG: log }
+    });
+    const calls = readFileSync(log, "utf8").trim().split("\n");
+    assert.equal(calls.length, 5);
+    for (const call of calls) {
+      assert.match(call, /--repo owner\/repo/);
+      assert.match(call, /--cert-identity https:\/\/github.com\/owner\/repo\/\.github\/workflows\/release.yml@refs\/heads\/main/);
+      assert.match(call, /--cert-oidc-issuer https:\/\/token.actions.githubusercontent.com/);
+      assert.match(call, /--source-digest expected-sha/);
+      assert.match(call, /--deny-self-hosted-runners/);
+    }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
