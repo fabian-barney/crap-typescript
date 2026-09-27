@@ -47,7 +47,7 @@ export async function jsonRequest(url, { token, allowMissing = false } = {}) {
     signal: AbortSignal.timeout(30000)
   });
   if (allowMissing && response.status === 404) return null;
-  if (!response.ok) throw new Error(`Request failed (${response.status}): ${url}`);
+  if (!response.ok) throw Object.assign(new Error(`Request failed (${response.status}): ${url}`), { status: response.status });
   return response.json();
 }
 

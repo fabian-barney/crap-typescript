@@ -6,6 +6,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { assertNoReleaseCollision, assertUnpublished, checkRunState, validateVersions, versionIncreased, waitForRequired } from "./release-lib.mjs";
 import { digest, packageBom, verifyManifest } from "./release-artifacts.mjs";
+import { verifyPublishedPackage } from "./release-registry.mjs";
 
 test("stable versions increase numerically and reject malformed candidates", () => {
   assert.equal(versionIncreased("0.5.3", "1.0.0"), true);
@@ -59,6 +60,35 @@ test("existing tags, drafts, and API failures fail closed", async () => {
   await assert.rejects(assertNoReleaseCollision("v1.0.0", async (endpoint) =>
     endpoint.startsWith("releases/") ? { draft: true } : null), /Release collision/);
   await assert.rejects(assertNoReleaseCollision("v1.0.0", async () => { throw new Error("API failed"); }), /API failed/);
+});
+
+test("post-publish verification waits for metadata and provenance propagation", async () => {
+  const pkg = { name: "core", version: "1.0.0" };
+  const metadata = { dist: { integrity: `sha512-${digest("archive", "sha512", "base64")}`, attestations: { url: "attestations" } } };
+  const responses = [null, metadata, null, metadata, { attestations: [] }, metadata,
+    { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] }];
+  let pauses = 0;
+  await verifyPublishedPackage(pkg, "archive", { request: async () => responses.shift(), pause: async () => { pauses++; } });
+  assert.equal(pauses, 3);
+  assert.equal(responses.length, 0);
+});
+
+test("post-publish retries are bounded and never hide integrity or permission failures", async () => {
+  const pkg = { name: "core", version: "1.0.0" };
+  const immediate = { attempts: 2, pause: async () => {} };
+  await assert.rejects(verifyPublishedPackage(pkg, "archive", { ...immediate, request: async () => null }), /Timed out/);
+  let calls = 0;
+  await assert.rejects(verifyPublishedPackage(pkg, "archive", { ...immediate,
+    request: async () => { calls++; return { dist: { integrity: "wrong" } }; } }), /integrity mismatch/);
+  assert.equal(calls, 1);
+  await assert.rejects(verifyPublishedPackage(pkg, "archive", { ...immediate,
+    request: async () => { throw Object.assign(new Error("Forbidden"), { status: 403 }); } }), /Forbidden/);
+  for (const status of [429, 500, 503]) {
+    calls = 0;
+    await assert.rejects(verifyPublishedPackage(pkg, "archive", { ...immediate,
+      request: async () => { calls++; throw Object.assign(new Error("Temporary"), { status }); } }), /Timed out/);
+    assert.equal(calls, 2);
+  }
 });
 
 test("SBOM re-rooting retains runtime closure, removes unrelated dev tools, and fails on missing nodes", () => {

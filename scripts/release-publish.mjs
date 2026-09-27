@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { archiveName, assertUnpublished, git, jsonRequest, packages } from "./release-lib.mjs";
-import { digest, npm, verifyManifest } from "./release-artifacts.mjs";
+import { archiveName, assertUnpublished, git, packages } from "./release-lib.mjs";
+import { npm, verifyManifest } from "./release-artifacts.mjs";
+import { verifyPublishedPackage } from "./release-registry.mjs";
 
 const manifests = packages();
 const tag = `v${manifests[0].version}`;
@@ -35,14 +36,8 @@ if (command === "prepare") {
   }
 } else if (command === "verify") {
   for (const pkg of manifests) {
-    const metadata = await jsonRequest(`https://registry.npmjs.org/${encodeURIComponent(pkg.name)}/${pkg.version}`);
     const bytes = readFileSync(`release-artifacts/${archiveName(pkg)}`);
-    if (metadata.dist.integrity !== `sha512-${digest(bytes, "sha512", "base64")}`) throw new Error(`npm integrity mismatch: ${pkg.name}`);
-    if (!metadata.dist.attestations?.url) throw new Error(`Missing npm provenance: ${pkg.name}`);
-    const attestations = await jsonRequest(metadata.dist.attestations.url);
-    if (!attestations.attestations?.some((attestation) => attestation.predicateType === "https://slsa.dev/provenance/v1")) {
-      throw new Error(`Missing SLSA provenance: ${pkg.name}`);
-    }
+    await verifyPublishedPackage(pkg, bytes);
   }
 } else {
   throw new Error(`Unknown publication command: ${command}`);
