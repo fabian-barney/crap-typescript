@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-const tagRef = process.env.GITHUB_REF_NAME ?? process.argv[2];
+const tagRef = process.argv[2] ?? process.env.GITHUB_REF_NAME;
 if (!tagRef) {
   throw new Error("A tag name is required.");
 }

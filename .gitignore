@@ -9,3 +9,4 @@ coverage/
 .temp/
 test-results/
 release-notes.md
+release-artifacts/
