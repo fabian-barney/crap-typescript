@@ -95,6 +95,20 @@ creates a GitHub draft, uploads assets, publishes core/CLI/Vitest/Jest in that o
 checks npm integrity and provenance, runs a clean registry consumer smoke test, and
 promotes the draft only after all checks succeed.
 
+The npm read API can lag successful publication. Verification checks both version details
+and npm's separate install-metadata representation, and the smoke install revalidates its cache.
+Verification retries missing metadata,
+missing provenance, rate limits, and temporary server failures up to 60 times at ten-second
+intervals per package. Integrity mismatches and permanent permission errors fail immediately.
+
+If all four uploads succeeded but only this read-side propagation check failed, recovery
+may finish verification without republishing: download the original draft assets, verify
+their checksums and attestations against the original tag commit, verify each npm archive's
+integrity and provenance, and run the registry consumer smoke test with signature checks.
+Promote the existing draft only after every check passes. This exception is limited to a
+read-side verification failure after successful uploads; a genuinely failed publication
+target still requires a new version. Never rebuild or overwrite the original assets.
+
 Failures before tag creation and before any public package exists can be rerun at
 the same commit. Once a tag or draft exists, automatic retries fail closed: do not
 rebuild and replace its assets or delete the tag to unblock a rerun. A recovery must

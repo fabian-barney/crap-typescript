@@ -41,13 +41,13 @@ export function validateVersions(version, root, manifests, lock) {
   }
 }
 
-export async function jsonRequest(url, { token, allowMissing = false } = {}) {
+export async function jsonRequest(url, { token, allowMissing = false, headers = {} } = {}) {
   const response = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } : {},
+    headers: { ...(token ? { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } : {}), ...headers },
     signal: AbortSignal.timeout(30000)
   });
   if (allowMissing && response.status === 404) return null;
-  if (!response.ok) throw new Error(`Request failed (${response.status}): ${url}`);
+  if (!response.ok) throw Object.assign(new Error(`Request failed (${response.status}): ${url}`), { status: response.status });
   return response.json();
 }
 

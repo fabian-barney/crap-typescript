@@ -11,7 +11,7 @@ try {
   writeFileSync(path.join(directory, "package.json"), JSON.stringify({ name: "release-consumer", private: true, type: "module" }));
   const dependencies = packages().map((pkg) => registry ? `${pkg.name}@${pkg.version}` :
     path.resolve("release-artifacts", archiveName(pkg)));
-  npm(["install", "--ignore-scripts", "--no-audit", "--no-fund", ...dependencies], { cwd: directory, stdio: "inherit" });
+  npm(["install", "--prefer-online", "--ignore-scripts", "--no-audit", "--no-fund", ...dependencies], { cwd: directory, stdio: "inherit" });
   const source = `
     import assert from 'node:assert/strict';
     import * as core from '@barney-media/crap-typescript-core';
