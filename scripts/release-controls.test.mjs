@@ -105,6 +105,35 @@ test("post-publish retries are bounded and never hide integrity or permission fa
   }
 });
 
+test("partial version and install metadata wait for integrity without accepting a missing digest", async () => {
+  const pkg = { name: "core", version: "1.0.0" };
+  const metadata = { dist: { integrity: `sha512-${digest("archive", "sha512", "base64")}`, attestations: { url: "attestations" } } };
+  const partial = [{}, { dist: {} }, { dist: { integrity: null } }];
+  for (const endpoint of ["version", "install"]) {
+    for (const incomplete of partial) {
+      let reads = 0;
+      let pauses = 0;
+      await verifyPublishedPackage(pkg, "archive", { attempts: 2, pause: async () => { pauses++; }, request: async (url) => {
+        if (url === "attestations") return { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] };
+        if (url.endsWith("/1.0.0")) return endpoint === "version" && ++reads === 1 ? incomplete : metadata;
+        return { versions: { "1.0.0": endpoint === "install" && ++reads === 1 ? incomplete : metadata } };
+      } });
+      assert.equal(reads, 2);
+      assert.equal(pauses, 1);
+    }
+    await assert.rejects(verifyPublishedPackage(pkg, "archive", { attempts: 1, request: async (url) => {
+      if (url === "attestations") return { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] };
+      if (url.endsWith("/1.0.0")) return endpoint === "version" ? {} : metadata;
+      return { versions: { "1.0.0": {} } };
+    } }), /Timed out/);
+  }
+  await assert.rejects(verifyPublishedPackage(pkg, "archive", { attempts: 1, request: async (url) => {
+    if (url === "attestations") return { attestations: [{ predicateType: "https://slsa.dev/provenance/v1" }] };
+    if (url.endsWith("/1.0.0")) return metadata;
+    return { versions: { "1.0.0": { dist: { integrity: "wrong" } } } };
+  } }), /install integrity mismatch/);
+});
+
 test("SBOM re-rooting retains runtime closure, removes unrelated dev tools, and fails on missing nodes", () => {
   const component = (ref) => ({ name: ref, "bom-ref": ref });
   const bom = { metadata: { component: component("parent") },

@@ -14,16 +14,18 @@ export async function verifyPublishedPackage(pkg, bytes, {
     try {
       const metadata = await request(url, { allowMissing: true });
       if (metadata) {
-        if (metadata.dist?.integrity !== expected) throw new Error(`npm integrity mismatch: ${pkg.name}`);
-        if (metadata.dist.attestations?.url) {
+        const versionIntegrity = metadata.dist?.integrity;
+        if (versionIntegrity != null && versionIntegrity !== expected) throw new Error(`npm integrity mismatch: ${pkg.name}`);
+        if (versionIntegrity === expected && metadata.dist.attestations?.url) {
           const provenance = await request(metadata.dist.attestations.url, { allowMissing: true });
           if (provenance?.attestations?.some((entry) => entry.predicateType === "https://slsa.dev/provenance/v1")) {
             const installMetadata = await request(packageUrl, { allowMissing: true,
               headers: { Accept: "application/vnd.npm.install-v1+json", "Cache-Control": "no-cache" } });
             const published = installMetadata?.versions?.[pkg.version];
             if (published) {
-              if (published.dist?.integrity !== expected) throw new Error(`npm install integrity mismatch: ${pkg.name}`);
-              return;
+              const installIntegrity = published.dist?.integrity;
+              if (installIntegrity != null && installIntegrity !== expected) throw new Error(`npm install integrity mismatch: ${pkg.name}`);
+              if (installIntegrity === expected) return;
             }
           }
         }
