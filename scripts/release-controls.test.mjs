@@ -137,15 +137,80 @@ test("partial version and install metadata wait for integrity without accepting 
 test("SBOM re-rooting retains runtime closure, removes unrelated dev tools, and fails on missing nodes", () => {
   const component = (ref) => ({ name: ref, "bom-ref": ref });
   const bom = { metadata: { component: component("parent") },
-    components: [component("cli@1.0.0"), component("typescript"), component("dev-tool")],
+    components: [{ ...component("cli@1.0.0"), name: "cli", version: "1.0.0" }, component("typescript"), component("dev-tool")],
     dependencies: [{ ref: "cli@1.0.0", dependsOn: ["typescript"] }, { ref: "typescript", dependsOn: [] },
       { ref: "dev-tool", dependsOn: [] }] };
   const pkg = { name: "cli", version: "1.0.0" };
-  const result = packageBom(bom, pkg, [pkg]);
+  const result = packageBom(bom, pkg);
   assert.equal(result.metadata.component.name, "cli");
   assert.deepEqual(result.components.map((entry) => entry.name), ["typescript"]);
   bom.dependencies[0].dependsOn.push("missing");
-  assert.throws(() => packageBom(bom, pkg, [pkg]), /Incomplete SBOM/);
+  assert.throws(() => packageBom(bom, pkg), /Incomplete SBOM/);
+});
+
+test("npm 12 SBOM identities retain scoped names, aliases, purls, peers, and arbitrary references", () => {
+  const root = { name: "@scope/cli", version: "1.0.0", "bom-ref": "workspace:cli", purl: "pkg:npm/%40scope/cli@1.0.0" };
+  const alias = {
+    name: "actual-package",
+    version: "2.0.0",
+    "bom-ref": "alias:legacy",
+    purl: "pkg:npm/actual-package@2.0.0"
+  };
+  const bom = {
+    metadata: { component: { name: "private-parent" } },
+    components: [root, alias, { name: "peer-runner", "bom-ref": "peer" }, { name: "dev-tool", "bom-ref": "dev" }],
+    dependencies: [
+      { ref: "workspace:cli", dependsOn: ["alias:legacy", "peer"] },
+      { ref: "alias:legacy", dependsOn: [] },
+      { ref: "peer", dependsOn: [] },
+      { ref: "dev", dependsOn: [] }
+    ]
+  };
+  const original = structuredClone(bom);
+  const result = packageBom(bom, { name: "@scope/cli", version: "1.0.0" });
+  assert.deepEqual(result.metadata.component, root);
+  assert.deepEqual(result.components, [alias, bom.components[2]]);
+  assert.deepEqual(
+    result.dependencies.map((edge) => edge.ref),
+    ["workspace:cli", "alias:legacy", "peer"]
+  );
+  assert.deepEqual(bom, original);
+});
+
+test("SBOM roots must be unique and every reachable component must have a dependency entry", () => {
+  const pkg = { name: "core", version: "1.0.0" };
+  const root = { ...pkg, "bom-ref": "root" };
+  assert.throws(() => packageBom({ components: [], dependencies: [] }, pkg), /Expected one SBOM component/);
+  assert.throws(
+    () => packageBom({ components: [root, { ...root, "bom-ref": "other" }], dependencies: [] }, pkg),
+    /Expected one SBOM component/
+  );
+  assert.throws(() => packageBom({ components: [root], dependencies: [] }, pkg), /Incomplete SBOM/);
+  assert.throws(
+    () =>
+      packageBom(
+        {
+          components: [root, { name: "dependency", "bom-ref": "dep" }],
+          dependencies: [{ ref: "root", dependsOn: ["dep"] }]
+        },
+        pkg
+      ),
+    /Incomplete SBOM/
+  );
+  assert.throws(
+    () =>
+      packageBom(
+        {
+          components: [root],
+          dependencies: [
+            { ref: "root", dependsOn: [] },
+            { ref: "root", dependsOn: [] }
+          ]
+        },
+        pkg
+      ),
+    /Duplicate SBOM/
+  );
 });
 
 test("checksums reject modified bytes and unsafe paths", () => {

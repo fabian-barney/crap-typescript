@@ -44,6 +44,6 @@
     "@barney-media/crap-typescript-core": "^1.0.0"
   },
   "peerDependencies": {
-    "vitest": "^4.0.0"
+    "vitest": "^4.0.0 || ^5.0.0"
   }
 }
