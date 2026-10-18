@@ -20,17 +20,17 @@
         },
         "loc": {
           "start": { "line": 2, "column": 0 },
-          "end": { "line": 7, "column": 1 }
+          "end": { "line": 7, "column": null }
         }
       },
       "1": {
-        "name": "deduped",
+        "name": "deduped_2",
         "decl": {
           "start": { "line": 1, "column": 0 },
           "end": { "line": 1, "column": 15 }
         },
         "loc": {
-          "start": { "line": 1, "column": 0 },
+          "start": { "line": 2, "column": 0 },
           "end": { "line": 7, "column": null }
         }
       }

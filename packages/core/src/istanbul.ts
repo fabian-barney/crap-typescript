@@ -371,8 +371,11 @@ function resolveDeclarationStart(entryValue: JsonRecord): CoveragePosition | und
 }
 
 function functionIdentityKey(entry: FunctionCoverageUnit): string {
-  if (entry.name && entry.declarationStart) {
-    return `decl:${entry.name}:${entry.declarationStart.line}:${entry.declarationStart.column}`;
+  const declaration = entry.declarationStart;
+  // Vitest 5 renames merged variants (for example fn_2). A precise declaration
+  // position identifies the source function independently of those generated names.
+  if (declaration && declaration.column !== MAX_COLUMN) {
+    return `decl:${declaration.line}:${declaration.column}`;
   }
 
   if (entry.name) {

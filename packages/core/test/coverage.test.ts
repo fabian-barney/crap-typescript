@@ -556,7 +556,7 @@ export function enumDeclOnly(): void {
     ]);
   });
 
-  it("canonicalizes duplicate fnMap variants for the same logical function", async () => {
+  it.each(["deduped", "deduped_2"])("canonicalizes duplicate fnMap variants named %s", async (variantName) => {
     const projectRoot = await createTempDir("crap-coverage-");
     tempDirs.push(projectRoot);
     await writeProjectFiles(projectRoot, {
@@ -595,17 +595,17 @@ export function enumDeclOnly(): void {
               },
               loc: {
                 start: { line: 2, column: 0 },
-                end: { line: 7, column: 1 }
+                end: { line: 7, column: variantName === "deduped" ? 1 : null }
               }
             },
             "1": {
-              name: "deduped",
+              name: variantName,
               decl: {
                 start: { line: 1, column: 0 },
                 end: { line: 1, column: 15 }
               },
               loc: {
-                start: { line: 1, column: 0 },
+                start: { line: variantName === "deduped" ? 1 : 2, column: 0 },
                 end: { line: 7, column: null }
               }
             }
@@ -651,6 +651,40 @@ export function enumDeclOnly(): void {
         branch: { percent: 100.0, status: "measured", reason: null }
       }
     ]);
+  });
+
+  it("keeps different functions separate when declaration columns are unknown", async () => {
+    const projectRoot = await createTempDir("crap-coverage-");
+    tempDirs.push(projectRoot);
+    await writeProjectFiles(projectRoot, {
+      "coverage/coverage-final.json": JSON.stringify({
+        "src/sample.ts": {
+          path: "src/sample.ts",
+          statementMap: {},
+          s: {},
+          branchMap: {},
+          b: {},
+          fnMap: {
+            "0": {
+              name: "first",
+              decl: { start: { line: 1, column: null } },
+              loc: { start: { line: 1, column: 0 }, end: { line: 3, column: 1 } }
+            },
+            "1": {
+              name: "first_2",
+              decl: { start: { line: 1, column: null } },
+              loc: { start: { line: 1, column: 20 }, end: { line: 3, column: 1 } }
+            }
+          }
+        }
+      })
+    });
+    const coverageReport = await parseCoverageReport(
+      path.join(projectRoot, "coverage", "coverage-final.json"),
+      projectRoot
+    );
+
+    expect([...coverageReport.values()][0]?.functions.map((entry) => entry.name)).toEqual(["first", "first_2"]);
   });
 
   it("matches fnMap coverage when the function location stops before the closing brace line", async () => {

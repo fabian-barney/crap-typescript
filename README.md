@@ -13,6 +13,19 @@ It combines cyclomatic complexity with function-level coverage derived from Ista
 - `packages/vitest`: helper that enables the canonical Istanbul JSON coverage output and fails Vitest runs when the CRAP threshold is exceeded
 - `packages/jest`: helper and reporter for Jest runs
 
+## Runtime and Toolchain Support
+
+Node.js 22, 24, and 26 are fully supported on Windows, macOS, and Linux. The policy covers maintained LTS
+lines and released lines with an official scheduled LTS transition, including Node 26 before its LTS transition.
+Use current security patches within each line. Published packages retain their Node.js `>=22.13.0` requirement.
+
+Building this repository requires npm 12.2.0 and Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`.
+CI uses Node 22.23.3, 24.22.0, and 26.12.0, with separate checks at the published runtime minimums.
+The Vitest adapter supports Vitest 4 and 5; the Jest adapter supports Jest 30.
+
+See [the dependency baseline](docs/dependency-baseline.md) for tested versions, TypeScript 7 deferral,
+next-major TOON migration notes, and dependency audit and license details.
+
 ## Formula
 
 `CRAP = CC^2 * (1 - coverage)^3 + CC`
@@ -63,7 +76,7 @@ npm install --save-dev @barney-media/crap-typescript
 Vitest adapter:
 
 ```bash
-npm install --save-dev @barney-media/crap-typescript-vitest
+npm install --save-dev @barney-media/crap-typescript-vitest vitest@5.0.5 @vitest/coverage-v8@5.0.5 vite@^8.3.4
 ```
 
 Jest adapter:

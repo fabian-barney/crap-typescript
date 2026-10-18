@@ -6,6 +6,32 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Breaking
+
+- Adopt TOON 4.4 serialization, including updated quoting and BOM handling. Logical report fields and
+  JSON/JUnit/text semantics are preserved; see `docs/dependency-baseline.md` for next-major migration guidance.
+
+### Added
+
+- Full Node.js 26 support alongside maintained Node 22/24, with required Windows/macOS/Linux build,
+  test, and isolated packaged-consumer checks plus verification of published runtime minimums.
+- Verified Vitest 4 and 5 consumers with matching coverage providers, and expanded Jest/CLI smoke checks.
+
+### Changed
+
+- Modernize npm, lint/test tooling, Node type definitions, XML parsing, and the Cognitive TypeScript gate.
+  Keep TypeScript 6.0.3 while stable TypeScript 7.1 API readiness is investigated in #232.
+- Generate release artifacts with npm 12 and setup-node 7 while preserving trusted-publisher identity,
+  provenance, SBOM dependency references, and published Node runtime requirements.
+
+### Fixed
+
+- Canonicalize renamed Vitest 5 coverage functions by precise declaration position, preserving coverage
+  attribution when source and compiled variants are merged while retaining unknown-position ambiguity.
+- Exclude local worktrees and temporary tooling from repository lint scans.
+- Refresh patchable dependency advisories and remove the nanoid override. Document the remaining
+  unpatched sprintf-js advisory in the Jest/Istanbul host-tool dependency chain.
+
 ## [1.0.0] - 2026-09-27
 
 ### Changed

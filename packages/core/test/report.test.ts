@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encode } from "@toon-format/toon";
+import { decode, encode } from "@toon-format/toon";
 
 import {
   buildAgentAnalysisReport,
@@ -673,6 +673,20 @@ describe("report formatting", () => {
     expect(output).toBe(`${encode(report)}\n`);
     expect(output).toContain('failed,20,4,0,stmt,"risky \\"quoted\\", value","src/a,b.ts",1,3');
     expect(output).toContain("skipped,null,1,null,N/A,missingCoverage");
+  });
+
+  it.each([
+    { method: "#private", encoded: '"#private"' },
+    { method: "+123", encoded: '"+123"' },
+    { method: "\uFEFFmethod", encoded: "\uFEFFmethod" },
+    { method: "a,b", encoded: '"a,b"' },
+    { method: "line\nbreak", encoded: '"line\\nbreak"' }
+  ])("preserves TOON 4.4 string semantics for $method", ({ method, encoded }) => {
+    const report = buildAnalysisReport([metric({ displayName: method })]);
+    const output = formatToonReport(report);
+
+    expect(output).toContain(`,${encoded},src/sample.ts,1,3`);
+    expect(decode(output)).toEqual(report);
   });
 
   it("formats text reports with aligned method columns", () => {

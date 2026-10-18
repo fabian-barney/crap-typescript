@@ -5,12 +5,18 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { archiveName, packages, readJson, validateVersions } from "./release-lib.mjs";
 
-export const digest = (bytes, algorithm = "sha256", encoding = "hex") => createHash(algorithm).update(bytes).digest(encoding);
+export const digest = (bytes, algorithm = "sha256", encoding = "hex") =>
+  createHash(algorithm).update(bytes).digest(encoding);
 
-export function packageBom(bom, pkg, manifests) {
-  const rootRef = `${pkg.name}@${pkg.version}`;
+export function packageBom(bom, pkg) {
+  const roots = bom.components.filter((component) => component.name === pkg.name && component.version === pkg.version);
+  if (roots.length !== 1) throw new Error(`Expected one SBOM component for ${pkg.name}@${pkg.version}`);
+  const rootRef = roots[0]["bom-ref"];
   const components = new Map(bom.components.map((component) => [component["bom-ref"], component]));
   const edges = new Map(bom.dependencies.map((dependency) => [dependency.ref, dependency]));
+  if (components.size !== bom.components.length || edges.size !== bom.dependencies.length) {
+    throw new Error("Duplicate SBOM graph reference");
+  }
   const reachable = new Set();
   const visit = (ref) => {
     if (reachable.has(ref)) return;
@@ -19,12 +25,8 @@ export function packageBom(bom, pkg, manifests) {
     for (const dependency of edges.get(ref).dependsOn ?? []) visit(dependency);
   };
   visit(rootRef);
-  for (const manifest of manifests) {
-    const component = components.get(`${manifest.name}@${manifest.version}`);
-    if (component) component.name = manifest.name;
-  }
-  // npm's workspace SBOM has a private parent and folder names. Re-root the
-  // graph at the published workspace and retain only its runtime/peer closure.
+  // npm 12 uses package names, including aliases, rather than folder names.
+  // Preserve its references/purls and retain only this package's runtime/peer closure.
   return {
     ...bom,
     metadata: { ...bom.metadata, component: components.get(rootRef) },
@@ -49,7 +51,9 @@ export function verifyManifest(directory) {
 export function npm(args, options = {}) {
   if (!process.env.npm_execpath) throw new Error("Run through npm scripts to select the pinned npm CLI");
   return execFileSync(process.execPath, [process.env.npm_execpath, ...args], {
-    encoding: "utf8", maxBuffer: 32 * 1024 * 1024, ...options
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+    ...options
   });
 }
 
@@ -59,20 +63,24 @@ export function buildArtifacts(directory = "release-artifacts") {
   const root = readJson("package.json");
   const manifests = packages();
   validateVersions(root.version, root, manifests, readJson("package-lock.json"));
-  const packed = JSON.parse(npm(["pack", "--workspaces", "--json", "--pack-destination", directory]));
+  // npm 12 keys workspace results by package name instead of returning an array.
+  const packed = Object.values(JSON.parse(npm(["pack", "--workspaces", "--json", "--pack-destination", directory])));
   if (packed.length !== manifests.length) throw new Error("Unexpected package count");
   const bom = JSON.parse(npm(["sbom", "--package-lock-only", "--sbom-format=cyclonedx"]));
   for (const pkg of manifests) {
     const artifact = packed.find((entry) => entry.name === pkg.name);
-    if (artifact?.filename !== archiveName(pkg) || artifact.version !== root.version) throw new Error("Unexpected archive identity");
+    if (artifact?.filename !== archiveName(pkg) || artifact.version !== root.version)
+      throw new Error("Unexpected archive identity");
     const files = new Set(artifact.files.map((file) => file.path));
     for (const required of ["package.json", "README.md", "LICENSE", "dist/index.js", "dist/index.d.ts"]) {
       if (!files.has(required)) throw new Error(`${pkg.name} is missing ${required}`);
     }
-    const sbom = packageBom(structuredClone(bom), pkg, manifests);
+    const sbom = packageBom(structuredClone(bom), pkg);
     writeFileSync(path.join(directory, `${artifact.filename}.cdx.json`), `${JSON.stringify(sbom, null, 2)}\n`);
   }
-  const sums = readdirSync(directory).sort().map((file) => `${digest(readFileSync(path.join(directory, file)))}  ${file}`);
+  const sums = readdirSync(directory)
+    .sort()
+    .map((file) => `${digest(readFileSync(path.join(directory, file)))}  ${file}`);
   writeFileSync(path.join(directory, "SHA256SUMS"), `${sums.join("\n")}\n`);
   verifyManifest(directory);
 }
