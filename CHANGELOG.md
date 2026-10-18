@@ -6,10 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-18
+
 ### Breaking
 
 - Adopt TOON 4.4 serialization, including updated quoting and BOM handling. Logical report fields and
-  JSON/JUnit/text semantics are preserved; see `docs/dependency-baseline.md` for next-major migration guidance.
+  JSON/JUnit/text semantics are preserved; see `docs/dependency-baseline.md` for 2.0 migration guidance.
 
 ### Added
 

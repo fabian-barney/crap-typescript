@@ -2,7 +2,8 @@
 
 `crap-typescript` is a shared CRAP metric toolkit for TypeScript projects.
 
-Version 1.0.0 declares the existing core, CLI, Vitest, and Jest APIs stable under Semantic Versioning.
+Version 2.0.0 adopts TOON 4.4 serialization and supports Node.js 22/24/26 and Vitest 4/5.
+The core, CLI, Vitest, and Jest APIs follow Semantic Versioning.
 
 It combines cyclomatic complexity with function-level coverage derived from Istanbul statement and branch counters and reports CRAP scores for concrete TypeScript function bodies. The repository publishes a standalone CLI plus dedicated Vitest and Jest adapters.
 
@@ -24,7 +25,7 @@ CI uses Node 22.23.3, 24.22.0, and 26.12.0, with separate checks at the publishe
 The Vitest adapter supports Vitest 4 and 5; the Jest adapter supports Jest 30.
 
 See [the dependency baseline](docs/dependency-baseline.md) for tested versions, TypeScript 7 deferral,
-next-major TOON migration notes, and dependency audit and license details.
+TOON migration notes for version 2.0, and dependency audit and license details.
 
 ## Formula
 
