@@ -47,11 +47,11 @@ Those jobs consume built archives without installing the private workspace.
   The obsolete global override was removed. Prerelease toolchains are excluded from this baseline.
 - checkout 7.0.1, upload-artifact 7.0.2, download-artifact 8.0.2, and attest 4.2.2 remain current.
 
-## Next-major TOON migration
+## Version 2.0 TOON migration
 
-The Unreleased code uses TOON Specification 4.4 through `~4.4.0`, retaining patch updates within this
-serialization baseline. Package versions remain 1.0.0 until a separate next-major release preparation.
-The published 1.x release keeps its historical contract; these serialization changes are staged for that major.
+Version 2.0.0 uses TOON Specification 4.4 through `~4.4.0`, retaining patch updates within this
+serialization baseline. The published 1.x release keeps its historical TOON 2.3 contract.
+Upgrade installed analyzer packages together to major version 2 to adopt these serialization changes.
 
 Logical report fields, ordering, thresholds, null coverage, exit codes, and JSON/JUnit/text behavior remain
 unchanged. TOON text can differ: hash-leading strings such as `#private` and plus-numeric-like strings such as
