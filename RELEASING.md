@@ -37,7 +37,7 @@ before merging a release bump. The successful v0.5.3 runs used this workflow and
 generated npm provenance for all four packages. A workflow rename or environment
 change requires updating all four trusted-publisher configurations first.
 
-Publication uses GitHub OIDC with npm 12.2.0 on Node 24.22.0. There is no npm publishing token or
+Publication uses GitHub OIDC with npm 12.2.1 on Node 24.22.1. There is no npm publishing token or
 GPG private key. Only the publication job receives contents, attestations, and
 OIDC write permissions. Third-party Actions are pinned to full commit hashes.
 The `v*` ruleset prevents tag updates and deletion without bypass actors.
@@ -93,8 +93,8 @@ In a clean consumer project, install the exact release versions and run
 The build workflow generates archives and SBOMs once and distributes those exact files to required
 Windows/macOS/Linux consumer jobs on Node 22/24/26. Each job installs the archives in isolated projects,
 runs Vitest 4.1.12, Vitest 5.0.5, and Jest, and checks CLI formats and failure behavior.
-Separate Ubuntu jobs exercise Node 22.13.0, 24.0.0, and 26.0.0 using npm 11.15.0 for consumer installs;
-they do not install the private workspace. All build and SBOM generation jobs use npm 12.2.0.
+Separate Ubuntu jobs exercise Node 22.13.0, 24.0.0, and 26.0.0 using npm 11.21.1 for consumer installs;
+they do not install the private workspace. All build and SBOM generation jobs use npm 12.2.1.
 
 For an isolated local artifact directory, run:
 

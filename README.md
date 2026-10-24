@@ -20,8 +20,8 @@ Node.js 22, 24, and 26 are fully supported on Windows, macOS, and Linux. The pol
 lines and released lines with an official scheduled LTS transition, including Node 26 before its LTS transition.
 Use current security patches within each line. Published packages retain their Node.js `>=22.13.0` requirement.
 
-Building this repository requires npm 12.2.0 and Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`.
-CI uses Node 22.23.3, 24.22.0, and 26.12.0, with separate checks at the published runtime minimums.
+Building this repository requires npm 12.2.1 and Node.js `^22.22.2 || ^24.15.0 || >=26.0.0`.
+CI uses Node 22.23.4, 24.22.1, and 26.12.1, with separate checks at the published runtime minimums.
 The Vitest adapter supports Vitest 4 and 5; the Jest adapter supports Jest 30.
 
 See [the dependency baseline](docs/dependency-baseline.md) for tested versions, TypeScript 7 deferral,
