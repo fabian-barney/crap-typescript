@@ -14,17 +14,17 @@ Published packages retain `engines.node: >=22.13.0`. The broad engine declaratio
 the official support commitment is the maintained/scheduled-LTS policy above. EOL and other unverified lines
 do not gain an official support commitment merely by satisfying the engine expression.
 
-The private source-build toolchain requires npm 12.2.0 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`.
+The private source-build toolchain requires npm 12.2.1 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`.
 This is the intersection of selected direct build-tool requirements, including npm 12, ESLint, and Vitest 5.
-CI builds and tests on 22.23.3, 24.22.0, and 26.12.0. Packaging/release jobs use 24.22.0.
-Isolated consumer jobs also exercise 22.13.0, 24.0.0, and 26.0.0 using npm 11.15.0 for installation only.
+CI builds and tests on 22.23.4, 24.22.1, and 26.12.1. Packaging/release jobs use 24.22.1.
+Isolated consumer jobs also exercise 22.13.0, 24.0.0, and 26.0.0 using npm 11.21.1 for installation only.
 Those jobs consume built archives without installing the private workspace.
 
 ## Selected versions and compatibility decisions
 
 | Component                                      | Baseline                                   |
 | ---------------------------------------------- | ------------------------------------------ |
-| npm / Node definitions                         | 12.2.0 / 22.20.5                           |
+| npm / Node definitions                         | 12.2.1 / 22.20.5                           |
 | TypeScript                                     | 6.0.3                                      |
 | TOON / fast-xml-parser                         | 4.4.0 / 5.11.2                             |
 | Vitest / coverage-v8 / Vite                    | 5.0.5 / 5.0.5 / 8.3.4                      |
