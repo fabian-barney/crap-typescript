@@ -1,5 +1,7 @@
 # Runtime and dependency baseline
 
+Maintenance versions refreshed on 2026-10-31 for #239.
+
 Baseline updated on 2026-10-18 for [#233](https://github.com/fabian-barney/crap-typescript/issues/233),
 on top of the compatible-dependency update in PR #230. Historical changelog entries describe their original releases.
 
@@ -16,7 +18,7 @@ do not gain an official support commitment merely by satisfying the engine expre
 
 The private source-build toolchain requires npm 12.2.1 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`.
 This is the intersection of selected direct build-tool requirements, including npm 12, ESLint, and Vitest 5.
-CI builds and tests on 22.23.4, 24.22.1, and 26.12.1. Packaging/release jobs use 24.22.1.
+CI builds and tests on 22.23.4, 24.22.2, and 26.13.0. Packaging/release jobs use 24.22.2.
 Isolated consumer jobs also exercise 22.13.0, 24.0.0, and 26.0.0 using npm 11.21.1 for installation only.
 Those jobs consume built archives without installing the private workspace.
 
@@ -29,12 +31,12 @@ Those jobs consume built archives without installing the private workspace.
 | TOON / fast-xml-parser                         | 4.4.0 / 5.11.2                             |
 | Vitest / coverage-v8 / Vite                    | 5.0.5 / 5.0.5 / 8.3.4                      |
 | Jest / ts-jest                                 | 30.5.2 / 29.4.15                           |
-| ESLint / typescript-eslint                     | 10.13.0 / 8.71.2                           |
+| ESLint / typescript-eslint                     | 10.14.0 / 8.72.1                           |
 | Prettier / eslint-config-prettier / @eslint/js | 3.9.10 / 10.1.8 / 10.0.1                   |
 | Cognitive TypeScript gate                      | 1.0.0, retaining its native threshold of 8 |
 | setup-node                                     | 7.1.0, pinned to its immutable commit      |
 
-- TypeScript 7.0.2 does not expose the compiler API used by the analyzer. typescript-eslint 8.71.2 requires
+- TypeScript 7.0.2 does not expose the compiler API used by the analyzer. typescript-eslint 8.72.1 requires
   TypeScript below 6.1, and ts-jest 29.4.15 requires below 7. Retain TypeScript 6 until the stable 7.1 API
   and the chosen tooling arrangement pass the investigation and regressions tracked in
   [#232](https://github.com/fabian-barney/crap-typescript/issues/232).
