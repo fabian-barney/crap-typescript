@@ -37,7 +37,7 @@ before merging a release bump. The successful v0.5.3 runs used this workflow and
 generated npm provenance for all four packages. A workflow rename or environment
 change requires updating all four trusted-publisher configurations first.
 
-Publication uses GitHub OIDC with npm 12.2.1 on Node 24.22.1. There is no npm publishing token or
+Publication uses GitHub OIDC with npm 12.2.1 on Node 24.22.2. There is no npm publishing token or
 GPG private key. Only the publication job receives contents, attestations, and
 OIDC write permissions. Third-party Actions are pinned to full commit hashes.
 The `v*` ruleset prevents tag updates and deletion without bypass actors.
