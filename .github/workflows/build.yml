@@ -23,11 +23,11 @@ jobs:
           - os: windows
             runner: windows-latest
             node: node24
-            node-version: "24.22.1"
+            node-version: "24.22.2"
           - os: windows
             runner: windows-latest
             node: node26
-            node-version: "26.12.1"
+            node-version: "26.13.0"
           - os: macos
             runner: macos-latest
             node: node22
@@ -35,11 +35,11 @@ jobs:
           - os: macos
             runner: macos-latest
             node: node24
-            node-version: "24.22.1"
+            node-version: "24.22.2"
           - os: macos
             runner: macos-latest
             node: node26
-            node-version: "26.12.1"
+            node-version: "26.13.0"
           - os: ubuntu
             runner: ubuntu-latest
             node: node22
@@ -47,11 +47,11 @@ jobs:
           - os: ubuntu
             runner: ubuntu-latest
             node: node24
-            node-version: "24.22.1"
+            node-version: "24.22.2"
           - os: ubuntu
             runner: ubuntu-latest
             node: node26
-            node-version: "26.12.1"
+            node-version: "26.13.0"
 
     steps:
       - name: Checkout
@@ -88,11 +88,11 @@ jobs:
           - os: windows
             runner: windows-latest
             node: node24
-            node-version: "24.22.1"
+            node-version: "24.22.2"
           - os: windows
             runner: windows-latest
             node: node26
-            node-version: "26.12.1"
+            node-version: "26.13.0"
           - os: macos
             runner: macos-latest
             node: node22
@@ -100,11 +100,11 @@ jobs:
           - os: macos
             runner: macos-latest
             node: node24
-            node-version: "24.22.1"
+            node-version: "24.22.2"
           - os: macos
             runner: macos-latest
             node: node26
-            node-version: "26.12.1"
+            node-version: "26.13.0"
           - os: ubuntu
             runner: ubuntu-latest
             node: node22
@@ -112,11 +112,11 @@ jobs:
           - os: ubuntu
             runner: ubuntu-latest
             node: node24
-            node-version: "24.22.1"
+            node-version: "24.22.2"
           - os: ubuntu
             runner: ubuntu-latest
             node: node26
-            node-version: "26.12.1"
+            node-version: "26.13.0"
 
     steps:
       - name: Checkout
@@ -157,10 +157,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Node 24.22.1
+      - name: Set up Node 24.22.2
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.1
+          node-version: 24.22.2
           cache: npm
 
       - name: Set up npm 12.2.1
@@ -182,10 +182,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Node 24.22.1
+      - name: Set up Node 24.22.2
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.1
+          node-version: 24.22.2
           cache: npm
 
       - name: Set up npm 12.2.1
@@ -217,7 +217,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: ["22.23.4", "24.22.1", "26.12.1"]
+        node-version: ["22.23.4", "24.22.2", "26.13.0"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -265,10 +265,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Node 24.22.1
+      - name: Set up Node 24.22.2
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.1
+          node-version: 24.22.2
           cache: npm
 
       - name: Set up npm 12.2.1
@@ -283,7 +283,7 @@ jobs:
       - name: Download coverage
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: coverage-ubuntu-latest-24.22.1
+          name: coverage-ubuntu-latest-24.22.2
           path: coverage
 
       - name: Run crap-typescript gate
@@ -299,10 +299,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Set up Node 24.22.1
+      - name: Set up Node 24.22.2
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.22.1
+          node-version: 24.22.2
           cache: npm
 
       - name: Set up npm 12.2.1
