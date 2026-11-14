@@ -5,11 +5,11 @@ Vitest adapter for [crap-typescript](https://github.com/fabian-barney/crap-types
 ## Install
 
 ```bash
-npm install --save-dev @barney-media/crap-typescript-vitest vitest@5.0.5 @vitest/coverage-v8@5.0.5 vite@^8.3.4
+npm install --save-dev @barney-media/crap-typescript-vitest vitest@5.1.0 @vitest/coverage-v8@5.1.0 vite@^8.3.8
 ```
 
 Vitest 4 and 5 are supported. Install the same version of `vitest` and `@vitest/coverage-v8`; the clean-consumer
-matrix exercises 4.1.12 and 5.0.5. For Vitest 4, replace both `5.0.5` versions above with `4.1.12`.
+matrix exercises 4.1.12 and 5.1.0. For Vitest 4, replace both `5.1.0` versions above with `4.1.12`.
 Install Vite explicitly, particularly with Yarn, because Vitest 5 declares it as a required peer.
 Node.js 22/24/26 are fully supported on Windows, macOS, and Linux; use current security patches.
 

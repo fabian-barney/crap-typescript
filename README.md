@@ -77,7 +77,7 @@ npm install --save-dev @barney-media/crap-typescript
 Vitest adapter:
 
 ```bash
-npm install --save-dev @barney-media/crap-typescript-vitest vitest@5.0.5 @vitest/coverage-v8@5.0.5 vite@^8.3.8
+npm install --save-dev @barney-media/crap-typescript-vitest vitest@5.1.0 @vitest/coverage-v8@5.1.0 vite@^8.3.8
 ```
 
 Jest adapter:

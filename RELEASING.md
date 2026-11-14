@@ -92,7 +92,7 @@ In a clean consumer project, install the exact release versions and run
 
 The build workflow generates archives and SBOMs once and distributes those exact files to required
 Windows/macOS/Linux consumer jobs on Node 22/24/26. Each job installs the archives in isolated projects,
-runs Vitest 4.1.12, Vitest 5.0.5, and Jest, and checks CLI formats and failure behavior.
+runs Vitest 4.1.12, Vitest 5.1.0, and Jest, and checks CLI formats and failure behavior.
 Separate Ubuntu jobs exercise Node 22.13.0, 24.0.0, and 26.0.0 using npm 11.21.2 for consumer installs;
 they do not install the private workspace. All build and SBOM generation jobs use npm 12.2.2.
 

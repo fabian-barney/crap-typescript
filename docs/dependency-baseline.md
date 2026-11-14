@@ -41,7 +41,7 @@ Those jobs consume built archives without installing the private workspace.
   [#232](https://github.com/fabian-barney/crap-typescript/issues/232).
 - Node definitions follow the oldest supported runtime, rather than latest definitions for Node 26, to
   prevent compilation against APIs unavailable on Node 22. Runtime tests cover all three supported lines.
-- The Vitest adapter peer range is `^4.0.0 || ^5.0.0`. Clean consumers test 4.1.12 and 5.0.5 with identically
+- The Vitest adapter peer range is `^4.0.0 || ^5.0.0`. Clean consumers test 4.1.12 and 5.1.0 with identically
   versioned coverage-v8 providers. Vite is installed explicitly; Vitest 5 makes it a required peer.
 - Jest remains on major 30. Provider/runner installation and transformation belong to the consumer project.
 - PostCSS 8.5.30 requires nanoid `^3.3.20`; the compatible resolution is 3.3.20, rather than nanoid 6.
