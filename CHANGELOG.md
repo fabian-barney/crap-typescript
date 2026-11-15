@@ -6,6 +6,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-11-15
+
+### Changed
+
+- Refresh compatible development dependencies, including Vitest and coverage-v8 5.1.0, Vite 8.3.8,
+  ESLint 10.15.0, typescript-eslint 8.72.2, and Prettier 3.10.1.
+- Update the build and release toolchain to npm 12.2.2 and Node.js 22.23.5, 24.22.3, and 26.13.1.
+- Resolve rolldown to stable 1.2.18 and refresh dependency audit, license, and runtime documentation.
+
 ## [2.0.1] - 2026-11-15
 
 ### Changed
