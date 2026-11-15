@@ -48,7 +48,7 @@ Those jobs consume built archives without installing the private workspace.
   `@rolldown/binding-wasm32-wasi` that pins `@emnapi/core` and `@emnapi/runtime` 2.0.0-beta.2. No override is
   declared; move on once a rolldown release within Vite's range depends only on stable emnapi releases.
 - Jest remains on major 30. Provider/runner installation and transformation belong to the consumer project.
-- PostCSS 8.5.30 requires nanoid `^3.3.20`; the compatible resolution is 3.3.20, rather than nanoid 6.
+- PostCSS 8.5.33 requires nanoid `^3.3.20`; the compatible resolution is 3.3.20, rather than nanoid 6.
   The obsolete global override was removed. Prerelease toolchains are excluded from this baseline.
 - checkout 7.0.1, upload-artifact 7.0.2, download-artifact 8.0.2, and attest 4.2.2 remain current.
 
@@ -79,8 +79,8 @@ The entries propagate from three advisories:
 - [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4), glob 9.0.0 through 14.0.1
   (patched in 14.0.2): glob 13.0.7 through `@jest/reporters`, `jest-config`, and `jest-runtime`, and glob 10.5.0
   through Istanbul's `test-exclude`.
-- [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), minimatch 7.0.0 up to 11.0.1:
-  minimatch 10.2.6 through `@typescript-eslint/typescript-estree`, glob 13, and `test-exclude`, and minimatch 9.0.9
+- [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), minimatch 7.0.0 through 11.0.0
+  (patched in 11.0.1): minimatch 10.2.6 through `@typescript-eslint/typescript-estree`, glob 13, and `test-exclude`, and minimatch 9.0.9
   through glob 10. ESLint itself resolves the patched minimatch 11.0.8.
 - [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4), deepmerge 4.2.0 through 4.3.1 with no
   patched release: deepmerge 4.3.1 through `jest-config`.
@@ -91,8 +91,9 @@ host-runner peer of the published Jest adapter, so these residuals appear in tha
 Fresh core/CLI runtime SBOM closures and Vitest's selected peer closure include none of the affected packages.
 Consumer graphs can differ within published ranges.
 
-`npm audit` proposes Jest 25 and typescript-eslint 8.36.0 as fixes. Do not apply these downgrades or force glob or
-minimatch majors into the existing Jest, Istanbul, and typescript-eslint ranges to obtain an apparently clean audit.
+`npm audit` proposes Jest 25, ts-jest 25, and typescript-eslint 8.36.0 as fixes. Do not apply these downgrades or
+force glob or minimatch majors into the existing Jest, Istanbul, and typescript-eslint ranges to obtain an apparently
+clean audit.
 Track the advisories and re-audit after upstream updates.
 The sprintf-js advisory GHSA-hp3w-g68c-fv3c recorded for #239 was withdrawn on 2026-10-22 and is no longer reported.
 
@@ -100,7 +101,7 @@ The sprintf-js advisory GHSA-hp3w-g68c-fv3c recorded for #239 was withdrawn on 2
 
 The selected TOON and Vitest upstream license files are MIT, TypeScript is Apache-2.0, and fast-xml-parser is MIT.
 Fresh core/CLI runtime SBOMs contain MIT and Apache-2.0 dependencies. The larger runner-peer graphs also
-record ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, BlueOak-1.0.0, CC-BY-4.0, and MIT/CC0 alternatives.
+record ISC, BSD-2-Clause, BSD-3-Clause, BlueOak-1.0.0, CC-BY-4.0, and MIT/CC0 alternatives.
 No component in the generated per-package SBOMs has an unknown license field.
 
 Vite retains the existing, unmodified Lightning CSS 1.33.0 dependency and platform bindings under MPL-2.0.
