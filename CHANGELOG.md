@@ -6,6 +6,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-15
+
+### Changed
+
+- Refresh compatible runtime and development dependencies, including fast-xml-parser 5.12.0.
+- Update the build and release toolchain to npm 12.2.1 and current Node.js 22/24/26 patches.
+
 ## [2.0.0] - 2026-10-18
 
 ### Breaking
