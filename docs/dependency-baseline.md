@@ -80,8 +80,8 @@ The entries propagate from three advisories:
   (patched in 14.0.2): glob 13.0.7 through `@jest/reporters`, `jest-config`, and `jest-runtime`, and glob 10.5.0
   through Istanbul's `test-exclude`.
 - [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), minimatch 7.0.0 through 11.0.0
-  (patched in 11.0.1): minimatch 10.2.6 through `@typescript-eslint/typescript-estree`, glob 13, and `test-exclude`, and minimatch 9.0.9
-  through glob 10. ESLint itself resolves the patched minimatch 11.0.8.
+  (patched in 11.0.1): minimatch 10.2.6 through `@typescript-eslint/typescript-estree`, glob 13, and `test-exclude`,
+  and minimatch 9.0.9 through glob 10. ESLint itself resolves the patched minimatch 11.0.8.
 - [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4), deepmerge 4.2.0 through 4.3.1 with no
   patched release: deepmerge 4.3.1 through `jest-config`.
 
