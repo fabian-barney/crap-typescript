@@ -1,6 +1,6 @@
 # Runtime and dependency baseline
 
-Maintenance versions refreshed on 2026-11-14 for #242.
+Maintenance versions refreshed on 2026-11-15 for #242.
 
 Baseline updated on 2026-10-18 for [#233](https://github.com/fabian-barney/crap-typescript/issues/233),
 on top of the compatible-dependency update in PR #230. Historical changelog entries describe their original releases.
@@ -8,7 +8,8 @@ on top of the compatible-dependency update in PR #230. Historical changelog entr
 ## Support policy
 
 Official support covers maintained Node.js LTS lines and released lines officially scheduled to become LTS.
-Node 22, 24, and 26 are maintained LTS lines, fully supported on Windows, macOS, and Linux. Use current security patches in each supported line.
+Node 22, 24, and 26 are maintained LTS lines, fully supported on Windows, macOS, and Linux.
+Use current security patches in each supported line.
 See the [upstream schedule](https://github.com/nodejs/Release/blob/main/README.md).
 
 Published packages retain `engines.node: >=22.13.0`. The broad engine declaration is an installation floor;
@@ -43,6 +44,9 @@ Those jobs consume built archives without installing the private workspace.
   prevent compilation against APIs unavailable on Node 22. Runtime tests cover all three supported lines.
 - The Vitest adapter peer range is `^4.0.0 || ^5.0.0`. Clean consumers test 4.1.12 and 5.1.0 with identically
   versioned coverage-v8 providers. Vite is installed explicitly; Vitest 5 makes it a required peer.
+- Vite 8.3.8 declares rolldown `~1.2.18`. The lock resolves rolldown 1.2.18 because 1.2.19 and later add an optional
+  `@rolldown/binding-wasm32-wasi` that pins `@emnapi/core` and `@emnapi/runtime` 2.0.0-beta.2. No override is
+  declared; move on once a rolldown release within Vite's range depends only on stable emnapi releases.
 - Jest remains on major 30. Provider/runner installation and transformation belong to the consumer project.
 - PostCSS 8.5.30 requires nanoid `^3.3.20`; the compatible resolution is 3.3.20, rather than nanoid 6.
   The obsolete global override was removed. Prerelease toolchains are excluded from this baseline.
@@ -68,25 +72,29 @@ The regression fixture and real adapter tests verify that this migration preserv
 
 ## Dependency audit and remaining risk
 
-The refreshed locked workspace audit reports 20 moderate affected-package entries, no critical findings,
-and no high findings. All 20 entries propagate from one unpatched advisory:
-[GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c), affecting sprintf-js through 1.1.3.
-These counts are a dated snapshot, not a continuing security guarantee.
+The locked workspace audit on 2026-11-15 reports 26 affected-package entries: 22 moderate, 4 low, no high,
+and no critical findings. These counts are a dated snapshot, not a continuing security guarantee.
+The entries propagate from three advisories:
 
-The relevant chain is Jest/Babel Istanbul instrumentation -> `@istanbuljs/load-nyc-config` -> js-yaml 3.15.2
--> argparse 1.0.10 -> sprintf-js 1.0.3. Jest/ts-jest are repository test tooling; Jest is also a host-runner peer
-of the published Jest adapter, so the residual appears in that adapter's peer dependency closure.
+- [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4), glob 9.0.0 through 14.0.1
+  (patched in 14.0.2): glob 13.0.7 through `@jest/reporters`, `jest-config`, and `jest-runtime`, and glob 10.5.0
+  through Istanbul's `test-exclude`.
+- [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), minimatch 7.0.0 up to 11.0.1:
+  minimatch 10.2.6 through `@typescript-eslint/typescript-estree`, glob 13, and `test-exclude`, and minimatch 9.0.9
+  through glob 10. ESLint itself resolves the patched minimatch 11.0.8.
+- [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4), deepmerge 4.2.0 through 4.3.1 with no
+  patched release: deepmerge 4.3.1 through `jest-config`.
 
-The assessed NYC loader calls the js-yaml library's `load` function. That library imports its loader/dumper;
-argparse is imported by the separate js-yaml command-line executable, and sprintf is used in argparse's
-help/usage formatting. No call from the analyzer's source parsing or reporting path was identified.
-This reachability observation does not establish safety for every host tool or separate CLI invocation.
-Track the upstream advisory and re-audit after updates; any continued deferral requires this scoped evidence.
+Every path runs through Jest/ts-jest or typescript-eslint. Both are repository lint/test tooling that reads trusted
+repository globs and configuration; restrict lint, test, and coverage configuration to trusted sources. Jest is also a
+host-runner peer of the published Jest adapter, so these residuals appear in that adapter's peer dependency closure.
+Fresh core/CLI runtime SBOM closures and Vitest's selected peer closure include none of the affected packages.
+Consumer graphs can differ within published ranges.
 
-Patchable Handlebars, source-map-js, and brace-expansion paths were refreshed. Do not substitute incompatible
-Jest downgrades or force js-yaml majors into the existing Istanbul contract to obtain an apparently clean audit.
-Fresh core/CLI runtime SBOM closures do not include the remaining vulnerable leaf. Vitest's selected peer
-closure does not include it; Jest's does. Consumer graphs can differ within published ranges.
+`npm audit` proposes Jest 25 and typescript-eslint 8.36.0 as fixes. Do not apply these downgrades or force glob or
+minimatch majors into the existing Jest, Istanbul, and typescript-eslint ranges to obtain an apparently clean audit.
+Track the advisories and re-audit after upstream updates.
+The sprintf-js advisory GHSA-hp3w-g68c-fv3c recorded for #239 was withdrawn on 2026-10-22 and is no longer reported.
 
 ## Licenses and artifact verification
 
