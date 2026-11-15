@@ -1,6 +1,6 @@
 # Runtime and dependency baseline
 
-Maintenance versions refreshed on 2026-10-31 for #239.
+Maintenance versions refreshed on 2026-11-15 for #242.
 
 Baseline updated on 2026-10-18 for [#233](https://github.com/fabian-barney/crap-typescript/issues/233),
 on top of the compatible-dependency update in PR #230. Historical changelog entries describe their original releases.
@@ -8,44 +8,47 @@ on top of the compatible-dependency update in PR #230. Historical changelog entr
 ## Support policy
 
 Official support covers maintained Node.js LTS lines and released lines officially scheduled to become LTS.
-Node 22, 24, and 26 are fully supported on Windows, macOS, and Linux, including Node 26 before its
-scheduled LTS transition on 2026-10-28. Use current security patches in each supported line.
+Node 22, 24, and 26 are maintained LTS lines, fully supported on Windows, macOS, and Linux.
+Use current security patches in each supported line.
 See the [upstream schedule](https://github.com/nodejs/Release/blob/main/README.md).
 
 Published packages retain `engines.node: >=22.13.0`. The broad engine declaration is an installation floor;
 the official support commitment is the maintained/scheduled-LTS policy above. EOL and other unverified lines
 do not gain an official support commitment merely by satisfying the engine expression.
 
-The private source-build toolchain requires npm 12.2.1 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`.
+The private source-build toolchain requires npm 12.2.2 and Node `^22.22.2 || ^24.15.0 || >=26.0.0`.
 This is the intersection of selected direct build-tool requirements, including npm 12, ESLint, and Vitest 5.
-CI builds and tests on 22.23.4, 24.22.2, and 26.13.0. Packaging/release jobs use 24.22.2.
-Isolated consumer jobs also exercise 22.13.0, 24.0.0, and 26.0.0 using npm 11.21.1 for installation only.
+CI builds and tests on 22.23.5, 24.22.3, and 26.13.1. Packaging/release jobs use 24.22.3.
+Isolated consumer jobs also exercise 22.13.0, 24.0.0, and 26.0.0 using npm 11.21.2 for installation only.
 Those jobs consume built archives without installing the private workspace.
 
 ## Selected versions and compatibility decisions
 
 | Component                                      | Baseline                                   |
 | ---------------------------------------------- | ------------------------------------------ |
-| npm / Node definitions                         | 12.2.1 / 22.20.5                           |
+| npm / Node definitions                         | 12.2.2 / 22.20.5                           |
 | TypeScript                                     | 6.0.3                                      |
 | TOON / fast-xml-parser                         | 4.4.0 / 5.12.0                             |
-| Vitest / coverage-v8 / Vite                    | 5.0.5 / 5.0.5 / 8.3.4                      |
+| Vitest / coverage-v8 / Vite                    | 5.1.0 / 5.1.0 / 8.3.8                      |
 | Jest / ts-jest                                 | 30.5.2 / 29.4.15                           |
-| ESLint / typescript-eslint                     | 10.14.0 / 8.72.1                           |
-| Prettier / eslint-config-prettier / @eslint/js | 3.9.10 / 10.1.8 / 10.0.1                   |
+| ESLint / typescript-eslint                     | 10.15.0 / 8.72.2                           |
+| Prettier / eslint-config-prettier / @eslint/js | 3.10.1 / 10.1.8 / 10.0.1                   |
 | Cognitive TypeScript gate                      | 1.0.0, retaining its native threshold of 8 |
 | setup-node                                     | 7.1.0, pinned to its immutable commit      |
 
-- TypeScript 7.0.2 does not expose the compiler API used by the analyzer. typescript-eslint 8.72.1 requires
+- TypeScript 7.0.2 does not expose the compiler API used by the analyzer. typescript-eslint 8.72.2 requires
   TypeScript below 6.1, and ts-jest 29.4.15 requires below 7. Retain TypeScript 6 until the stable 7.1 API
   and the chosen tooling arrangement pass the investigation and regressions tracked in
   [#232](https://github.com/fabian-barney/crap-typescript/issues/232).
 - Node definitions follow the oldest supported runtime, rather than latest definitions for Node 26, to
   prevent compilation against APIs unavailable on Node 22. Runtime tests cover all three supported lines.
-- The Vitest adapter peer range is `^4.0.0 || ^5.0.0`. Clean consumers test 4.1.12 and 5.0.5 with identically
+- The Vitest adapter peer range is `^4.0.0 || ^5.0.0`. Clean consumers test 4.1.12 and 5.1.0 with identically
   versioned coverage-v8 providers. Vite is installed explicitly; Vitest 5 makes it a required peer.
+- Vite 8.3.8 declares rolldown `~1.2.18`. The lock resolves rolldown 1.2.18 because 1.2.19 and later add an optional
+  `@rolldown/binding-wasm32-wasi` that pins `@emnapi/core` and `@emnapi/runtime` 2.0.0-beta.2. No override is
+  declared; move on once a rolldown release within Vite's range depends only on stable emnapi releases.
 - Jest remains on major 30. Provider/runner installation and transformation belong to the consumer project.
-- PostCSS 8.5.30 requires nanoid `^3.3.20`; the compatible resolution is 3.3.20, rather than nanoid 6.
+- PostCSS 8.5.33 requires nanoid `^3.3.20`; the compatible resolution is 3.3.20, rather than nanoid 6.
   The obsolete global override was removed. Prerelease toolchains are excluded from this baseline.
 - checkout 7.0.1, upload-artifact 7.0.2, download-artifact 8.0.2, and attest 4.2.2 remain current.
 
@@ -69,31 +72,36 @@ The regression fixture and real adapter tests verify that this migration preserv
 
 ## Dependency audit and remaining risk
 
-The refreshed locked workspace audit reports 20 moderate affected-package entries, no critical findings,
-and no high findings. All 20 entries propagate from one unpatched advisory:
-[GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c), affecting sprintf-js through 1.1.3.
-These counts are a dated snapshot, not a continuing security guarantee.
+The locked workspace audit on 2026-11-15 reports 26 affected-package entries: 22 moderate, 4 low, no high,
+and no critical findings. These counts are a dated snapshot, not a continuing security guarantee.
+The entries propagate from three advisories:
 
-The relevant chain is Jest/Babel Istanbul instrumentation -> `@istanbuljs/load-nyc-config` -> js-yaml 3.15.2
--> argparse 1.0.10 -> sprintf-js 1.0.3. Jest/ts-jest are repository test tooling; Jest is also a host-runner peer
-of the published Jest adapter, so the residual appears in that adapter's peer dependency closure.
+- [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4), glob 9.0.0 through 14.0.1
+  (patched in 14.0.2): glob 13.0.7 through `@jest/reporters`, `jest-config`, and `jest-runtime`, and glob 10.5.0
+  through Istanbul's `test-exclude`.
+- [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), minimatch 7.0.0 through 11.0.0
+  (patched in 11.0.1): minimatch 10.2.6 through `@typescript-eslint/typescript-estree`, glob 13, and `test-exclude`,
+  and minimatch 9.0.9 through glob 10. ESLint itself resolves the patched minimatch 11.0.8.
+- [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4), deepmerge 4.2.0 through 4.3.1 with no
+  patched release: deepmerge 4.3.1 through `jest-config`.
 
-The assessed NYC loader calls the js-yaml library's `load` function. That library imports its loader/dumper;
-argparse is imported by the separate js-yaml command-line executable, and sprintf is used in argparse's
-help/usage formatting. No call from the analyzer's source parsing or reporting path was identified.
-This reachability observation does not establish safety for every host tool or separate CLI invocation.
-Track the upstream advisory and re-audit after updates; any continued deferral requires this scoped evidence.
+Every path runs through Jest/ts-jest or typescript-eslint. Both are repository lint/test tooling that reads trusted
+repository globs and configuration; restrict lint, test, and coverage configuration to trusted sources. Jest is also a
+host-runner peer of the published Jest adapter, so these residuals appear in that adapter's peer dependency closure.
+Fresh core/CLI runtime SBOM closures and Vitest's selected peer closure include none of the affected packages.
+Consumer graphs can differ within published ranges.
 
-Patchable Handlebars, source-map-js, and brace-expansion paths were refreshed. Do not substitute incompatible
-Jest downgrades or force js-yaml majors into the existing Istanbul contract to obtain an apparently clean audit.
-Fresh core/CLI runtime SBOM closures do not include the remaining vulnerable leaf. Vitest's selected peer
-closure does not include it; Jest's does. Consumer graphs can differ within published ranges.
+`npm audit` proposes Jest 25, ts-jest 25, and typescript-eslint 8.36.0 as fixes. Do not apply these downgrades or
+force glob or minimatch majors into the existing Jest, Istanbul, and typescript-eslint ranges to obtain an apparently
+clean audit.
+Track the advisories and re-audit after upstream updates.
+The sprintf-js advisory GHSA-hp3w-g68c-fv3c recorded for #239 was withdrawn on 2026-10-22 and is no longer reported.
 
 ## Licenses and artifact verification
 
 The selected TOON and Vitest upstream license files are MIT, TypeScript is Apache-2.0, and fast-xml-parser is MIT.
 Fresh core/CLI runtime SBOMs contain MIT and Apache-2.0 dependencies. The larger runner-peer graphs also
-record ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, BlueOak-1.0.0, CC-BY-4.0, and MIT/CC0 alternatives.
+record ISC, BSD-2-Clause, BSD-3-Clause, BlueOak-1.0.0, CC-BY-4.0, and MIT/CC0 alternatives.
 No component in the generated per-package SBOMs has an unknown license field.
 
 Vite retains the existing, unmodified Lightning CSS 1.33.0 dependency and platform bindings under MPL-2.0.
