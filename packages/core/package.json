@@ -1,6 +1,6 @@
 {
   "name": "@barney-media/crap-typescript-core",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Core CRAP metric analyzer for TypeScript projects.",
   "license": "Apache-2.0",
   "author": "Fabian Barney (https://github.com/fabian-barney)",
@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@toon-format/toon": "~4.4.0",
-    "fast-xml-parser": "^5.11.2",
+    "fast-xml-parser": "^5.12.0",
     "typescript": "^6.0.3"
   }
 }

@@ -27,7 +27,7 @@ Those jobs consume built archives without installing the private workspace.
 | ---------------------------------------------- | ------------------------------------------ |
 | npm / Node definitions                         | 12.2.2 / 22.20.5                           |
 | TypeScript                                     | 6.0.3                                      |
-| TOON / fast-xml-parser                         | 4.4.0 / 5.11.2                             |
+| TOON / fast-xml-parser                         | 4.4.0 / 5.12.0                             |
 | Vitest / coverage-v8 / Vite                    | 5.1.0 / 5.1.0 / 8.3.8                      |
 | Jest / ts-jest                                 | 30.5.2 / 29.4.15                           |
 | ESLint / typescript-eslint                     | 10.15.0 / 8.72.2                           |
