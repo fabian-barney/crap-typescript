@@ -65,7 +65,7 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
       - name: Install pinned npm
-        run: npm install --global npm@12.2.2
+        run: npm install --global npm@12.2.3
       - run: npm ci
       - run: npm run verify-release-version -- "$RELEASE_TAG"
       - run: npm run build
